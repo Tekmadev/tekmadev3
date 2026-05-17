@@ -31,21 +31,18 @@ export const business = {
   email: _email,
   legalEmail: _legalEmail,
   registeredOffice: {
-    // TODO: replace with actual registered office address before publishing legal pages.
-    line1: "(Registered office address pending)",
-    city: "Toronto",
+    line1: "40 Courtland Ave",
+    city: "Hamilton",
     province: "Ontario",
     country: "Canada",
-    postalCode: "",
+    postalCode: "L9B 1X6",
   },
   jurisdictions: {
     primary: "Ontario, Canada",
-    secondary: "Quebec, Canada",
   },
   privacyOfficer: {
-    // TODO: replace with the named individual designated under Quebec Law 25.
-    name: "Privacy Officer",
-    title: "Privacy Officer",
+    name: "Kazi Shajeedul Islam",
+    title: "Founder and Privacy Officer",
     email: _legalEmail,
   },
   legalDates: {

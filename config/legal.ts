@@ -39,7 +39,7 @@ export const privacyPolicy: LegalDoc = {
   slug: "privacy",
   title: "Privacy Policy",
   subtitle: "How Tekmadev collects, uses, and protects personal information.",
-  intro: `This Privacy Policy explains how ${company} ("${business.name}", "we", "us", or "our") collects, uses, discloses, retains, and safeguards personal information. ${business.name} operates from ${business.jurisdictions.primary} and ${business.jurisdictions.secondary} and complies with the federal Personal Information Protection and Electronic Documents Act (PIPEDA) and, where applicable, the Quebec Act respecting the protection of personal information in the private sector (Law 25). This policy applies to information we collect through ${business.url}, through our Growth System services, and through our other interactions with you.`,
+  intro: `This Privacy Policy explains how ${company} ("${business.name}", "we", "us", or "our") collects, uses, discloses, retains, and safeguards personal information. ${business.name} operates from ${business.jurisdictions.primary} and complies with the federal Personal Information Protection and Electronic Documents Act (PIPEDA). Where individuals reside in Quebec, we also respect the rights provided under the Quebec Act respecting the protection of personal information in the private sector (Law 25). This policy applies to information we collect through ${business.url}, through our Growth System services, and through our other interactions with you.`,
   effectiveDate: business.legalDates.effective,
   lastUpdated: business.legalDates.lastUpdated,
   sections: [
@@ -249,7 +249,7 @@ export const privacyPolicy: LegalDoc = {
         },
         {
           type: "p",
-          text: `${business.name} has designated a Privacy Officer responsible for the protection of personal information. The Privacy Officer can be reached at ${legalEmail}.`,
+          text: `${business.name} has designated ${business.privacyOfficer.name}, ${business.privacyOfficer.title}, as the person responsible for the protection of personal information. The Privacy Officer can be reached at ${legalEmail}.`,
         },
       ],
     },
@@ -318,10 +318,10 @@ export const privacyPolicy: LegalDoc = {
         {
           type: "ul",
           items: [
-            `Privacy Officer, ${company}`,
+            `${business.privacyOfficer.name}, ${business.privacyOfficer.title}, ${company}`,
             `Email: ${legalEmail}`,
             `Phone: ${phone}`,
-            `Registered office: ${business.registeredOffice.line1}, ${business.registeredOffice.city}, ${business.registeredOffice.province}, ${business.registeredOffice.country}`,
+            `Registered office: ${business.registeredOffice.line1}, ${business.registeredOffice.city}, ${business.registeredOffice.province} ${business.registeredOffice.postalCode}, ${business.registeredOffice.country}`,
           ],
         },
       ],
@@ -610,35 +610,21 @@ export const termsOfService: LegalDoc = {
       blocks: [
         {
           type: "p",
-          text: `These Terms are governed by the laws of the Province of Ontario and the federal laws of Canada applicable in Ontario, without regard to conflict-of-laws rules. The parties attorn to the exclusive jurisdiction of the courts located in Toronto, Ontario for any matter not subject to arbitration under Section 19.`,
-        },
-        {
-          type: "p",
-          text: `For Clients domiciled in Quebec: the parties confirm that they have expressly required these Terms and all related documents to be drafted in English. Les parties confirment avoir expressément exigé que les présentes conditions et tous les documents qui s'y rapportent soient rédigés en anglais. A French language version is available on request to ${legalEmail}.`,
-        },
-      ],
-    },
-    {
-      id: "quebec-clients",
-      title: "18. Quebec residents",
-      blocks: [
-        {
-          type: "p",
-          text: "If the Client is domiciled in Quebec, nothing in these Terms is intended to limit any non-waivable right under Quebec law, including under the Quebec Consumer Protection Act (where applicable to consumers) or under Law 25 with respect to personal information.",
+          text: `These Terms are governed by the laws of the Province of Ontario and the federal laws of Canada applicable in Ontario, without regard to conflict-of-laws rules. The parties attorn to the exclusive jurisdiction of the courts located in Hamilton or Toronto, Ontario for any matter not subject to arbitration under Section 18. These Terms are drafted in English.`,
         },
       ],
     },
     {
       id: "disputes",
-      title: "19. Dispute resolution",
+      title: "18. Dispute resolution",
       blocks: [
         {
           type: "p",
-          text: "The parties will attempt to resolve any dispute first by good-faith negotiation between authorized representatives for at least 30 days. If unresolved, the parties will submit the dispute to mediation through a recognized mediation institution in Toronto, Ontario.",
+          text: "The parties will attempt to resolve any dispute first by good-faith negotiation between authorized representatives for at least 30 days. If unresolved, the parties will submit the dispute to mediation through a recognized mediation institution in Ontario.",
         },
         {
           type: "p",
-          text: "If the dispute remains unresolved 30 days after mediation begins, either party may refer it to confidential, binding arbitration administered by the ADR Institute of Canada (ADRIC) under its Arbitration Rules. The seat of arbitration is Toronto, Ontario. The arbitration will be conducted in English. The award is final and binding and may be entered as a judgment in any court of competent jurisdiction. Either party may seek interim or injunctive relief from a court at any time to protect its rights.",
+          text: "If the dispute remains unresolved 30 days after mediation begins, either party may refer it to confidential, binding arbitration administered by the ADR Institute of Canada (ADRIC) under its Arbitration Rules. The seat of arbitration is Hamilton or Toronto, Ontario. The arbitration will be conducted in English. The award is final and binding and may be entered as a judgment in any court of competent jurisdiction. Either party may seek interim or injunctive relief from a court at any time to protect its rights.",
         },
         {
           type: "p",
@@ -648,7 +634,7 @@ export const termsOfService: LegalDoc = {
     },
     {
       id: "miscellaneous",
-      title: "20. Miscellaneous",
+      title: "19. Miscellaneous",
       blocks: [
         {
           type: "ul",
@@ -666,7 +652,7 @@ export const termsOfService: LegalDoc = {
     },
     {
       id: "contact",
-      title: "21. Contact",
+      title: "20. Contact",
       blocks: [
         {
           type: "p",
@@ -678,7 +664,7 @@ export const termsOfService: LegalDoc = {
             `Legal, ${company}`,
             `Email: ${legalEmail}`,
             `Phone: ${phone}`,
-            `Registered office: ${business.registeredOffice.line1}, ${business.registeredOffice.city}, ${business.registeredOffice.province}, ${business.registeredOffice.country}`,
+            `Registered office: ${business.registeredOffice.line1}, ${business.registeredOffice.city}, ${business.registeredOffice.province} ${business.registeredOffice.postalCode}, ${business.registeredOffice.country}`,
           ],
         },
       ],
