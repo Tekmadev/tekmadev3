@@ -8,7 +8,7 @@ export function Footer() {
       <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 lg:px-10">
         <div className="grid grid-cols-1 gap-12 md:grid-cols-12">
           <div className="md:col-span-5">
-            <a href="#top" className="flex items-center gap-3" aria-label={business.name}>
+            <a href="/#top" className="flex items-center gap-3" aria-label={business.name}>
               <Image
                 src="/images/logo/TMD2_logo.svg"
                 alt={`${business.name} mark`}

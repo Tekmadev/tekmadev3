@@ -145,7 +145,7 @@ export function Nav() {
 function Brand({ size = "md" }: { size?: "md" | "lg" }) {
   const dim = size === "lg" ? 44 : 36;
   return (
-    <a href="#top" className="group flex items-center gap-2.5" aria-label={business.name}>
+    <a href="/#top" className="group flex items-center gap-2.5" aria-label={business.name}>
       <Image
         src="/images/logo/TMD2_logo.svg"
         alt={`${business.name} mark`}

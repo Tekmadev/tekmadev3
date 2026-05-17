@@ -37,6 +37,7 @@
   html {
     background: #f5f2eb;
     color: #0d0c0a;
+    scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
