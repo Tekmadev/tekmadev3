@@ -25,8 +25,10 @@ const MONO = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monos
 const BUSINESS = {
   name: "Tekmadev",
   legalName: "Tekmadev Innovation Inc.",
-  address: "40 Courtland Ave, Hamilton, Ontario L9B 1X6, Canada",
   site: "https://tekmadev.com",
+  // SVG rasterized to PNG by Cloudinary (email clients do not render SVG).
+  // w_180 is a 2x asset for a ~60px display size.
+  logo: "https://res.cloudinary.com/dnly2ngqc/image/upload/f_png,w_180/v1756916100/TMD2_logo_dom1iq.png",
 };
 
 function button(label, href) {
@@ -70,7 +72,7 @@ function base({ subject, preheader, heading, body, action, note }) {
         <table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0" style="width:480px;max-width:480px;">
           <tr>
             <td align="center" style="padding:4px 0 24px;">
-              <span style="font-family:${FONT};font-size:21px;font-weight:800;letter-spacing:-0.5px;color:${C.ink};">${BUSINESS.name}<span style="color:${C.gold};">.</span></span>
+              <img src="${BUSINESS.logo}" width="60" height="60" alt="${BUSINESS.name}" style="display:block;border:0;outline:none;text-decoration:none;width:60px;height:60px;">
             </td>
           </tr>
           <tr>
@@ -84,7 +86,6 @@ function base({ subject, preheader, heading, body, action, note }) {
           <tr>
             <td style="padding:24px 8px 8px;text-align:center;font-family:${FONT};font-size:12px;line-height:1.7;color:${C.ink4};">
               <strong style="color:${C.ink3};">${BUSINESS.legalName}</strong><br>
-              ${BUSINESS.address}<br>
               <a href="${BUSINESS.site}" target="_blank" style="color:${C.gold};text-decoration:none;">tekmadev.com</a><br><br>
               This is an automated message about your ${BUSINESS.name} account.
             </td>
