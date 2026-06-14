@@ -103,6 +103,9 @@ function p(text) {
 }
 
 const URL = "{{ .ConfirmationURL }}";
+// Reset goes through our own page so the user can type a new password. The
+// token_hash flow is verified server-side (works across devices).
+const RESET_URL = "{{ .SiteURL }}/admin/reset/confirm?token_hash={{ .TokenHash }}&type=recovery";
 
 const templates = [
   {
@@ -154,7 +157,7 @@ const templates = [
     preheader: "Reset your Tekmadev password.",
     heading: "Reset your password",
     body: p("We received a request to reset your password. Choose a new one with the button below."),
-    action: button("Reset password", URL) + fallbackLink(URL),
+    action: button("Reset password", RESET_URL) + fallbackLink(RESET_URL),
     note: "If you didn't request this, you can safely ignore this email. Your password won't change.",
   },
   {

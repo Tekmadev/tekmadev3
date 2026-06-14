@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { signInAction } from "@/app/admin/actions";
 import { PasswordField } from "@/components/admin/PasswordField";
 
@@ -39,6 +40,13 @@ export default async function AdminLogin({
             Sign in
           </button>
         </form>
+
+        <Link
+          href="/admin/forgot"
+          className="mt-4 inline-block text-sm text-ink-3 transition-colors hover:text-ink"
+        >
+          Forgot password?
+        </Link>
       </div>
     </main>
   );
