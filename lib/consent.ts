@@ -24,6 +24,11 @@ export const CONSENT_REOPEN_EVENT = "tmd-consent-reopen";
 export const CONSENT_TTL_DAYS = 180;
 const TTL_MS = CONSENT_TTL_DAYS * 24 * 60 * 60 * 1000;
 
+const ANON_KEY = "tmd_anon_id";
+/** Bump this when the cookie-policy text materially changes, so the audit trail
+ *  records which version each visitor consented to. */
+export const CONSENT_POLICY_VERSION = "2026-06-14";
+
 type StoredConsent = { choice: Consent; ts: number };
 
 function parse(raw: string | null): StoredConsent | null {
@@ -72,8 +77,72 @@ export function setConsent(choice: Consent) {
   } catch {
     /* storage unavailable */
   }
+  // Best-effort audit log to our own first-party store. Never blocks the UI.
+  try {
+    logConsent(choice);
+  } catch {
+    /* logging must never break the choice */
+  }
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent<Consent>(CONSENT_EVENT, { detail: choice }));
+  }
+}
+
+/**
+ * Send the consent decision to our own /api/consent endpoint for a Law 25
+ * demonstrable-consent audit trail. Uses an anonymous first-party id stored
+ * alongside the choice (the choice itself is strictly necessary). Prefers
+ * sendBeacon so it survives navigation, with a keepalive fetch fallback.
+ */
+function logConsent(choice: Consent) {
+  if (typeof window === "undefined") return;
+
+  let anon = "";
+  try {
+    anon = localStorage.getItem(ANON_KEY) || "";
+    if (!anon) {
+      anon =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `a_${Date.now()}_${Math.round(Math.random() * 1e9)}`;
+      localStorage.setItem(ANON_KEY, anon);
+    }
+  } catch {
+    /* storage unavailable; send without a stable id */
+  }
+
+  let utmSource = "";
+  try {
+    utmSource = new URLSearchParams(window.location.search).get("utm_source") || "";
+  } catch {
+    /* ignore */
+  }
+
+  const data = JSON.stringify({
+    choice,
+    anonymous_id: anon,
+    policy_version: CONSENT_POLICY_VERSION,
+    path: window.location.pathname,
+    utm_source: utmSource,
+  });
+
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon("/api/consent", new Blob([data], { type: "application/json" }));
+      return;
+    }
+  } catch {
+    /* fall through to fetch */
+  }
+  try {
+    void fetch("/api/consent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: data,
+      keepalive: true,
+    });
+  } catch {
+    /* best-effort only */
   }
 }
 
