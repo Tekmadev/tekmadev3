@@ -1,10 +1,10 @@
-# Traffic attribution — how to know where people came from
+# Traffic attribution, how to know where people came from
 
 We use the free **UTM standard**. Add `?utm_...` parameters to any link you share.
 When someone clicks it:
 
 1. **Vercel Web Analytics** records the visit with its source (filter the dashboard
-   by UTM / referrer) — cookieless, no consent banner.
+   by UTM / referrer), cookieless, no consent banner.
 2. Our site stores their source (first-touch + last-touch) in the browser and
    **stamps every booked call with it**, firing a `booking` event in Vercel
    Analytics tagged with `utm_source`, `utm_medium`, `utm_campaign`. So you see
@@ -13,7 +13,7 @@ When someone clicks it:
 No extra tool to buy. Implemented in `lib/attribution.ts` + `components/AttributionTracker.tsx`
 and the Cal.com embed (`components/BookingEmbed.tsx`).
 
-## The convention (always lowercase, no spaces — use `_`)
+## The convention (always lowercase, no spaces, use `_`)
 
 | Param | Meaning | Examples |
 |---|---|---|
@@ -44,13 +44,13 @@ and the Cal.com embed (`components/BookingEmbed.tsx`).
 **Email signature**
 `https://tekmadev.com/?utm_source=email&utm_medium=signature&utm_campaign=outreach`
 
-**Paid ads** — Google Ads auto-tags clicks (we also capture `gclid`); for manual
+**Paid ads**, Google Ads auto-tags clicks (we also capture `gclid`); for manual
 tagging use `utm_medium=cpc`. Meta ads: `utm_medium=paid_social` and you can use
 Meta's dynamic `utm_campaign={{campaign.name}}`.
 
 ## Tips
 - Make a **different QR code per place** (one for cards, one for flyers) by
-  changing `utm_campaign` — then you know which print piece worked.
+  changing `utm_campaign`, then you know which print piece worked.
 - Keep `utm_source` values consistent (always `instagram`, never `Instagram` or
   `IG`) so the dashboard groups them cleanly.
 - Untagged visits show up as `direct` (typed the URL) or `referral` (a link from

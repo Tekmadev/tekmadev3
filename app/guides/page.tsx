@@ -10,12 +10,12 @@ import { crumbsJsonLd } from "@/lib/seo";
 export const metadata: Metadata = {
   title: "Guides: how to get more clients for your service business",
   description:
-    "Plain-English guides on getting more clients — responding faster, never missing a call, following up, and choosing the right kind of help. Or skip the reading and let us run it.",
+    "Plain-English guides on getting more clients: responding faster, never missing a call, following up, and choosing the right kind of help. Or skip the reading and let us run it.",
   alternates: { canonical: `${business.url}/guides` },
   openGraph: {
     title: "Guides: how to get more clients for your service business",
     description:
-      "Plain-English guides on getting more clients — and the done-for-you system behind them.",
+      "Plain-English guides on getting more clients, and the done-for-you system behind them.",
     url: `${business.url}/guides`,
     type: "website",
   },
@@ -33,7 +33,7 @@ export default function GuidesIndex() {
       <div className="mx-auto max-w-3xl">
         <p className="eyebrow">Guides</p>
         <h1 className="display-xl mt-6 text-balance text-4xl sm:text-5xl lg:text-6xl">
-          How to get more clients — the playbook
+          How to get more clients: the playbook
         </h1>
         <p className="mt-6 text-pretty text-lg leading-relaxed text-ink-2">
           Straight answers on what actually brings a service business more clients: respond

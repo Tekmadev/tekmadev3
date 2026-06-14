@@ -41,7 +41,7 @@ export function ConsentBanner() {
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 rounded-2xl border border-line-strong bg-surface/95 p-5 shadow-[0_20px_60px_-30px_rgba(13,12,10,0.45)] backdrop-blur-xl sm:flex-row sm:items-center sm:gap-6 sm:p-6">
         <p className="text-sm leading-relaxed text-ink-2">
           We use cookies to understand how visitors use our site and make it better. You can
-          accept or decline — see our{" "}
+          accept or decline. See our{" "}
           <Link href="/cookies" className="text-ink underline decoration-line-strong underline-offset-2 hover:text-gold">
             Cookie Policy
           </Link>

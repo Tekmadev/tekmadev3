@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     nocache: true,
     googleBot: { index: false, follow: false },
   },
-  // No canonical — this page should not be advertised as canonical anywhere.
+  // No canonical. This page should not be advertised as canonical anywhere.
   alternates: { canonical: undefined },
 };
 

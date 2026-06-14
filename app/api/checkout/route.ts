@@ -7,7 +7,7 @@ import { getTier, STRIPE_PRICE_ENV, type PaidTierId } from "@/config/pricing";
 export const runtime = "nodejs";
 
 const NOT_CONFIGURED =
-  "Online checkout isn't available yet — please book a call and we'll get you set up.";
+  "Online checkout isn't available yet. Please book a call and we'll get you set up.";
 
 /**
  * Creates a Stripe Checkout Session for a paid tier and returns its URL.
@@ -15,7 +15,7 @@ const NOT_CONFIGURED =
  *
  * Everything degrades gracefully: if the secret key or a tier's price IDs are
  * missing, we return a friendly 503 and the page tells the visitor to book a
- * call — nothing throws, the page never breaks.
+ * call. Nothing throws, the page never breaks.
  */
 export async function POST(req: NextRequest) {
   const secret = process.env.STRIPE_SECRET_KEY;

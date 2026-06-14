@@ -1,5 +1,5 @@
 /**
- * Private pricing tiers — rendered ONLY on the unlisted /start page.
+ * Private pricing tiers, rendered ONLY on the unlisted /start page.
  *
  * ⚠️  Pricing is private. The /start page is noindex, is not linked from the
  *     nav / footer / sitemap / any internal link, and carries no price schema.
@@ -24,9 +24,9 @@ export type PricingTier = {
   id: TierId;
   name: string;
   blurb: string;
-  /** One-time setup fee in whole USD. PLACEHOLDER — set the real number. `null` = custom/quote. */
+  /** One-time setup fee in whole USD. PLACEHOLDER, set the real number. `null` = custom/quote. */
   setupFee: number | null;
-  /** Monthly subscription in whole USD. PLACEHOLDER — set the real number. `null` = custom/quote. */
+  /** Monthly subscription in whole USD. PLACEHOLDER, set the real number. `null` = custom/quote. */
   monthly: number | null;
   /** Short line under the price (e.g. cadence note). */
   priceNote?: string;
@@ -52,7 +52,7 @@ export const CURRENCY = "USD";
  */
 export const PROMO = {
   active: true,
-  text: "Launch offer — a free professional website (built for SEO/GEO) is included on every plan.",
+  text: "Launch offer: a free professional website (built for SEO/GEO) is included on every plan.",
 };
 
 export const pricingTiers: PricingTier[] = [
@@ -60,13 +60,13 @@ export const pricingTiers: PricingTier[] = [
     id: "convert",
     name: "Convert",
     blurb:
-      "The capture-and-convert system. Stop losing leads to missed calls and slow replies — every inquiry answered, qualified, and booked, automatically.",
+      "The capture-and-convert system. Stop losing leads to missed calls and slow replies. Every inquiry answered, qualified, and booked, automatically.",
     setupFee: 1500, // PLACEHOLDER
     monthly: 997, // PLACEHOLDER
     priceNote: "setup, then monthly",
     guarantee: false,
     features: [
-      "24/7 AI receptionist — answers every call, day or night",
+      "24/7 AI receptionist that answers every call, day or night",
       "Missed-call text-back so no lead goes cold",
       "Unified inbox: calls, SMS, email & web chat in one place",
       "Online booking wired straight to your calendar",
@@ -82,7 +82,7 @@ export const pricingTiers: PricingTier[] = [
     id: "grow",
     name: "Grow",
     blurb:
-      "The full done-for-you growth engine. Everything that captures and converts, plus the marketing that fills the top of the funnel — we run all of it.",
+      "The full done-for-you growth engine. Everything that captures and converts, plus the marketing that fills the top of the funnel. We run all of it.",
     setupFee: 2500, // PLACEHOLDER
     monthly: 1997, // PLACEHOLDER
     priceNote: "setup, then monthly",
@@ -106,7 +106,7 @@ export const pricingTiers: PricingTier[] = [
     id: "lets-talk",
     name: "Let's Talk",
     blurb:
-      "Custom, enterprise-grade growth for multi-location brands and teams that need the best of everything — scoped one-to-one.",
+      "Custom, enterprise-grade growth for multi-location brands and teams that need the best of everything, scoped one-to-one.",
     setupFee: null,
     monthly: null,
     priceNote: "custom scope",
@@ -126,7 +126,7 @@ export const pricingTiers: PricingTier[] = [
 
 /**
  * Maps each paid tier to the env var names holding its Stripe price IDs.
- * Read SERVER-SIDE only (in /api/checkout) — never expose these values to the client.
+ * Read SERVER-SIDE only (in /api/checkout). Never expose these values to the client.
  */
 export const STRIPE_PRICE_ENV: Record<PaidTierId, { monthly: string; setup: string }> = {
   convert: { monthly: "STRIPE_PRICE_CONVERT", setup: "STRIPE_SETUP_CONVERT" },

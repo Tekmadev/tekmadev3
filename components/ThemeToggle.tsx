@@ -29,7 +29,7 @@ export function ThemeToggle({ className }: { className?: string }) {
     try {
       localStorage.setItem("theme", next);
     } catch {
-      /* storage unavailable — toggle still works for the session */
+      /* storage unavailable, toggle still works for the session */
     }
     window.dispatchEvent(new CustomEvent<Theme>("tmd-theme", { detail: next }));
   }

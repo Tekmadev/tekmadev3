@@ -34,13 +34,13 @@ export function PricingTiers() {
     if (status === "success") {
       setBanner({
         kind: "success",
-        text: "You're in — check your email for next steps. We'll be in touch within one business day.",
+        text: "You're in. Check your email for next steps. We'll be in touch within one business day.",
       });
       captureEvent("checkout_success", attributionProps(getAttribution()));
     } else if (status === "cancelled") {
       setBanner({
         kind: "cancelled",
-        text: "Checkout cancelled — no charge was made. Pick a plan whenever you're ready.",
+        text: "Checkout cancelled. No charge was made. Pick a plan whenever you're ready.",
       });
     }
   }, []);
@@ -80,7 +80,7 @@ export function PricingTiers() {
           <span className="gold-gradient-text">fills your calendar.</span>
         </h1>
         <p className="mt-6 text-lg leading-snug text-ink-2">
-          One team runs all of it — the AI receptionist, the follow-up, the website, the marketing.
+          One team runs all of it: the AI receptionist, the follow-up, the website, the marketing.
           You show up to the booked calls.
         </p>
       </div>
@@ -129,7 +129,7 @@ export function PricingTiers() {
 
       <p className="mx-auto mt-12 max-w-2xl text-center text-xs leading-relaxed text-ink-4">
         Prices in {CURRENCY}. A short qualification call confirms fit before kickoff. Cancel any
-        month — no long-term contract.
+        month, no long-term contract.
       </p>
     </Section>
   );
@@ -187,7 +187,7 @@ function TierCard({
       {tier.guarantee && (
         <div className="mt-5 flex items-center gap-2 rounded-xl border border-gold/30 bg-gold/[0.06] px-3.5 py-2.5 text-sm text-ink-2">
           <ShieldCheck className="h-4 w-4 shrink-0 text-gold-deep" />
-          <span>30 booked calls in 60 days — or you don&apos;t pay.</span>
+          <span>30 booked calls in 60 days. Or you don&apos;t pay.</span>
         </div>
       )}
 

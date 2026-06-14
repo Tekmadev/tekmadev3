@@ -10,11 +10,11 @@
  *    and fires a Vercel Analytics event so bookings are attributable by channel.
  *
  * Aggregate visit sources (Instagram vs ads vs organic) are ALSO captured
- * automatically by Vercel Web Analytics from the UTM-tagged URL + referrer —
- * this module exists to attribute the high-value event (a booked call), not
+ * automatically by Vercel Web Analytics from the UTM-tagged URL + referrer.
+ * This module exists to attribute the high-value event (a booked call), not
  * just a pageview.
  *
- * UTM CONVENTION (lowercase, no spaces — see docs/attribution.md for ready links):
+ * UTM CONVENTION (lowercase, no spaces; see docs/attribution.md for ready links):
  *   utm_source   where it came from   e.g. instagram, google, business_card
  *   utm_medium   the channel type     e.g. social, cpc, qr, email, organic
  *   utm_campaign the specific push    e.g. bio_link, spring_promo, networking
@@ -58,7 +58,7 @@ function write(key: string, value: Attribution) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    /* storage unavailable — skip silently */
+    /* storage unavailable, skip silently */
   }
 }
 
