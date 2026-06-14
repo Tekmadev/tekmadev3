@@ -4,6 +4,7 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
 import { JsonLd } from "@/components/JsonLd";
 import { AttributionTracker } from "@/components/AttributionTracker";
+import { PageviewTracker } from "@/components/PageviewTracker";
 import { PostHogInit } from "@/components/PostHogInit";
 import { ConsentBanner } from "@/components/ConsentBanner";
 import { organizationJsonLd, personJsonLd, websiteJsonLd } from "@/lib/seo";
@@ -124,6 +125,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd data={websiteJsonLd} />
         {children}
         <AttributionTracker />
+        <PageviewTracker />
         <PostHogInit />
         <Analytics />
         <ConsentBanner />
