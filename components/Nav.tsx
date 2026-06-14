@@ -6,6 +6,7 @@ import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "motion/
 import { Menu, X, Phone } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { business, navLinks } from "@/config/site";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
@@ -55,6 +56,7 @@ export function Nav() {
             </nav>
 
             <div className="hidden items-center gap-2 md:flex">
+              <ThemeToggle />
               <a
                 href={`tel:${business.phone.tel}`}
                 aria-label={`Call ${business.phone.display}`}
@@ -64,20 +66,23 @@ export function Nav() {
                 <span className="hidden lg:inline">{business.phone.display}</span>
               </a>
               <a
-                href="#book"
+                href="/#book"
                 className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-sm font-medium text-bg transition-all duration-300 hover:bg-ink-2"
               >
                 Book a call
               </a>
             </div>
 
-            <button
-              onClick={() => setOpen(true)}
-              aria-label="Open menu"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line-strong md:hidden"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-2 md:hidden">
+              <ThemeToggle />
+              <button
+                onClick={() => setOpen(true)}
+                aria-label="Open menu"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line-strong"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -93,13 +98,16 @@ export function Nav() {
             <div className="flex h-full flex-col px-6 pt-6">
               <div className="flex items-center justify-between">
                 <Brand size="lg" />
-                <button
-                  onClick={() => setOpen(false)}
-                  aria-label="Close menu"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line-strong"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <ThemeToggle />
+                  <button
+                    onClick={() => setOpen(false)}
+                    aria-label="Close menu"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line-strong"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
 
               <nav className="mt-14 flex flex-col gap-3">
@@ -127,7 +135,7 @@ export function Nav() {
                   {business.phone.display}
                 </a>
                 <a
-                  href="#book"
+                  href="/#book"
                   onClick={() => setOpen(false)}
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-ink px-6 py-4 text-base font-medium text-bg"
                 >

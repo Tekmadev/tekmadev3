@@ -96,7 +96,7 @@ export const privacyPolicy: LegalDoc = {
           items: [
             "Booking platform: when you schedule an audit call through Cal.com, we receive the information you provide to Cal.com (name, email, scheduling details).",
             "Public sources: publicly available business information (company size, industry, website) used for qualification.",
-            "Service providers: our sub-processors may relay information necessary to provide the Growth System (for example, GoHighLevel relays CRM events to our dashboard).",
+            "Service providers: our sub-processors may relay information necessary to provide the Growth System (for example, our CRM and automation platform relays CRM events to our dashboard).",
           ],
         },
       ],
@@ -148,7 +148,7 @@ export const privacyPolicy: LegalDoc = {
         {
           type: "ul",
           items: [
-            "Service providers and sub-processors who help us deliver the Growth System (for example, GoHighLevel as the customer relationship platform, Vercel and Cloudflare for hosting and content delivery, Cal.com for booking, payment processors for billing, and analytics or productivity vendors). A current list is available on request.",
+            "Service providers and sub-processors who help us deliver the Growth System (for example, our customer relationship and automation platform provider, Vercel and Cloudflare for hosting and content delivery, Cal.com for booking, payment processors for billing, and analytics or productivity vendors). A current list is available on request.",
             "Professional advisors (lawyers, accountants, auditors) under duties of confidentiality.",
             "Government, regulatory, or law enforcement authorities where we are legally required, or to protect our rights, property, or safety, or those of our clients or the public.",
             "Successors or assignees in connection with a merger, acquisition, financing, reorganization, or sale of all or part of our business. We will use commercially reasonable efforts to require the recipient to honour this Privacy Policy.",
@@ -524,7 +524,7 @@ export const termsOfService: LegalDoc = {
       blocks: [
         {
           type: "p",
-          text: "The Growth System integrates with third-party services (including GoHighLevel, Cal.com, voice carriers, payment processors, and ad platforms). The Client is responsible for accepting the applicable third-party terms and for maintaining the credentials and authorizations required for integration. Tekmadev is not responsible for the acts, omissions, or service availability of any third-party provider.",
+          text: "The Growth System integrates with third-party services (including our CRM and automation platform, Cal.com, voice carriers, payment processors, and ad platforms). The Client is responsible for accepting the applicable third-party terms and for maintaining the credentials and authorizations required for integration. Tekmadev is not responsible for the acts, omissions, or service availability of any third-party provider.",
         },
       ],
     },
@@ -716,7 +716,7 @@ export const cookiePolicy: LegalDoc = {
         },
         {
           type: "p",
-          text: "Help us understand aggregate traffic patterns. As of the effective date of this policy, no third-party analytics scripts are loaded by our website. If we add analytics in the future, we will update this policy and obtain the required consents.",
+          text: "Help us understand how the site is used. Vercel Web Analytics runs without cookies and measures aggregate traffic only. With your consent, we also use PostHog to understand on-page behaviour such as page views, clicks, and navigation paths; PostHog sets first-party cookies once you accept. We request your consent through a banner when you first visit, and you can change your choice at any time using the 'Cookie settings' link in our footer. If you decline, no analytics cookies are set and PostHog does not run.",
         },
         {
           type: "h3",
@@ -730,11 +730,15 @@ export const cookiePolicy: LegalDoc = {
     },
     {
       id: "control",
-      title: "3. How to control cookies",
+      title: "3. Your choices and how to control cookies",
       blocks: [
         {
           type: "p",
-          text: "You can control or delete cookies through your browser settings. Most browsers let you refuse third-party cookies, clear cookies on close, or be alerted before a cookie is stored. Disabling cookies may affect the functioning of some parts of our site.",
+          text: "When you first visit, we show a consent banner. Non-essential (analytics) cookies are not set unless you select 'Accept'. If you select 'Decline', they are not set. You can change your decision at any time using the 'Cookie settings' link in the footer of any page; choosing to decline there will stop further analytics cookies. Strictly necessary cookies and cookieless aggregate analytics do not require consent.",
+        },
+        {
+          type: "p",
+          text: "You can also control or delete cookies through your browser settings. Most browsers let you refuse third-party cookies, clear cookies on close, or be alerted before a cookie is stored. Disabling cookies may affect the functioning of some parts of our site.",
         },
       ],
     },

@@ -47,7 +47,7 @@ export const business = {
   },
   legalDates: {
     effective: "2026-05-16",
-    lastUpdated: "2026-05-16",
+    lastUpdated: "2026-06-13",
   },
   phone: {
     tel: _phoneTel,
@@ -88,7 +88,7 @@ export const brand = {
     "web development agency",
     "app development agency",
     "AI development agency",
-    "GoHighLevel implementation",
+    "marketing automation implementation",
     "CRM automation",
     "missed call text back",
     "lead follow-up automation",
@@ -103,7 +103,7 @@ export const brand = {
     "Mobile app development",
     "AI development",
     "Performance-based marketing",
-    "GoHighLevel implementation",
+    "Marketing automation implementation",
     "CRM automation",
   ],
   promises: [
@@ -116,10 +116,13 @@ export const brand = {
 };
 
 /**
- * Mirror of the @theme block in app/globals.css.
- * Tailwind utilities still read the CSS vars; this object is only for
- * places that cannot read CSS vars: Cal embed cssVarsPerTheme, OG image,
- * viewport.themeColor, and manifest theme_color.
+ * Mirror of the @theme block in app/globals.css (light) and the `html.dark`
+ * block (dark). Tailwind utilities still read the CSS vars; these objects are
+ * only for places that cannot read CSS vars: Cal embed cssVarsPerTheme, OG
+ * image, viewport.themeColor, and manifest theme_color.
+ *
+ * If you change a color, update BOTH this file and the matching block in
+ * app/globals.css so the two stay in sync.
  */
 export const theme = {
   bg: "#f5f2eb",
@@ -144,6 +147,31 @@ export const theme = {
   goldTint: "#f4ebd6",
 
   signal: "#b8392c",
+};
+
+export const themeDark: typeof theme = {
+  bg: "#0e0d0b",
+  bg2: "#16140f",
+  bg3: "#080706",
+  surface: "#1a1712",
+
+  ink: "#f4f0e8",
+  ink2: "#d6d0c4",
+  ink3: "#a39d8f",
+  ink4: "#78736a",
+  ink5: "#56524b",
+
+  line: "rgba(244,240,232,0.1)",
+  lineStrong: "rgba(244,240,232,0.16)",
+  lineSoft: "rgba(244,240,232,0.06)",
+
+  gold: "#c89c65",
+  goldDeep: "#a8814f",
+  goldMid: "#d7b07a",
+  goldSoft: "#e8d1a6",
+  goldTint: "#221b10",
+
+  signal: "#d8503f",
 };
 
 export const heroStats = [
@@ -286,7 +314,7 @@ export const faqs: FAQ[] = [
   },
   {
     q: "What’s the tech stack, and do I own it?",
-    a: "We build on GoHighLevel with a custom AI voice agent layer, Next.js funnels, and integrations to your existing tools. You own the stack. If you ever leave, the system stays with you.",
+    a: "We build on a proprietary growth stack: a custom AI voice agent layer, our automation and CRM engine, Next.js funnels, and integrations to your existing tools. You own the stack. If you ever leave, the system stays with you.",
   },
 ];
 
@@ -299,26 +327,28 @@ export const trustSignals: TrustSignal[] = [
 ];
 
 export const navLinks = [
-  { href: "#system", label: "The System" },
-  { href: "#proof", label: "Proof" },
-  { href: "#pricing", label: "Pricing" },
-  { href: "#faq", label: "FAQ" },
+  { href: "/#system", label: "The System" },
+  { href: "/#proof", label: "Proof" },
+  { href: "/#pricing", label: "Pricing" },
+  { href: "/guides", label: "Guides" },
+  { href: "/#faq", label: "FAQ" },
 ];
 
 export const footerColumns = [
   {
     label: "Tekmadev",
     items: [
-      { label: "The System", href: "#system" },
-      { label: "Proof", href: "#proof" },
-      { label: "Pricing", href: "#pricing" },
-      { label: "FAQ", href: "#faq" },
+      { label: "The System", href: "/#system" },
+      { label: "Proof", href: "/#proof" },
+      { label: "Pricing", href: "/#pricing" },
+      { label: "Guides", href: "/guides" },
+      { label: "FAQ", href: "/#faq" },
     ],
   },
   {
     label: "Connect",
     items: [
-      { label: "Book a call", href: "#book" },
+      { label: "Book a call", href: "/#book" },
       { label: "Email us", href: `mailto:${_email}` },
       { label: "Call us", href: `tel:${_phoneTel}` },
     ],

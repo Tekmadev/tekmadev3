@@ -1,12 +1,39 @@
 import type { NextConfig } from "next";
 
 /**
+ * Content-Security-Policy. Allowlists exactly the third parties we load:
+ *  - Cal.com (booking embed: script + iframe + API)
+ *  - PostHog (cookieless analytics: assets + ingest, US + EU hosts)
+ *  - Vercel Analytics (same-origin /_vercel/insights + vitals host)
+ *  - Stripe (checkout: js + iframe + form post) — preloaded for the pricing flow
+ * Fonts are self-hosted by next/font, so no Google Fonts host is needed.
+ * 'unsafe-inline' is required for the pre-paint theme script, JSON-LD blocks,
+ * Next.js hydration scripts, and Tailwind/Framer inline styles.
+ */
+const csp = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self' 'unsafe-inline' https://app.cal.com https://*.cal.com https://js.stripe.com https://us-assets.i.posthog.com https://us.i.posthog.com https://eu-assets.i.posthog.com https://eu.i.posthog.com",
+  "connect-src 'self' https://*.cal.com https://us.i.posthog.com https://us-assets.i.posthog.com https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.posthog.com https://vitals.vercel-insights.com https://*.vercel-insights.com",
+  "frame-src 'self' https://*.cal.com https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com",
+  "form-action 'self' https://checkout.stripe.com",
+  "worker-src 'self' blob:",
+  "upgrade-insecure-requests",
+].join("; ");
+
+/**
  * Baseline security headers applied to every response.
- * Content-Security-Policy is intentionally NOT set here yet, because it needs
- * to be tuned against the live deployment (Cal.com, Google Fonts, OG images,
- * Vercel Analytics when added) to avoid false-positive blocks.
  */
 const securityHeaders = [
+  {
+    key: "Content-Security-Policy",
+    value: csp,
+  },
   // Force HTTPS for 2 years on this domain and all subdomains. `preload` makes
   // the domain eligible for the browser HSTS preload list at hstspreload.org.
   {

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Phone, Mail } from "lucide-react";
 import { business, footerColumns, footerCopy } from "@/config/site";
+import { CookieSettingsButton } from "@/components/CookieSettingsButton";
 
 export function Footer() {
   return (
@@ -53,7 +54,10 @@ export function Footer() {
           <p>
             © {new Date().getFullYear()} {business.legalName}
           </p>
-          <p className="font-mono uppercase tracking-[0.18em]">{footerCopy.signoff}</p>
+          <div className="flex items-center gap-5">
+            <CookieSettingsButton />
+            <p className="font-mono uppercase tracking-[0.18em]">{footerCopy.signoff}</p>
+          </div>
         </div>
       </div>
     </footer>

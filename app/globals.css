@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Class-based dark mode. Token overrides + any `dark:` utilities activate when
+   <html> has the `dark` class (toggled in components/ThemeToggle.tsx, set
+   pre-paint by the inline script in app/layout.tsx). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-bg: #f5f2eb;
   --color-bg-2: #fbf9f4;
@@ -34,26 +39,59 @@
     color-scheme: light;
   }
 
+  /* DARK THEME TOKENS — single source of truth for dark-mode colors.
+     Mirrors the light @theme block above (same variable names, dark values).
+     The TS mirror for non-CSS contexts (Cal embed, OG image, theme-color)
+     lives in config/site.ts as `themeDark`. Edit both together. */
+  html.dark {
+    color-scheme: dark;
+
+    --color-bg: #0e0d0b;
+    --color-bg-2: #16140f;
+    --color-bg-3: #080706;
+    --color-surface: #1a1712;
+
+    --color-ink: #f4f0e8;
+    --color-ink-2: #d6d0c4;
+    --color-ink-3: #a39d8f;
+    --color-ink-4: #78736a;
+    --color-ink-5: #56524b;
+
+    --color-line: rgba(244, 240, 232, 0.1);
+    --color-line-strong: rgba(244, 240, 232, 0.16);
+    --color-line-soft: rgba(244, 240, 232, 0.06);
+
+    --color-gold: #c89c65;
+    --color-gold-deep: #a8814f;
+    --color-gold-mid: #d7b07a;
+    --color-gold-soft: #e8d1a6;
+    --color-gold-tint: #221b10;
+
+    --color-signal: #d8503f;
+  }
+
   html {
-    background: #f5f2eb;
-    color: #0d0c0a;
+    background: var(--color-bg);
+    color: var(--color-ink);
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   body {
-    background: #f5f2eb;
-    color: #0d0c0a;
+    background: var(--color-bg);
+    color: var(--color-ink);
     font-family: var(--font-sans);
     overflow-x: hidden;
     font-feature-settings: "ss01", "ss02", "cv01", "cv11";
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   ::selection {
-    background: #0d0c0a;
-    color: #f5f2eb;
+    background: var(--color-ink);
+    color: var(--color-bg);
   }
 
   ::-webkit-scrollbar {
@@ -66,10 +104,17 @@
   ::-webkit-scrollbar-thumb {
     background: rgba(13, 12, 10, 0.18);
     border-radius: 5px;
-    border: 2px solid #f5f2eb;
+    border: 2px solid var(--color-bg);
   }
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(13, 12, 10, 0.32);
+  }
+  html.dark ::-webkit-scrollbar-thumb {
+    background: rgba(244, 240, 232, 0.18);
+    border: 2px solid var(--color-bg);
+  }
+  html.dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(244, 240, 232, 0.32);
   }
 }
 
@@ -157,6 +202,18 @@
 
 .marquee-track {
   animation: marquee 40s linear infinite;
+}
+
+/* Dark-mode tweaks for effects that use hardcoded colors / blend modes. */
+html.dark .gold-gradient-text {
+  background: linear-gradient(135deg, #d7b07a 0%, #a8814f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+html.dark .grain {
+  mix-blend-mode: screen;
+  opacity: 0.05;
 }
 
 @media (prefers-reduced-motion: reduce) {

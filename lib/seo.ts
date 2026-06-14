@@ -1,4 +1,5 @@
 import { business, brand, faqs, systemSteps } from "@/config/site";
+import { GUIDE_PUBLISHED, type Guide } from "@/lib/content";
 
 export const SITE_URL = business.url;
 export const SITE_NAME = business.name;
@@ -12,21 +13,47 @@ const areaServedSchema = business.areasServed.map((a) => ({
 
 const areaServedCodes = business.areasServed.map((a) => a.code);
 
+const postalAddress = {
+  "@type": "PostalAddress",
+  streetAddress: business.registeredOffice.line1,
+  addressLocality: business.registeredOffice.city,
+  addressRegion: "ON",
+  postalCode: business.registeredOffice.postalCode,
+  addressCountry: "CA",
+};
+
+// Built from the declared social handle so it stays in sync with config/site.ts.
+const sameAs = [`https://x.com/${business.social.twitter.replace(/^@/, "")}`];
+
+export const personJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "@id": `${SITE_URL}#founder`,
+  name: business.privacyOfficer.name,
+  jobTitle: "Founder",
+  worksFor: { "@id": `${SITE_URL}#organization` },
+  url: SITE_URL,
+};
+
 export const organizationJsonLd = {
   "@context": "https://schema.org",
-  "@type": "Organization",
+  "@type": ["Organization", "ProfessionalService"],
   "@id": `${SITE_URL}#organization`,
   name: SITE_NAME,
   legalName: LEGAL_NAME,
   url: SITE_URL,
   logo: `${SITE_URL}/images/logo/TMD2_logo.svg`,
+  image: `${SITE_URL}/images/logo/TMD2_logo.svg`,
   description: SITE_DESCRIPTION,
   foundingDate: String(business.foundingYear),
+  founder: { "@id": `${SITE_URL}#founder` },
   slogan: brand.slogan,
   knowsAbout: brand.knowsAbout,
   areaServed: areaServedSchema,
+  address: postalAddress,
   telephone: business.phone.schemaOrg,
   email: business.email,
+  sameAs,
   contactPoint: [
     {
       "@type": "ContactPoint",
@@ -152,3 +179,48 @@ export const breadcrumbJsonLd = {
     },
   ],
 };
+
+// ---- Guide (pillar/cluster) page schema builders ----
+
+export function guideArticleJsonLd(guide: Guide, path: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": `${SITE_URL}${path}#article`,
+    headline: guide.h1,
+    description: guide.metaDescription,
+    inLanguage: "en-US",
+    isPartOf: { "@id": `${SITE_URL}#website` },
+    about: { "@id": `${SITE_URL}#service` },
+    author: { "@id": `${SITE_URL}#founder` },
+    publisher: { "@id": `${SITE_URL}#organization` },
+    datePublished: GUIDE_PUBLISHED,
+    dateModified: GUIDE_PUBLISHED,
+    mainEntityOfPage: `${SITE_URL}${path}`,
+  };
+}
+
+export function faqPageJsonLd(items: { q: string; a: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
+}
+
+export function crumbsJsonLd(items: { name: string; url: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((it, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: it.name,
+      item: it.url,
+    })),
+  };
+}

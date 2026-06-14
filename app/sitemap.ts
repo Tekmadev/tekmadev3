@@ -1,9 +1,8 @@
 import type { MetadataRoute } from "next";
 import { business } from "@/config/site";
+import { guideSlugs } from "@/lib/content";
 
 const SITE_URL = business.url;
-
-const homeAnchors = ["system", "proof", "pricing", "faq", "book"];
 
 const legalRoutes = ["/privacy", "/terms", "/cookies"];
 
@@ -16,8 +15,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 1.0,
     },
-    ...homeAnchors.map((s) => ({
-      url: `${SITE_URL}/#${s}`,
+    {
+      url: `${SITE_URL}/guides`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    ...guideSlugs.map((slug) => ({
+      url: `${SITE_URL}/guides/${slug}`,
       lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.7,

@@ -40,7 +40,7 @@ ${business.name} (legal name: ${business.legalName}) is a performance-based grow
 
 ## Technology stack
 
-- GoHighLevel as the operating system
+- A proprietary automation and CRM engine as the operating system
 - Custom AI voice agent layer
 - Next.js funnels hosted on Vercel
 - Integrations to client CRM, calendar, phone, and ad accounts

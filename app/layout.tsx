@@ -1,9 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next";
 import { JsonLd } from "@/components/JsonLd";
-import { organizationJsonLd, websiteJsonLd } from "@/lib/seo";
-import { brand, business, theme } from "@/config/site";
+import { AttributionTracker } from "@/components/AttributionTracker";
+import { PostHogInit } from "@/components/PostHogInit";
+import { ConsentBanner } from "@/components/ConsentBanner";
+import { organizationJsonLd, personJsonLd, websiteJsonLd } from "@/lib/seo";
+import { brand, business, theme, themeDark } from "@/config/site";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -27,10 +31,13 @@ const geistMono = Geist_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: theme.bg,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: theme.bg },
+    { media: "(prefers-color-scheme: dark)", color: themeDark.bg },
+  ],
   width: "device-width",
   initialScale: 1,
-  colorScheme: "light",
+  colorScheme: "light dark",
 };
 
 export const metadata: Metadata = {
@@ -105,9 +112,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${geist.variable} ${geistDisplay.variable} ${geistMono.variable}`}
     >
       <body className="bg-bg text-ink antialiased">
+        {/* Set theme before paint to avoid a flash. Default is light; only
+            applies dark if the visitor previously chose it. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(localStorage.getItem('theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}})();`,
+          }}
+        />
         <JsonLd data={organizationJsonLd} />
+        <JsonLd data={personJsonLd} />
         <JsonLd data={websiteJsonLd} />
         {children}
+        <AttributionTracker />
+        <PostHogInit />
+        <Analytics />
+        <ConsentBanner />
       </body>
     </html>
   );
