@@ -18,6 +18,7 @@ type PlanRow = {
 export type PlanFull = PlanRow & {
   name: string;
   stripe_product_id: string | null;
+  stripe_setup_product_id: string | null;
   stripe_monthly_price_id: string | null;
   stripe_setup_price_id: string | null;
 };

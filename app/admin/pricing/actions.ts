@@ -54,11 +54,13 @@ export async function updatePlanAction(formData: FormData) {
         monthlyCents,
         existing: {
           productId: plan.stripe_product_id,
+          setupProductId: plan.stripe_setup_product_id,
           monthlyPriceId: plan.stripe_monthly_price_id,
           setupPriceId: plan.stripe_setup_price_id,
         },
       });
       update.stripe_product_id = synced.productId;
+      update.stripe_setup_product_id = synced.setupProductId;
       update.stripe_monthly_price_id = synced.monthlyPriceId;
       update.stripe_setup_price_id = synced.setupPriceId;
     } catch (err) {
