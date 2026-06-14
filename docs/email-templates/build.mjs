@@ -141,9 +141,7 @@ const templates = [
     subject: "Confirm your new email address",
     preheader: "Confirm your new email address for Tekmadev.",
     heading: "Confirm your new email",
-    body:
-      p("We received a request to change the email on your Tekmadev account from <strong style=\"color:" + C.ink + ";\">{{ .Email }}</strong> to <strong style=\"color:" + C.ink + ";\">{{ .NewEmail }}</strong>.") +
-      p("Confirm the change with the button below."),
+    body: p("We received a request to change the email address on your Tekmadev account. Confirm the change with the button below."),
     action: button("Confirm new email", URL) + fallbackLink(URL),
     note: "If you didn't request this change, please contact us right away at hi@tekmadev.com.",
   },
