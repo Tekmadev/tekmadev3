@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { PricingTiers } from "@/components/sections/PricingTiers";
+import { getDisplayTiers } from "@/lib/pricing-data";
 
 /**
- * Private, unlisted plans + checkout page.
- *
- * Intentionally NOT in the sitemap, robots is set to noindex, and it is not
- * linked from the nav, footer, or any internal page. Reachable only via the
- * direct link the founder shares. No price schema is emitted here so the
- * numbers never enter any machine-readable / scrapable surface.
+ * Private, unlisted plans + checkout page. noindex, not in the sitemap or any
+ * internal link, no price schema. Prices are read live from the `plans` table
+ * (editable in the admin dashboard), so this renders dynamically.
  */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Your plan",
   description: "Private plans and checkout for Tekmadev growth partners.",
@@ -20,15 +20,15 @@ export const metadata: Metadata = {
     nocache: true,
     googleBot: { index: false, follow: false },
   },
-  // No canonical. This page should not be advertised as canonical anywhere.
   alternates: { canonical: undefined },
 };
 
-export default function StartPage() {
+export default async function StartPage() {
+  const tiers = await getDisplayTiers();
   return (
     <main className="relative min-h-screen bg-bg text-ink">
       <Nav />
-      <PricingTiers />
+      <PricingTiers tiers={tiers} />
       <Footer />
     </main>
   );

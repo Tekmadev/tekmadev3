@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import Stripe from "stripe";
 import { business } from "@/config/site";
-import { getTier, STRIPE_PRICE_ENV, type PaidTierId } from "@/config/pricing";
+import { getTierMeta } from "@/config/pricing";
+import { getPlan } from "@/lib/pricing-data";
 
 // Stripe's SDK needs the Node.js runtime (not Edge).
 export const runtime = "nodejs";
@@ -10,12 +11,10 @@ const NOT_CONFIGURED =
   "Online checkout isn't available yet. Please book a call and we'll get you set up.";
 
 /**
- * Creates a Stripe Checkout Session for a paid tier and returns its URL.
- * The client redirects the browser to that URL.
- *
- * Everything degrades gracefully: if the secret key or a tier's price IDs are
- * missing, we return a friendly 503 and the page tells the visitor to book a
- * call. Nothing throws, the page never breaks.
+ * Creates a Stripe Checkout Session for a paid tier and returns its URL. The
+ * price IDs come from the `plans` table (set in the admin dashboard), so prices
+ * always match what the dashboard shows. Degrades gracefully (friendly 503) when
+ * Stripe or the plan's prices are not configured yet.
  */
 export async function POST(req: NextRequest) {
   const secret = process.env.STRIPE_SECRET_KEY;
@@ -31,20 +30,19 @@ export async function POST(req: NextRequest) {
   }
 
   const tierId = (body as { tier?: string })?.tier ?? "";
-  const tier = getTier(tierId);
-  if (!tier || tier.cta.type !== "checkout") {
+  const meta = getTierMeta(tierId);
+  if (!meta || meta.cta.type !== "checkout") {
     return NextResponse.json({ error: "Unknown plan." }, { status: 400 });
   }
 
-  const envNames = STRIPE_PRICE_ENV[tierId as PaidTierId];
-  const monthlyPrice = envNames ? process.env[envNames.monthly] : undefined;
-  const setupPrice = envNames ? process.env[envNames.setup] : undefined;
+  const plan = await getPlan(tierId);
+  const monthlyPrice = plan?.stripe_monthly_price_id;
+  const setupPrice = plan?.stripe_setup_price_id;
   if (!monthlyPrice) {
     return NextResponse.json({ error: NOT_CONFIGURED }, { status: 503 });
   }
 
-  // Carry attribution (UTM / click IDs) onto the Stripe customer + subscription
-  // so every paying customer is tied back to the source that won them.
+  // Carry attribution (UTM / click IDs) onto the customer + subscription.
   const rawAttr = (body as { attribution?: Record<string, unknown> })?.attribution ?? {};
   const metadata: Record<string, string> = { tier: tierId };
   for (const [k, v] of Object.entries(rawAttr)) {
@@ -58,7 +56,6 @@ export async function POST(req: NextRequest) {
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
     { price: monthlyPrice, quantity: 1 },
   ];
-  // One-time setup fee, billed on the first invoice (optional).
   if (setupPrice) lineItems.push({ price: setupPrice, quantity: 1 });
 
   const origin = req.headers.get("origin") || business.url;
@@ -80,10 +77,10 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ url: session.url });
   } catch (err) {
-    console.error("[checkout] Stripe session creation failed", {
-      tier: tierId,
-      message: err instanceof Error ? err.message : String(err),
-    });
+    console.error(
+      "[checkout] Stripe session creation failed",
+      err instanceof Error ? err.message : String(err),
+    );
     return NextResponse.json(
       { error: "Couldn't start checkout. Please try again or book a call." },
       { status: 500 },

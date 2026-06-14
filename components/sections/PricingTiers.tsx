@@ -5,30 +5,25 @@ import { motion } from "motion/react";
 import { Check, Loader2, ShieldCheck } from "lucide-react";
 import { Section, Eyebrow } from "@/components/Section";
 import { cn } from "@/lib/cn";
-import {
-  CURRENCY,
-  PROMO,
-  pricingTiers,
-  type PricingTier,
-  type TierId,
-} from "@/config/pricing";
+import { PROMO } from "@/config/pricing";
+import type { DisplayTier } from "@/lib/pricing-data";
 import { attributionProps, getAttribution } from "@/lib/attribution";
 import { captureEvent } from "@/lib/analytics";
 
-const fmt = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: CURRENCY,
-  maximumFractionDigits: 0,
-});
+function money(cents: number, currency: string) {
+  return new Intl.NumberFormat("en-CA", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
+}
 
 type Banner = { kind: "success" | "cancelled" | "error"; text: string } | null;
 
-export function PricingTiers() {
-  const [loading, setLoading] = useState<TierId | null>(null);
+export function PricingTiers({ tiers }: { tiers: DisplayTier[] }) {
+  const [loading, setLoading] = useState<string | null>(null);
   const [banner, setBanner] = useState<Banner>(null);
 
-  // Read the ?checkout= return state without pulling in useSearchParams (avoids
-  // the Suspense requirement); this only runs in the browser.
   useEffect(() => {
     const status = new URLSearchParams(window.location.search).get("checkout");
     if (status === "success") {
@@ -45,7 +40,7 @@ export function PricingTiers() {
     }
   }, []);
 
-  async function startCheckout(tier: PricingTier) {
+  async function startCheckout(tier: DisplayTier) {
     if (tier.cta.type !== "checkout" || loading) return;
     setLoading(tier.id);
     setBanner(null);
@@ -62,7 +57,7 @@ export function PricingTiers() {
       const data: { url?: string; error?: string } = await res.json();
       if (data.url) {
         window.location.href = data.url;
-        return; // keep the spinner up through the redirect
+        return;
       }
       setBanner({ kind: "error", text: data.error || "Something went wrong. Please book a call." });
     } catch {
@@ -76,8 +71,7 @@ export function PricingTiers() {
       <div className="mx-auto max-w-2xl text-center">
         <Eyebrow centered>Your plan</Eyebrow>
         <h1 className="display-xl mt-6 text-balance text-5xl sm:text-6xl">
-          Pick the engine that{" "}
-          <span className="gold-gradient-text">fills your calendar.</span>
+          Pick the engine that <span className="gold-gradient-text">fills your calendar.</span>
         </h1>
         <p className="mt-6 text-lg leading-snug text-ink-2">
           One team runs all of it: the AI receptionist, the follow-up, the website, the marketing.
@@ -109,7 +103,7 @@ export function PricingTiers() {
       )}
 
       <div className="mt-16 grid grid-cols-1 gap-6 lg:grid-cols-3 lg:items-stretch">
-        {pricingTiers.map((tier, i) => (
+        {tiers.map((tier, i) => (
           <motion.div
             key={tier.id}
             initial={{ opacity: 0, y: 16 }}
@@ -128,8 +122,8 @@ export function PricingTiers() {
       </div>
 
       <p className="mx-auto mt-12 max-w-2xl text-center text-xs leading-relaxed text-ink-4">
-        Prices in {CURRENCY}. A short qualification call confirms fit before kickoff. Cancel any
-        month, no long-term contract.
+        A short qualification call confirms fit before kickoff. Cancel any month, no long-term
+        contract.
       </p>
     </Section>
   );
@@ -141,12 +135,12 @@ function TierCard({
   anyLoading,
   onCheckout,
 }: {
-  tier: PricingTier;
+  tier: DisplayTier;
   loading: boolean;
   anyLoading: boolean;
   onCheckout: () => void;
 }) {
-  const isCustom = tier.monthly === null;
+  const isCustom = tier.monthlyAmount === null;
 
   return (
     <div
@@ -171,16 +165,18 @@ function TierCard({
           <p className="display-xl text-4xl text-ink">Custom</p>
         ) : (
           <div className="flex items-baseline gap-1.5">
-            <span className="display-xl text-5xl text-ink">{fmt.format(tier.monthly as number)}</span>
+            <span className="display-xl text-5xl text-ink">
+              {money(tier.monthlyAmount as number, tier.currency)}
+            </span>
             <span className="text-sm text-ink-3">/mo</span>
           </div>
         )}
         <p className="mt-2 text-sm text-ink-3">
           {isCustom
-            ? tier.priceNote
-            : tier.setupFee
-              ? `${fmt.format(tier.setupFee)} setup, then monthly`
-              : tier.priceNote}
+            ? "custom scope"
+            : tier.setupAmount && tier.setupAmount > 0
+              ? `${money(tier.setupAmount, tier.currency)} setup, then monthly`
+              : "billed monthly"}
         </p>
       </div>
 
@@ -221,9 +217,7 @@ function TierCard({
             disabled={anyLoading}
             className={cn(
               "inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 text-sm font-medium transition-colors disabled:opacity-60",
-              tier.highlighted
-                ? "bg-gold text-bg hover:bg-gold-deep"
-                : "bg-ink text-bg hover:bg-ink-2",
+              tier.highlighted ? "bg-gold text-bg hover:bg-gold-deep" : "bg-ink text-bg hover:bg-ink-2",
             )}
           >
             {loading ? (
