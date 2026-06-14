@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 
 export type Row = Record<string, unknown>;
 export type Tally = { label: string; count: number };
+export type DayPoint = { day: string; count: number };
 
 export type DashboardData = {
   counts: {
@@ -17,7 +18,10 @@ export type DashboardData = {
   recentEvents: Row[];
   topSources: Tally[];
   topPages: Tally[];
-  byDay: { day: string; count: number }[];
+  topReferrers: Tally[];
+  devices: Tally[];
+  countries: Tally[];
+  byDay: DayPoint[];
 };
 
 function tally(items: string[], limit = 10): Tally[] {
@@ -29,13 +33,26 @@ function tally(items: string[], limit = 10): Tally[] {
     .slice(0, limit);
 }
 
-function byDayCounts(dates: string[]): { day: string; count: number }[] {
-  const m = new Map<string, number>();
+/**
+ * Counts events per day across the trailing `days` window, filling empty days
+ * with zero so charts render a continuous line instead of skipping gaps.
+ */
+function byDayCounts(dates: string[], days = 30): DayPoint[] {
+  const counts = new Map<string, number>();
   for (const d of dates) {
     const day = d.slice(0, 10);
-    m.set(day, (m.get(day) ?? 0) + 1);
+    counts.set(day, (counts.get(day) ?? 0) + 1);
   }
-  return [...m.entries()].map(([day, count]) => ({ day, count })).sort((a, b) => (a.day < b.day ? -1 : 1));
+
+  const out: DayPoint[] = [];
+  const today = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    out.push({ day: key, count: counts.get(key) ?? 0 });
+  }
+  return out;
 }
 
 /**
@@ -73,14 +90,21 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         .limit(25),
       supabase
         .from("events")
-        .select("created_at,utm_source,path")
+        .select("created_at,utm_source,path,referrer,country,device")
         .gte("created_at", since30)
         .order("created_at", { ascending: false })
         .limit(5000),
     ]);
 
   const consent = (consentRows.data ?? []) as { choice: string }[];
-  const ev = (eventsWindow.data ?? []) as { created_at: string; utm_source: string | null; path: string | null }[];
+  const ev = (eventsWindow.data ?? []) as {
+    created_at: string;
+    utm_source: string | null;
+    path: string | null;
+    referrer: string | null;
+    country: string | null;
+    device: string | null;
+  }[];
 
   return {
     counts: {
@@ -96,6 +120,42 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     recentEvents: (recentEvents.data ?? []) as Row[],
     topSources: tally(ev.map((e) => e.utm_source || "(direct)")),
     topPages: tally(ev.map((e) => e.path || "(unknown)")),
+    topReferrers: tally(ev.map((e) => referrerHost(e.referrer))),
+    devices: tally(ev.map((e) => e.device || "unknown")),
+    countries: tally(ev.map((e) => e.country || "unknown")),
     byDay: byDayCounts(ev.map((e) => e.created_at)),
   };
+}
+
+function referrerHost(ref: string | null): string {
+  if (!ref) return "(direct)";
+  try {
+    return new URL(ref).hostname.replace(/^www\./, "");
+  } catch {
+    return ref;
+  }
+}
+
+/** Full leads list for the Leads page. */
+export async function getLeads(limit = 200): Promise<Row[]> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("leads")
+    .select("created_at,name,email,phone,status,booking_start,utm_source,utm_medium,utm_campaign,referrer")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as Row[];
+}
+
+/** Full subscriptions list for the Subscriptions page. */
+export async function getSubscriptions(limit = 200): Promise<Row[]> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from("subscriptions")
+    .select("created_at,email,tier,status,amount_total,currency,stripe_customer_id,utm_source,utm_campaign")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  return (data ?? []) as Row[];
 }

@@ -1,4 +1,5 @@
 import { signInAction } from "@/app/admin/actions";
+import { PasswordField } from "@/components/admin/PasswordField";
 
 const ERRORS: Record<string, string> = {
   "1": "Wrong email or password.",
@@ -29,14 +30,7 @@ export default async function AdminLogin({
             autoComplete="email"
             className="rounded-xl border border-line-strong bg-surface px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-gold"
           />
-          <input
-            name="password"
-            type="password"
-            required
-            placeholder="Password"
-            autoComplete="current-password"
-            className="rounded-xl border border-line-strong bg-surface px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-gold"
-          />
+          <PasswordField name="password" placeholder="Password" autoComplete="current-password" required />
           {error && <p className="text-sm text-signal">{error}</p>}
           <button
             type="submit"

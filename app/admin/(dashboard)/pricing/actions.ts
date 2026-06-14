@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/admin";
+import { requireOwner } from "@/lib/admin";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getPlan } from "@/lib/pricing-data";
 import { syncPlanToStripe } from "@/lib/plan-sync";
@@ -13,7 +13,7 @@ import { syncPlanToStripe } from "@/lib/plan-sync";
  * Stripe prices and archives the old ones (so checkout uses the new amount).
  */
 export async function updatePlanAction(formData: FormData) {
-  await requireAdmin();
+  await requireOwner();
 
   const tierId = String(formData.get("tier") || "");
   const monthlyDollars = Number(formData.get("monthly"));

@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isAdminEmail } from "@/lib/admin";
+import { isAllowedAdmin } from "@/lib/admin";
 
 export async function signInAction(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
@@ -15,8 +15,8 @@ export async function signInAction(formData: FormData) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error || !data.user) redirect("/admin/login?e=1");
 
-  // Even with valid credentials, only allowlisted emails get in.
-  if (!isAdminEmail(data.user.email)) {
+  // Even with valid credentials, only the owner or a team member gets in.
+  if (!(await isAllowedAdmin(data.user.email))) {
     await supabase.auth.signOut();
     redirect("/admin/login?e=denied");
   }
