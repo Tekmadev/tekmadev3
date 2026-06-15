@@ -88,8 +88,11 @@ export async function createCouponAction(formData: FormData) {
   let redeemByIso: string | null = null;
   const expiresRaw = String(formData.get("expires") || "").trim();
   if (expiresRaw) {
-    const d = new Date(expiresRaw);
+    // Treat the picked day as valid through its end (UTC), so choosing "today"
+    // still lands in the future rather than at a past midnight.
+    const d = new Date(`${expiresRaw}T23:59:59.999Z`);
     if (Number.isNaN(d.getTime())) redirect("/admin/coupons?e=expires");
+    if (d.getTime() <= Date.now()) redirect("/admin/coupons?e=expirespast");
     redeemByUnix = Math.floor(d.getTime() / 1000);
     redeemByIso = d.toISOString();
   }
@@ -132,8 +135,9 @@ export async function createCouponAction(formData: FormData) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[coupons] Stripe create failed", msg);
-    // Most common failure: a duplicate active code.
-    redirect(/already exists|unique|code/i.test(msg) ? "/admin/coupons?e=dupe" : "/admin/coupons?e=stripe");
+    if (/already exists/i.test(msg)) redirect("/admin/coupons?e=dupe");
+    // Surface the real Stripe reason so the dashboard shows it instead of a generic error.
+    redirect(`/admin/coupons?e=stripe&msg=${encodeURIComponent(msg.slice(0, 240))}`);
   }
 
   const { error } = await supabase.from("coupons").insert({

@@ -17,6 +17,7 @@ const ERRORS: Record<string, string> = {
   max: "Max redemptions must be 1 or more.",
   expires: "Enter a valid expiry date.",
   code: "That code isn't valid. Use letters, numbers and dashes.",
+  expirespast: "The expiry date must be in the future.",
   dupe: "A coupon with that code already exists. Pick a different code.",
   noproducts: "No matching Stripe products yet. Save a price on the Pricing page first.",
   stripe: "Stripe rejected the request. Please check the values and try again.",
@@ -42,11 +43,11 @@ function durationLabel(c: CouponRow): string {
 export default async function CouponsAdmin({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; e?: string; code?: string }>;
+  searchParams: Promise<{ ok?: string; e?: string; code?: string; msg?: string }>;
 }) {
   await requireOwner();
   const [coupons, plans] = await Promise.all([getCouponsView(), getAllPlans()]);
-  const { ok, e, code } = await searchParams;
+  const { ok, e, code, msg } = await searchParams;
 
   const stripeReady = plans.some((p) => p.stripe_product_id);
   const currency = plans[0]?.currency || "cad";
@@ -57,7 +58,10 @@ export default async function CouponsAdmin({
       : ok === "disabled"
         ? { kind: "ok" as const, text: "Coupon disabled. It can no longer be redeemed." }
         : e
-          ? { kind: "err" as const, text: ERRORS[e] || "Something went wrong." }
+          ? {
+              kind: "err" as const,
+              text: e === "stripe" && msg ? `Stripe: ${msg}` : ERRORS[e] || "Something went wrong.",
+            }
           : null;
 
   const rows = coupons.map((c) => [
