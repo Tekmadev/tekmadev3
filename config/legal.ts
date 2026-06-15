@@ -447,8 +447,8 @@ export const termsOfService: LegalDoc = {
         {
           type: "ul",
           items: [
-            "$0 setup fee.",
-            "Performance-based fees billed per Qualified Booked Call, or on a monthly retainer with a Qualified Booked Call floor, as specified in the Order Form.",
+            "A one-time setup fee and a recurring monthly fee, as set out in the Order Form.",
+            "A performance guarantee: if the system does not produce 30 Qualified Booked Calls within 60 days of go-live, the Client is entitled to a refund of the fees paid for that period, as specified in the Order Form.",
             "Fees are quoted in Canadian dollars (CAD) unless otherwise stated and are exclusive of applicable taxes (HST, GST, QST), which will be added where applicable.",
           ],
         },

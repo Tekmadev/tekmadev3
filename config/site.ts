@@ -26,7 +26,7 @@ export const business = {
   domain: "tekmadev.com",
   url: _siteUrl,
   description:
-    "Done-for-you AI and automation growth system for B2B service businesses. We install the system that fills your calendar with 30 qualified booked calls in 60 days. Performance-based. You only pay when it performs.",
+    "Done-for-you AI and automation growth system for B2B service businesses. We install the system that fills your calendar with qualified booked calls. Our guarantee: 30 qualified booked calls in your first 60 days, or your money back.",
   foundingYear: 2019,
   email: _email,
   legalEmail: _legalEmail,
@@ -294,7 +294,7 @@ export type FAQ = { q: string; a: string };
 export const faqs: FAQ[] = [
   {
     q: "What does “30 booked calls in 60 days or you don’t pay” actually mean?",
-    a: "Exactly what it says. You sign on with $0 down. We build and install the system. If you don’t have 30 qualified booked calls on your calendar within 60 days of go-live, you owe us nothing, and we keep working until you do. “Qualified” is defined together upfront.",
+    a: "Exactly what it says. We build and install the system, then go to work filling your calendar. If you don’t have 30 qualified booked calls on your calendar within 60 days of go-live, you get your money back, and we keep working until you do. “Qualified” is defined together upfront.",
   },
   {
     q: "How is this different from an agency?",
@@ -364,6 +364,6 @@ export const footerColumns = [
 ];
 
 export const footerCopy = {
-  tagline: "We install the system that fills your calendar. You only pay when it performs.",
+  tagline: "We install the system that fills your calendar. 30 qualified booked calls in 60 days, or your money back.",
   signoff: "Built · Installed · Running",
 };

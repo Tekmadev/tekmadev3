@@ -71,7 +71,8 @@ export function Hero() {
             className="mt-10 max-w-2xl text-balance text-lg leading-snug text-ink-2 sm:text-xl"
           >
             We install the AI and automation system that fills your calendar with qualified B2B
-            calls. We build it, we run it, and you only pay when it performs.
+            calls. We build it, we run it, and guarantee it: 30 qualified calls in 60 days, or your
+            money back.
           </motion.p>
 
           <motion.div

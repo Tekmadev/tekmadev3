@@ -56,22 +56,23 @@ export function Pricing() {
 
           <div className="lg:col-span-5">
             <div className="relative overflow-hidden rounded-3xl border border-line-strong bg-surface p-8 sm:p-10">
-              <p className="eyebrow">Pricing</p>
+              <p className="eyebrow">The guarantee</p>
 
               <motion.div
                 style={{ scale: numberScale, opacity: numberOpacity }}
                 className="mt-8 origin-left"
               >
-                <p className="display-xxl text-7xl text-ink sm:text-8xl">$0</p>
-                <p className="mt-2 text-sm text-ink-3">setup fee</p>
+                <p className="display-xxl text-7xl text-ink sm:text-8xl">30</p>
+                <p className="mt-2 text-sm text-ink-3">booked calls in 60 days, guaranteed</p>
               </motion.div>
 
               <div className="my-10 h-px w-full bg-line" />
 
-              <p className="text-base font-medium text-ink">Performance-based.</p>
+              <p className="text-base font-medium text-ink">Performance-guaranteed.</p>
               <p className="mt-2 text-base leading-relaxed text-ink-2">
-                Pay only when qualified calls hit your calendar. If the system stops producing, we
-                stop charging. Simple.
+                We don&apos;t get paid to keep busy. If the system doesn&apos;t put 30 qualified
+                calls on your calendar in your first 60 days, you get your money back, and we keep
+                working until it does.
               </p>
 
               <a
