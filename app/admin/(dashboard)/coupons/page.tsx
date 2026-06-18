@@ -3,6 +3,8 @@ import { getCouponsView, type CouponRow } from "@/lib/coupon-data";
 import { getAllPlans } from "@/lib/pricing-data";
 import { PageHeader, Panel, Notice, DataTable, Badge, fmtMoney, fmtDate } from "@/components/admin/ui";
 import { CouponForm } from "@/components/admin/CouponForm";
+import { DealLink } from "@/components/admin/DealLink";
+import { business } from "@/config/site";
 import { deactivateCouponAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -77,6 +79,13 @@ export default async function CouponsAdmin({
     </span>,
     c.redeem_by ? fmtDate(c.redeem_by) : "-",
     c.active ? <Badge key="s" tone="gold">active</Badge> : <Badge key="s" tone="muted">disabled</Badge>,
+    c.active && (c.applies_to === "monthly" || c.applies_to === "order") ? (
+      <DealLink key="dl" url={`${business.url}/start?deal=${encodeURIComponent(c.code)}`} />
+    ) : (
+      <span key="dl" className="text-ink-4">
+        -
+      </span>
+    ),
     c.active ? (
       <form key="a" action={deactivateCouponAction}>
         <input type="hidden" name="id" value={c.id} />
@@ -110,7 +119,13 @@ export default async function CouponsAdmin({
         Codes are entered in the &ldquo;Add promotion code&rdquo; field on the Stripe checkout page (already
         enabled). Scope a code to the <strong className="text-ink-2">monthly</strong> subscription, the{" "}
         <strong className="text-ink-2">setup fee</strong> only, or the whole order, because setup and monthly
-        are billed as separate Stripe products.
+        are billed as separate Stripe products. Stripe only allows one code per checkout, so codes can&rsquo;t
+        be stacked.
+      </p>
+      <p className="-mt-4 text-sm text-ink-3">
+        Need to combine <strong className="text-ink-2">free setup + a monthly discount</strong>? Use a{" "}
+        <strong className="text-ink-2">Deal link</strong>: share it instead of a code and checkout skips the
+        setup fee and auto-applies that code, no stacking needed.
       </p>
 
       <Panel title="New coupon">
@@ -119,7 +134,7 @@ export default async function CouponsAdmin({
 
       <Panel title="Existing coupons">
         <DataTable
-          head={["Code", "Discount", "Applies to", "Duration", "Redeemed", "Expires", "Status", ""]}
+          head={["Code", "Discount", "Applies to", "Duration", "Redeemed", "Expires", "Status", "Deal link", ""]}
           rows={rows}
           empty="No coupons yet. Create one above."
         />

@@ -52,25 +52,50 @@ export async function POST(req: NextRequest) {
   }
 
   const stripe = new Stripe(secret);
+  const origin = req.headers.get("origin") || business.url;
 
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
     { price: monthlyPrice, quantity: 1 },
   ];
-  if (setupPrice) lineItems.push({ price: setupPrice, quantity: 1 });
 
-  const origin = req.headers.get("origin") || business.url;
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    mode: "subscription",
+    line_items: lineItems,
+    billing_address_collection: "required",
+    success_url: `${origin}/start?checkout=success`,
+    cancel_url: `${origin}/start?checkout=cancelled`,
+    metadata,
+    subscription_data: { metadata },
+  };
+
+  // Optional startup "deal" link: waive the setup fee (omit the setup line) and
+  // auto-apply the deal's promo code. Stripe allows only one discount per
+  // checkout, so this replaces allow_promotion_codes rather than stacking.
+  const dealCode = String((body as { deal?: unknown })?.deal ?? "").trim();
+  if (dealCode) {
+    let promoId: string | undefined;
+    try {
+      const found = await stripe.promotionCodes.list({ code: dealCode, active: true, limit: 1 });
+      promoId = found.data[0]?.id;
+    } catch (err) {
+      console.error("[checkout] deal lookup failed", err instanceof Error ? err.message : String(err));
+      return NextResponse.json(
+        { error: "Couldn't apply the deal. Please try again or book a call." },
+        { status: 502 },
+      );
+    }
+    if (!promoId) {
+      return NextResponse.json({ error: "This deal link is no longer valid." }, { status: 400 });
+    }
+    metadata.deal = dealCode.slice(0, 40);
+    sessionParams.discounts = [{ promotion_code: promoId }];
+  } else {
+    if (setupPrice) lineItems.push({ price: setupPrice, quantity: 1 });
+    sessionParams.allow_promotion_codes = true;
+  }
 
   try {
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      line_items: lineItems,
-      allow_promotion_codes: true,
-      billing_address_collection: "required",
-      success_url: `${origin}/start?checkout=success`,
-      cancel_url: `${origin}/start?checkout=cancelled`,
-      metadata,
-      subscription_data: { metadata },
-    });
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     if (!session.url) {
       return NextResponse.json({ error: NOT_CONFIGURED }, { status: 502 });

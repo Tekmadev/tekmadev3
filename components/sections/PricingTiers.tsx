@@ -20,7 +20,15 @@ function money(cents: number, currency: string) {
 
 type Banner = { kind: "success" | "cancelled" | "error"; text: string } | null;
 
-export function PricingTiers({ tiers }: { tiers: DisplayTier[] }) {
+export function PricingTiers({
+  tiers,
+  deal = null,
+  dealInfo = null,
+}: {
+  tiers: DisplayTier[];
+  deal?: string | null;
+  dealInfo?: string | null;
+}) {
   const [loading, setLoading] = useState<string | null>(null);
   const [banner, setBanner] = useState<Banner>(null);
 
@@ -52,7 +60,7 @@ export function PricingTiers({ tiers }: { tiers: DisplayTier[] }) {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tier: tier.id, attribution }),
+        body: JSON.stringify({ tier: tier.id, attribution, deal }),
       });
       const data: { url?: string; error?: string } = await res.json();
       if (data.url) {
@@ -79,8 +87,17 @@ export function PricingTiers({ tiers }: { tiers: DisplayTier[] }) {
         </p>
       </div>
 
+      {deal && (
+        <div className="mx-auto mt-10 flex max-w-2xl items-center justify-center gap-3 rounded-2xl border border-gold/40 bg-gold/[0.08] px-5 py-4 text-center text-sm text-ink">
+          <ShieldCheck className="h-4 w-4 shrink-0 text-gold-deep" />
+          <span>
+            <strong>Startup deal applied.</strong> {dealInfo}
+          </span>
+        </div>
+      )}
+
       {PROMO.active && (
-        <div className="mx-auto mt-10 flex max-w-2xl items-center justify-center gap-3 rounded-full border border-gold/30 bg-gold/[0.06] px-5 py-3 text-center text-sm text-ink-2">
+        <div className="mx-auto mt-6 flex max-w-2xl items-center justify-center gap-3 rounded-full border border-gold/30 bg-gold/[0.06] px-5 py-3 text-center text-sm text-ink-2">
           <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-gold" />
           {PROMO.text}
         </div>
@@ -115,6 +132,7 @@ export function PricingTiers({ tiers }: { tiers: DisplayTier[] }) {
               tier={tier}
               loading={loading === tier.id}
               anyLoading={loading !== null}
+              dealActive={Boolean(deal)}
               onCheckout={() => startCheckout(tier)}
             />
           </motion.div>
@@ -133,11 +151,13 @@ function TierCard({
   tier,
   loading,
   anyLoading,
+  dealActive,
   onCheckout,
 }: {
   tier: DisplayTier;
   loading: boolean;
   anyLoading: boolean;
+  dealActive: boolean;
   onCheckout: () => void;
 }) {
   const isCustom = tier.monthlyAmount === null;
@@ -174,9 +194,11 @@ function TierCard({
         <p className="mt-2 text-sm text-ink-3">
           {isCustom
             ? "custom scope"
-            : tier.setupAmount && tier.setupAmount > 0
-              ? `${money(tier.setupAmount, tier.currency)} setup, then monthly`
-              : "billed monthly"}
+            : dealActive && tier.cta.type === "checkout"
+              ? "Setup fee waived"
+              : tier.setupAmount && tier.setupAmount > 0
+                ? `${money(tier.setupAmount, tier.currency)} setup, then monthly`
+                : "billed monthly"}
         </p>
       </div>
 
