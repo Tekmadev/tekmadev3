@@ -47,7 +47,7 @@ export const business = {
   },
   legalDates: {
     effective: "2026-05-16",
-    lastUpdated: "2026-06-13",
+    lastUpdated: "2026-06-18",
   },
   phone: {
     tel: _phoneTel,

@@ -10,8 +10,6 @@ export type DashboardData = {
     bookings: number;
     activeSubs: number;
     pageviews30: number;
-    consentGranted30: number;
-    consentDenied30: number;
   };
   recentLeads: Row[];
   recentSubs: Row[];
@@ -66,13 +64,12 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
   const since30 = new Date(Date.now() - 30 * 86_400_000).toISOString();
 
-  const [leadsC, bookingsC, subsC, pvC, consentRows, recentLeads, recentSubs, recentEvents, eventsWindow] =
+  const [leadsC, bookingsC, subsC, pvC, recentLeads, recentSubs, recentEvents, eventsWindow] =
     await Promise.all([
       supabase.from("leads").select("*", { count: "exact", head: true }),
       supabase.from("leads").select("*", { count: "exact", head: true }).eq("status", "booked"),
       supabase.from("subscriptions").select("*", { count: "exact", head: true }).eq("status", "active"),
       supabase.from("events").select("*", { count: "exact", head: true }).gte("created_at", since30),
-      supabase.from("consent_log").select("choice").gte("created_at", since30),
       supabase
         .from("leads")
         .select("created_at,name,email,status,booking_start,utm_source,utm_medium,utm_campaign")
@@ -96,7 +93,6 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         .limit(5000),
     ]);
 
-  const consent = (consentRows.data ?? []) as { choice: string }[];
   const ev = (eventsWindow.data ?? []) as {
     created_at: string;
     utm_source: string | null;
@@ -112,8 +108,6 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       bookings: bookingsC.count ?? 0,
       activeSubs: subsC.count ?? 0,
       pageviews30: pvC.count ?? 0,
-      consentGranted30: consent.filter((c) => c.choice === "granted").length,
-      consentDenied30: consent.filter((c) => c.choice === "denied").length,
     },
     recentLeads: (recentLeads.data ?? []) as Row[],
     recentSubs: (recentSubs.data ?? []) as Row[],

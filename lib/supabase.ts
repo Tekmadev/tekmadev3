@@ -6,7 +6,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  * code that ships to the browser.
  *
  * Returns null when the env is not configured so every caller (webhooks,
- * consent log) can degrade gracefully instead of throwing.
+ * pageview tracking) can degrade gracefully instead of throwing.
  */
 let cached: SupabaseClient | null = null;
 

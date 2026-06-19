@@ -273,7 +273,7 @@ export const privacyPolicy: LegalDoc = {
       blocks: [
         {
           type: "p",
-          text: "Our website uses a limited number of cookies and similar technologies. See our Cookie Policy at /cookies for details, categories of cookies, retention periods, and instructions on how to control them.",
+          text: "Our public website does not set non-essential or tracking cookies, and we use only cookieless, aggregate analytics. See our Cookie Policy at /cookies for the full details, including the strictly necessary cookies used in our admin area and the embedded Cal.com booking widget.",
         },
       ],
     },
@@ -700,23 +700,23 @@ export const cookiePolicy: LegalDoc = {
         },
         {
           type: "p",
-          text: "Required for the website to function. They do not require consent.",
+          text: "A small number of strictly necessary cookies are used only in our secure admin dashboard to keep an authenticated session. They are not set for visitors to the public website and do not require consent.",
         },
         {
           type: "h3",
-          text: "Functional",
+          text: "Analytics (cookieless)",
         },
         {
           type: "p",
-          text: "Remember choices you make (for example, that you have dismissed a notice). These are used only with your consent.",
+          text: "We measure aggregate traffic with Vercel Web Analytics, which runs without cookies and does not identify you. We do not use any cookie-based analytics, advertising pixels, or cross-site tracking on this website.",
         },
         {
           type: "h3",
-          text: "Analytics",
+          text: "Local storage",
         },
         {
           type: "p",
-          text: "Help us understand how the site is used. Vercel Web Analytics runs without cookies and measures aggregate traffic only. With your consent, we also use PostHog to understand on-page behaviour such as page views, clicks, and navigation paths; PostHog sets first-party cookies once you accept. We request your consent through a banner when you first visit, and you can change your choice at any time using the 'Cookie settings' link in our footer. If you decline, no analytics cookies are set and PostHog does not run.",
+          text: "We store your theme preference and basic first-party marketing attribution (for example, the link or campaign that brought you here) in your browser's local storage. This is not a cookie, contains no personal information, and is never shared with third parties.",
         },
         {
           type: "h3",
@@ -724,7 +724,7 @@ export const cookiePolicy: LegalDoc = {
         },
         {
           type: "p",
-          text: "The Cal.com booking widget embedded on our site may set its own cookies to manage your scheduling session. Refer to Cal.com's privacy policy for details.",
+          text: "Our booking widget is embedded from Cal.com. When you open it, Cal.com may set its own cookies to manage your scheduling session. These are controlled by Cal.com under its own privacy policy.",
         },
       ],
     },
@@ -734,11 +734,11 @@ export const cookiePolicy: LegalDoc = {
       blocks: [
         {
           type: "p",
-          text: "When you first visit, we show a consent banner. Non-essential (analytics) cookies are not set unless you select 'Accept'. If you select 'Decline', they are not set. You can change your decision at any time using the 'Cookie settings' link in the footer of any page; choosing to decline there will stop further analytics cookies. Strictly necessary cookies and cookieless aggregate analytics do not require consent.",
+          text: "Because we do not set non-essential or tracking cookies on the public website, we do not show a cookie consent banner; there is nothing to opt in or out of for our own analytics.",
         },
         {
           type: "p",
-          text: "You can also control or delete cookies through your browser settings. Most browsers let you refuse third-party cookies, clear cookies on close, or be alerted before a cookie is stored. Disabling cookies may affect the functioning of some parts of our site.",
+          text: "You can still control or delete cookies and local storage through your browser settings at any time. Most browsers let you refuse third-party cookies, clear them on close, or be alerted before one is stored. Cookies set by the embedded Cal.com booking widget are governed by Cal.com and can be managed the same way.",
         },
       ],
     },

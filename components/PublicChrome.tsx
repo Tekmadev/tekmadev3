@@ -3,13 +3,13 @@
 import { usePathname } from "next/navigation";
 import { AttributionTracker } from "@/components/AttributionTracker";
 import { PageviewTracker } from "@/components/PageviewTracker";
-import { PostHogInit } from "@/components/PostHogInit";
-import { ConsentBanner } from "@/components/ConsentBanner";
 
 /**
- * Marketing-site chrome (attribution, pageview tracking, PostHog, the cookie
- * consent banner). The admin app is a private tool, so none of this should run
- * or render there. Everything stays mounted across public-page navigation.
+ * Marketing-site chrome (first-party attribution + cookieless pageview
+ * tracking). Both are cookieless, so there is no cookie consent banner. If a
+ * cookie-setting analytics tool (e.g. PostHog) is ever added back, a consent
+ * mechanism must be reintroduced first. The admin app is a private tool, so
+ * none of this runs or renders there.
  */
 export function PublicChrome() {
   const pathname = usePathname();
@@ -19,8 +19,6 @@ export function PublicChrome() {
     <>
       <AttributionTracker />
       <PageviewTracker />
-      <PostHogInit />
-      <ConsentBanner />
     </>
   );
 }

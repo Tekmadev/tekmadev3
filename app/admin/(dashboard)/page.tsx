@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { UserRound, CalendarCheck, CreditCard, Eye, ShieldCheck } from "lucide-react";
+import { UserRound, CalendarCheck, CreditCard, Eye } from "lucide-react";
 import { requireAdmin } from "@/lib/admin";
 import { getDashboardData } from "@/lib/admin-data";
 import { PageHeader, StatCard, Panel, DataTable, Notice, fmtDateTime, fmtMoney, txt } from "@/components/admin/ui";
@@ -25,17 +25,11 @@ export default async function Overview({ searchParams }: { searchParams: Promise
         </Notice>
       ) : (
         <>
-          <section className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard label="Total leads" value={data.counts.leads} icon={UserRound} />
             <StatCard label="Booked calls" value={data.counts.bookings} icon={CalendarCheck} />
             <StatCard label="Active subs" value={data.counts.activeSubs} icon={CreditCard} />
             <StatCard label="Pageviews 30d" value={data.counts.pageviews30} icon={Eye} />
-            <StatCard
-              label="Consent 30d"
-              value={`${data.counts.consentGranted30} / ${data.counts.consentDenied30}`}
-              sub={acceptRate(data.counts.consentGranted30, data.counts.consentDenied30)}
-              icon={ShieldCheck}
-            />
           </section>
 
           <Panel title="Pageviews (last 30 days)">
@@ -98,10 +92,4 @@ export default async function Overview({ searchParams }: { searchParams: Promise
       )}
     </div>
   );
-}
-
-function acceptRate(granted: number, denied: number): string {
-  const total = granted + denied;
-  if (total === 0) return "no choices yet";
-  return `${Math.round((granted / total) * 100)}% accept`;
 }
