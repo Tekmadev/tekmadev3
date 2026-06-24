@@ -19,6 +19,7 @@ export type DashboardData = {
   topReferrers: Tally[];
   devices: Tally[];
   countries: Tally[];
+  topLinks: Tally[];
   byDay: DayPoint[];
 };
 
@@ -64,7 +65,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
 
   const since30 = new Date(Date.now() - 30 * 86_400_000).toISOString();
 
-  const [leadsC, bookingsC, subsC, pvC, recentLeads, recentSubs, recentEvents, eventsWindow] =
+  const [leadsC, bookingsC, subsC, pvC, recentLeads, recentSubs, recentEvents, eventsWindow, linkClicksWindow] =
     await Promise.all([
       supabase.from("leads").select("*", { count: "exact", head: true }),
       supabase.from("leads").select("*", { count: "exact", head: true }).eq("status", "booked"),
@@ -91,6 +92,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
         .gte("created_at", since30)
         .order("created_at", { ascending: false })
         .limit(5000),
+      supabase.from("link_clicks").select("slug").gte("created_at", since30).limit(5000),
     ]);
 
   const ev = (eventsWindow.data ?? []) as {
@@ -101,6 +103,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     country: string | null;
     device: string | null;
   }[];
+
+  const lc = (linkClicksWindow.data ?? []) as { slug: string | null }[];
 
   return {
     counts: {
@@ -117,6 +121,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     topReferrers: tally(ev.map((e) => referrerHost(e.referrer))),
     devices: tally(ev.map((e) => e.device || "unknown")),
     countries: tally(ev.map((e) => e.country || "unknown")),
+    topLinks: tally(lc.map((c) => (c.slug ? `/${c.slug}` : "(unknown)"))),
     byDay: byDayCounts(ev.map((e) => e.created_at)),
   };
 }

@@ -45,6 +45,12 @@ export default async function Overview({ searchParams }: { searchParams: Promise
             </Panel>
           </section>
 
+          {data.topLinks.length > 0 && (
+            <Panel title="Top tracking links (30d)">
+              <HBars items={data.topLinks} />
+            </Panel>
+          )}
+
           <Panel
             title="Recent leads"
             action={

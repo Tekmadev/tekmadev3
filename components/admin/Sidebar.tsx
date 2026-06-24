@@ -10,6 +10,7 @@ import {
   CreditCard,
   Tag,
   BadgePercent,
+  Link2,
   Shield,
   Settings,
   LogOut,
@@ -29,6 +30,7 @@ const NAV: NavItem[] = [
   { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
   { href: "/admin/pricing", label: "Pricing", icon: Tag, ownerOnly: true },
   { href: "/admin/coupons", label: "Coupons", icon: BadgePercent, ownerOnly: true },
+  { href: "/admin/links", label: "Links", icon: Link2, ownerOnly: true },
   { href: "/admin/team", label: "Team", icon: Shield, ownerOnly: true },
   { href: "/admin/profile", label: "Profile", icon: Settings },
 ];
