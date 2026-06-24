@@ -123,19 +123,26 @@ export function Badge({ children, tone = "neutral" }: { children: React.ReactNod
   );
 }
 
+/**
+ * Tekmadev's operating timezone (Hamilton, Ontario). These formatters run on the
+ * server, where Vercel runs in UTC, so without this every timestamp would render
+ * in UTC instead of local time. Intl handles EST/EDT (DST) automatically.
+ */
+const BUSINESS_TZ = "America/Toronto";
+
 /** Shared formatters so every table renders dates / money the same way. */
 export function fmtDateTime(v: unknown): string {
   if (typeof v !== "string") return "-";
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" });
+  return d.toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short", timeZone: BUSINESS_TZ });
 }
 
 export function fmtDate(v: unknown): string {
   if (typeof v !== "string") return "-";
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("en-CA", { dateStyle: "medium" });
+  return d.toLocaleDateString("en-CA", { dateStyle: "medium", timeZone: BUSINESS_TZ });
 }
 
 export function fmtMoney(cents: unknown, currency: unknown): string {
