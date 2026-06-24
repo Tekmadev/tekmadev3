@@ -140,8 +140,9 @@ export function PricingTiers({
       </div>
 
       <p className="mx-auto mt-12 max-w-2xl text-center text-xs leading-relaxed text-ink-4">
-        A short qualification call confirms fit before kickoff. Cancel any month, no long-term
-        contract.
+        A short qualification call confirms fit before kickoff. Month-to-month, cancel with 30
+        days&apos; notice, no long-term contract. Individual results vary and are not typical. Full
+        terms apply.
       </p>
     </Section>
   );

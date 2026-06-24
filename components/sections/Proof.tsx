@@ -29,8 +29,8 @@ export function Proof() {
             </h2>
           </div>
           <p className="max-w-sm text-base leading-relaxed text-ink-2">
-            Three of the forty-plus installs. Real businesses, real before and after numbers. Not
-            cherry-picked screenshots.
+            Three of forty-plus installs. Real businesses, real before-and-after numbers.
+            Individual results vary and are not typical or guaranteed.
           </p>
         </div>
 

@@ -26,7 +26,7 @@ export const business = {
   domain: "tekmadev.com",
   url: _siteUrl,
   description:
-    "Done-for-you AI and automation growth system for B2B service businesses. We install the system that fills your calendar with qualified booked calls. Our guarantee: 30 qualified booked calls in your first 60 days, or your money back.",
+    "Done-for-you AI and automation growth system for B2B service businesses. We install the system that fills your calendar with qualified booked calls. Our guarantee: 30 qualified booked calls in your first 60 days, or we refund your service fees.",
   foundingYear: 2019,
   email: _email,
   legalEmail: _legalEmail,
@@ -108,9 +108,9 @@ export const brand = {
   ],
   promises: [
     "30 qualified booked calls in your first 60 days.",
-    "If we miss it, we work for free until you hit it.",
-    "If the system stops booking, we stop billing.",
-    "Cancel any month. No long-term contract.",
+    "If we miss it, you get that period's service fees back.",
+    "Performance-based. We win when your calendar fills.",
+    "Month-to-month. Cancel with 30 days' notice.",
   ],
   rating: { value: 4.9, reviews: 40 },
 };
@@ -294,7 +294,7 @@ export type FAQ = { q: string; a: string };
 export const faqs: FAQ[] = [
   {
     q: "What does “30 booked calls in 60 days or you don’t pay” actually mean?",
-    a: "Exactly what it says. We build and install the system, then go to work filling your calendar. If you don’t have 30 qualified booked calls on your calendar within 60 days of go-live, you get your money back, and we keep working until you do. “Qualified” is defined together upfront.",
+    a: "Exactly what it says. We build and install the system, then go to work filling your calendar. If you don’t have 30 qualified booked calls on your calendar within 60 days of go-live, you get that period’s service fees back. That refund is the guarantee. “Qualified” is defined together upfront, and the guarantee assumes you follow up on the calls we deliver and keep the system live. Full terms apply.",
   },
   {
     q: "How is this different from an agency?",
@@ -364,6 +364,6 @@ export const footerColumns = [
 ];
 
 export const footerCopy = {
-  tagline: "We install the system that fills your calendar. 30 qualified booked calls in 60 days, or your money back.",
+  tagline: "We install the system that fills your calendar. 30 qualified booked calls in 60 days, or we refund your service fees.",
   signoff: "Built · Installed · Running",
 };
