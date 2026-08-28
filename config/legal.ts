@@ -447,8 +447,8 @@ export const termsOfService: LegalDoc = {
         {
           type: "ul",
           items: [
-            "A one-time setup fee and a recurring monthly fee, as set out in the Order Form.",
-            "A performance guarantee: if the system does not produce 30 Qualified Booked Calls within 60 days of go-live, the Client is entitled to a refund of the fees paid for that period, as specified in the Order Form.",
+            "A one-time setup fee and a recurring monthly fee, as set out in the Order Form. The setup fee covers the design, build, and installation of the growth system and the assets delivered to the Client, which the Client retains, and is non-refundable.",
+            "A performance guarantee: if the system does not produce 30 Qualified Booked Calls within 60 days of go-live, Tekmadev will not invoice further fees for that period and will continue to operate the system at no additional charge until the target is reached, as set out in Section 4 and the Order Form.",
             "Fees are quoted in Canadian dollars (CAD) unless otherwise stated and are exclusive of applicable taxes (HST, GST, QST), which will be added where applicable.",
           ],
         },

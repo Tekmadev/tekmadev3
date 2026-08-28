@@ -11,13 +11,13 @@ function render(): string {
 
 > ${brand.subhead}
 
-${business.name} (legal name: ${business.legalName}) is a performance-based growth agency for B2B service businesses. The offer is structured as a single, productized done-for-you system rather than hours, retainers, or activity. The system is backed by a money-back guarantee if it does not perform.
+${business.name} (legal name: ${business.legalName}) is a performance-based growth agency for B2B service businesses. The offer is structured as a single, productized done-for-you system rather than hours, retainers, or activity. The system is backed by a performance guarantee: if it does not deliver, we keep working at no additional charge and pause monthly billing until it does.
 
 ## What we sell
 
 - One core productized offer: the ${business.name} Growth System
-- Performance-guaranteed: a one-time setup fee plus a monthly fee, backed by a money-back guarantee (exact pricing is shared on a qualification call)
-- Hard guarantee: 30 qualified booked calls in 60 days or the client gets their money back
+- Performance-guaranteed: a one-time setup fee plus a monthly fee, backed by a performance guarantee (exact pricing is shared on a qualification call)
+- Hard guarantee: 30 qualified booked calls in 60 days, or we keep working free and pause billing until the client hits it
 - Cancel any month, no clawback, no long-term contract
 - System goes live in 14 days from kickoff in 90% of cases
 

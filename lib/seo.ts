@@ -125,14 +125,8 @@ export const offerJsonLd = {
   "@id": `${SITE_URL}#offer`,
   name: "30 Booked Calls in 60 Days Guarantee",
   description:
-    "Performance-based engagement: $0 setup, pay-per-booked-call pricing. If we don't deliver 30 qualified booked calls in your first 60 days, you don't pay.",
+    "Performance-guaranteed engagement: if we don't deliver 30 qualified booked calls in your first 60 days, we keep working at no additional charge and pause billing until we do. Pricing is quoted on a qualification call.",
   itemOffered: { "@id": `${SITE_URL}#service` },
-  priceSpecification: {
-    "@type": "PriceSpecification",
-    priceCurrency: "USD",
-    price: "0",
-    description: "$0 setup. Performance-based pricing. Pay per qualified booked call delivered.",
-  },
   availability: "https://schema.org/InStock",
   validFrom: `${business.foundingYear}-01-01`,
   eligibleRegion: areaServedSchema,

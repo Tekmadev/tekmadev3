@@ -58,6 +58,13 @@ export async function POST(req: NextRequest) {
     { price: monthlyPrice, quantity: 1 },
   ];
 
+  // The monthly subscription starts one month after the setup is paid. A trial
+  // delays only the recurring price; a one-time line item (the setup fee) sits
+  // on the first invoice, which Stripe cuts immediately at checkout. So the
+  // client is charged the setup today and the first monthly charge lands ~30
+  // days later. See https://docs.stripe.com/payments/checkout/free-trials
+  const TRIAL_DAYS = 30;
+
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
     line_items: lineItems,
@@ -65,7 +72,7 @@ export async function POST(req: NextRequest) {
     success_url: `${origin}/start?checkout=success`,
     cancel_url: `${origin}/start?checkout=cancelled`,
     metadata,
-    subscription_data: { metadata },
+    subscription_data: { metadata, trial_period_days: TRIAL_DAYS },
   };
 
   // Optional startup "deal" link: waive the setup fee (omit the setup line) and

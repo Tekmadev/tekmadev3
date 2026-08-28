@@ -18,6 +18,9 @@ export type TierMeta = {
   badge?: string;
   guarantee: boolean;
   features: string[];
+  /** Higher-tier items this plan does NOT get. Shown as a "what you give up" list
+   *  to make the next tier up feel like the better deal (loss aversion). */
+  missing?: string[];
   cta: { type: "checkout"; label: string } | { type: "contact"; label: string; href: string };
 };
 
@@ -44,6 +47,14 @@ export const tierMeta: TierMeta[] = [
       "Automated review & reputation requests",
       "Reporting dashboard with traffic-source attribution",
       "Free professional website (launch offer)",
+    ],
+    missing: [
+      "The 30 booked calls in 60 days guarantee, on Convert the risk stays on you",
+      "Paid ads managed for you (Google + Meta) to fill the top of the funnel",
+      "Social media management & posting",
+      "Advanced automations, funnels & landing pages",
+      "Email & SMS marketing campaigns",
+      "A dedicated strategist + priority support",
     ],
     cta: { type: "checkout", label: "Get started" },
   },

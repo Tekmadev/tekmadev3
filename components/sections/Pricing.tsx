@@ -71,8 +71,8 @@ export function Pricing() {
               <p className="text-base font-medium text-ink">Performance-guaranteed.</p>
               <p className="mt-2 text-base leading-relaxed text-ink-2">
                 We don&apos;t get paid to keep busy. If the system doesn&apos;t put 30 qualified
-                calls on your calendar in your first 60 days, you get your money back, and we keep
-                working until it does.
+                calls on your calendar in your first 60 days, we keep working free and pause your
+                billing until it does.
               </p>
 
               <a

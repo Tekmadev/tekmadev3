@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Check, Loader2, ShieldCheck } from "lucide-react";
+import { Check, Loader2, ShieldCheck, X } from "lucide-react";
 import { Section, Eyebrow } from "@/components/Section";
 import { cn } from "@/lib/cn";
 import { PROMO } from "@/config/pricing";
@@ -205,31 +205,51 @@ function TierCard({
       {tier.guarantee && (
         <div className="mt-5 flex items-center gap-2 rounded-xl border border-gold/30 bg-gold/[0.06] px-3.5 py-2.5 text-sm text-ink-2">
           <ShieldCheck className="h-4 w-4 shrink-0 text-gold-deep" />
-          <span>30 booked calls in 60 days. Or you don&apos;t pay.</span>
+          <span>30 booked calls in 60 days, or we work free and pause your billing until you hit it.</span>
         </div>
       )}
 
       <div className="my-7 h-px w-full bg-line" />
 
-      <ul className="flex flex-1 flex-col gap-3.5">
-        {tier.features.map((f) => {
-          const isHeading = f.endsWith("plus:");
-          return (
-            <li key={f} className={cn("flex items-start gap-3", isHeading && "mt-1")}>
-              {isHeading ? (
-                <span className="text-sm font-medium text-ink">{f}</span>
-              ) : (
-                <>
-                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gold/15">
-                    <Check className="h-3 w-3 text-gold-deep" />
+      <div className="flex flex-1 flex-col gap-6">
+        <ul className="flex flex-col gap-3.5">
+          {tier.features.map((f) => {
+            const isHeading = f.endsWith("plus:");
+            return (
+              <li key={f} className={cn("flex items-start gap-3", isHeading && "mt-1")}>
+                {isHeading ? (
+                  <span className="text-sm font-medium text-ink">{f}</span>
+                ) : (
+                  <>
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gold/15">
+                      <Check className="h-3 w-3 text-gold-deep" />
+                    </span>
+                    <span className="text-sm leading-snug text-ink-2">{f}</span>
+                  </>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+
+        {tier.missing && tier.missing.length > 0 && (
+          <div className="rounded-2xl border border-line bg-bg-2 p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-4">
+              Not included, only on Grow
+            </p>
+            <ul className="flex flex-col gap-3.5">
+              {tier.missing.map((f) => (
+                <li key={f} className="flex items-start gap-3">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-ink/[0.06]">
+                    <X className="h-3 w-3 text-ink-4" />
                   </span>
-                  <span className="text-sm leading-snug text-ink-2">{f}</span>
-                </>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+                  <span className="text-sm leading-snug text-ink-4">{f}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
 
       <div className="mt-8">
         {tier.cta.type === "checkout" ? (

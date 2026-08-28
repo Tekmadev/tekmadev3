@@ -26,7 +26,7 @@ export const business = {
   domain: "tekmadev.com",
   url: _siteUrl,
   description:
-    "Done-for-you AI and automation growth system for B2B service businesses. We install the system that fills your calendar with qualified booked calls. Our guarantee: 30 qualified booked calls in your first 60 days, or your money back.",
+    "Done-for-you AI and automation growth system for B2B service businesses. We install the system that fills your calendar with qualified booked calls. Our guarantee: 30 qualified booked calls in your first 60 days, or we keep working free until you hit it.",
   foundingYear: 2019,
   email: _email,
   legalEmail: _legalEmail,
@@ -294,7 +294,7 @@ export type FAQ = { q: string; a: string };
 export const faqs: FAQ[] = [
   {
     q: "What does “30 booked calls in 60 days or you don’t pay” actually mean?",
-    a: "Exactly what it says. We build and install the system, then go to work filling your calendar. If you don’t have 30 qualified booked calls on your calendar within 60 days of go-live, you get your money back, and we keep working until you do. “Qualified” is defined together upfront.",
+    a: "Exactly what it says. We build and install the system, then go to work filling your calendar. If you don’t have 30 qualified booked calls on your calendar within 60 days of go-live, we keep working for free and pause your monthly billing until you do. You keep everything we’ve built either way. “Qualified” is defined together upfront.",
   },
   {
     q: "How is this different from an agency?",
@@ -364,6 +364,16 @@ export const footerColumns = [
 ];
 
 export const footerCopy = {
-  tagline: "We install the system that fills your calendar. 30 qualified booked calls in 60 days, or your money back.",
+  tagline: "We install the system that fills your calendar. 30 qualified booked calls in 60 days, or we work free until you hit it.",
   signoff: "Built · Installed · Running",
+};
+
+export const newsletterCopy = {
+  eyebrow: "The Growth Memo",
+  title: "The plays that fill calendars, in your inbox.",
+  blurb:
+    "One or two emails a month on AI, automation, and the exact system we use to book 30 qualified calls in 60 days. No fluff. Unsubscribe anytime.",
+  cta: "Subscribe",
+  placeholder: "you@company.com",
+  disclaimer: "Join for the growth playbook. We never share your email, and you can unsubscribe in one click.",
 };
