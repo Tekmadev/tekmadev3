@@ -204,6 +204,7 @@ export const proofWins: ProofWin[] = [
   {
     industry: "Auto Detailing",
     company: "Down2Detail",
+    url: "https://down2detail.ca",
     metric: 480,
     prefix: "+",
     suffix: "%",
@@ -227,6 +228,7 @@ export const proofWins: ProofWin[] = [
   {
     industry: "Auto Locksmith",
     company: "KeyFoby",
+    url: "https://keyfoby.com",
     metric: 1100,
     prefix: "+",
     suffix: "%",
