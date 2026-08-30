@@ -190,6 +190,7 @@ export const aggregateStats = [
 export type ProofWin = {
   industry: string;
   company: string;
+  url?: string; // client site; when set, the company name links out (backlink)
   metric: number;
   prefix?: string;
   suffix: string;
@@ -212,8 +213,9 @@ export const proofWins: ProofWin[] = [
     note: "42 days from kickoff",
   },
   {
-    industry: "Home Services",
-    company: "Carpet Masters",
+    industry: "Interlock & Hardscaping",
+    company: "Stoneworks Interlock",
+    url: "https://stoneworksinterlock.com",
     metric: 288,
     prefix: "+",
     suffix: "%",

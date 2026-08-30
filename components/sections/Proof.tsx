@@ -81,7 +81,18 @@ function Card({
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="eyebrow">{win.industry}</p>
-            <p className="mt-2 text-base font-medium text-ink-2">{win.company}</p>
+            {win.url ? (
+              <a
+                href={win.url}
+                target="_blank"
+                rel="noopener"
+                className="mt-2 inline-block text-base font-medium text-ink-2 underline decoration-line-strong underline-offset-4 transition-colors hover:text-gold hover:decoration-gold"
+              >
+                {win.company}
+              </a>
+            ) : (
+              <p className="mt-2 text-base font-medium text-ink-2">{win.company}</p>
+            )}
           </div>
           <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-ink-4">
             {win.note}
