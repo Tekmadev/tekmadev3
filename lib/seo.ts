@@ -1,5 +1,6 @@
 import { business, brand, faqs, systemSteps } from "@/config/site";
 import { GUIDE_PUBLISHED, type Guide } from "@/lib/content";
+import type { BlogPostWithRefs } from "@/lib/blog-data";
 
 export const SITE_URL = business.url;
 export const SITE_NAME = business.name;
@@ -203,6 +204,46 @@ export function faqPageJsonLd(items: { q: string; a: string }[]) {
       name: f.q,
       acceptedAnswer: { "@type": "Answer", text: f.a },
     })),
+  };
+}
+
+// ---- Blog post schema ----
+
+function absoluteUrl(src: string | null | undefined): string | undefined {
+  if (!src) return undefined;
+  return /^https?:\/\//i.test(src) ? src : `${SITE_URL}${src.startsWith("/") ? "" : "/"}${src}`;
+}
+
+export function blogPostingJsonLd(post: BlogPostWithRefs, path: string) {
+  const image = absoluteUrl(post.cover_image_url ?? post.og_image_url);
+  const author = post.author;
+  const authorNode = author
+    ? {
+        "@type": "Person",
+        name: author.name,
+        ...(author.role ? { jobTitle: author.role } : {}),
+        ...(Object.values(author.social ?? {}).length
+          ? { sameAs: Object.values(author.social).filter(Boolean) }
+          : {}),
+      }
+    : { "@id": `${SITE_URL}#founder` };
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "@id": `${SITE_URL}${path}#article`,
+    headline: post.meta_title || post.title,
+    description: post.meta_description || post.excerpt || undefined,
+    ...(image ? { image: [image] } : {}),
+    inLanguage: post.locale || "en-US",
+    isPartOf: { "@id": `${SITE_URL}#website` },
+    author: authorNode,
+    publisher: { "@id": `${SITE_URL}#organization` },
+    datePublished: post.published_at ?? post.created_at,
+    dateModified: post.updated_at,
+    mainEntityOfPage: `${SITE_URL}${path}`,
+    ...(post.category ? { articleSection: post.category.name } : {}),
+    ...(post.keywords?.length ? { keywords: post.keywords.join(", ") } : {}),
   };
 }
 
