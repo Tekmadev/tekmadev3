@@ -310,6 +310,38 @@ export async function getMembershipsForUser(userId: string, email: string | null
   return rows.filter((r) => r.client && !r.client.deleted_at);
 }
 
+/**
+ * First successful sign-in (password set, or Google): flip every invited
+ * membership for this person to active, record their name, and note it on
+ * each client's timeline. Safe to call on every sign-in.
+ */
+export async function activateMembershipsForUser(userId: string, email: string | null | undefined, name: string | null): Promise<MembershipWithClient[]> {
+  const memberships = await getMembershipsForUser(userId, email);
+  const now = new Date().toISOString();
+  for (const m of memberships) {
+    const patch: Partial<ClientMember> = {};
+    if (m.status === "invited") {
+      patch.status = "active";
+      patch.accepted_at = now;
+    }
+    if (name && !m.name) patch.name = name;
+    if (Object.keys(patch).length) await db().from("client_members").update(patch).eq("id", m.id);
+    if (m.status === "invited") {
+      await logActivity({
+        client_id: m.client_id,
+        actor_type: "client",
+        actor_email: email ?? m.email,
+        event: "member.activated",
+        entity_type: "member",
+        entity_id: m.id,
+        summary: `${name || email || m.email} joined the portal`,
+        visibility: "client",
+      });
+    }
+  }
+  return memberships;
+}
+
 export async function upsertMember(input: {
   client_id: string;
   email: string;

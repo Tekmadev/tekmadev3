@@ -1,7 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { db, getMembershipsForUser, logActivity } from "@/lib/clients-data";
+import { activateMembershipsForUser, getMembershipsForUser } from "@/lib/clients-data";
 import { portalUrl } from "@/lib/portal-host";
 import type { ActionResult } from "@/components/portal/PortalForm";
 
@@ -32,6 +32,26 @@ export async function portalSignInAction(formData: FormData): Promise<ActionResu
   }
 
   return { ok: true, redirect: "/" };
+}
+
+/**
+ * Starts Google sign-in. Supabase (PKCE) sends the person to Google and back
+ * to /auth/callback on this host, which exchanges the code for a session and
+ * applies the same membership gate as password login.
+ */
+export async function portalGoogleAction(): Promise<ActionResult> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return { ok: false, message: "Login is not configured yet." };
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: portalUrl("/auth/callback"),
+      queryParams: { prompt: "select_account" },
+    },
+  });
+  if (error || !data.url) return { ok: false, message: "Could not start Google sign-in. Try again or use your email and password." };
+  return { ok: true, redirect: data.url };
 }
 
 export async function portalSignOutAction(): Promise<ActionResult> {
@@ -78,30 +98,7 @@ export async function setPasswordAction(formData: FormData): Promise<ActionResul
   });
   if (error) return { ok: false, message: "Could not save your password. Request a new link and try again." };
 
-  // Activate every membership for this person and remember their name.
-  const memberships = await getMembershipsForUser(user.id, user.email);
-  const now = new Date().toISOString();
-  for (const m of memberships) {
-    const patch: Record<string, unknown> = {};
-    if (m.status === "invited") {
-      patch.status = "active";
-      patch.accepted_at = now;
-    }
-    if (name && !m.name) patch.name = name;
-    if (Object.keys(patch).length) await db().from("client_members").update(patch).eq("id", m.id);
-    if (m.status === "invited") {
-      await logActivity({
-        client_id: m.client_id,
-        actor_type: "client",
-        actor_email: user.email,
-        event: "member.activated",
-        entity_type: "member",
-        entity_id: m.id,
-        summary: `${name || user.email} joined the portal`,
-        visibility: "client",
-      });
-    }
-  }
+  await activateMembershipsForUser(user.id, user.email, name || null);
 
   return { ok: true, redirect: welcome ? "/?welcome=1" : "/" };
 }
