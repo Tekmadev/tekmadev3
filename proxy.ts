@@ -22,6 +22,17 @@ export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
   if (isPortalHost(host)) {
+    // The portal is private: answer robots and sitemap here rather than
+    // rewriting to app routes, which Next would prerender as metadata files.
+    if (pathname === "/robots.txt") {
+      return new NextResponse("User-agent: *\nDisallow: /\n", {
+        headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "public, max-age=3600" },
+      });
+    }
+    if (pathname === "/sitemap.xml") {
+      return new NextResponse("Not found", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+    }
+
     // Bare portal paths map onto the internal /portal routes. Auth, API,
     // Next internals and static files pass through untouched.
     let response: NextResponse;
