@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import Stripe from "stripe";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { provisionClient } from "@/lib/client-provisioning";
+import { getClientByStripeCustomer, logActivity, updateClient } from "@/lib/clients-data";
 
 // Stripe signature verification needs the raw body, so this must run on Node.
 export const runtime = "nodejs";
@@ -55,33 +57,63 @@ export async function POST(req: NextRequest) {
   try {
     if (event.type === "checkout.session.completed") {
       const s = event.data.object as Stripe.Checkout.Session;
-      await supabase.from("subscriptions").upsert(
-        {
-          stripe_customer_id: typeof s.customer === "string" ? s.customer : (s.customer?.id ?? null),
-          stripe_subscription_id:
-            typeof s.subscription === "string" ? s.subscription : (s.subscription?.id ?? null),
-          stripe_checkout_session_id: s.id,
-          email: s.customer_details?.email ?? s.customer_email ?? null,
-          tier: s.metadata?.tier ?? null,
-          status: "active",
-          amount_total: s.amount_total ?? null,
-          currency: s.currency ?? null,
-          ...utmFrom(s.metadata),
-          raw: s as unknown as Record<string, unknown>,
-        },
-        { onConflict: "stripe_subscription_id" },
-      );
+      const customerId = typeof s.customer === "string" ? s.customer : (s.customer?.id ?? null);
+      const email = s.customer_details?.email ?? s.customer_email ?? null;
+      const { data: subRow } = await supabase
+        .from("subscriptions")
+        .upsert(
+          {
+            stripe_customer_id: customerId,
+            stripe_subscription_id:
+              typeof s.subscription === "string" ? s.subscription : (s.subscription?.id ?? null),
+            stripe_checkout_session_id: s.id,
+            email,
+            tier: s.metadata?.tier ?? null,
+            status: "active",
+            amount_total: s.amount_total ?? null,
+            currency: s.currency ?? null,
+            ...utmFrom(s.metadata),
+            raw: s as unknown as Record<string, unknown>,
+          },
+          { onConflict: "stripe_subscription_id" },
+        )
+        .select("id")
+        .maybeSingle();
+
+      // Day 0 of onboarding: the paid customer becomes a portal account and
+      // gets their invite within minutes. Never let this break the billing
+      // record above; a failure here is logged and can be re-run from admin.
+      if (email) {
+        const businessField = s.custom_fields?.find((f) => f.key === "business_name");
+        const businessName = businessField?.text?.value?.trim() || s.customer_details?.name || email.split("@")[1] || "New client";
+        try {
+          await provisionClient({
+            business_name: businessName,
+            email,
+            name: s.customer_details?.name ?? null,
+            phone: s.customer_details?.phone ?? null,
+            plan_id: s.metadata?.tier ?? null,
+            stripe_customer_id: customerId,
+            subscription_id: (subRow as { id: string } | null)?.id ?? null,
+            actor_type: "system",
+            actor_email: null,
+          });
+        } catch (err) {
+          console.error("[stripe webhook] client provisioning failed", err instanceof Error ? err.message : String(err));
+        }
+      }
     } else if (
       event.type === "customer.subscription.created" ||
       event.type === "customer.subscription.updated" ||
       event.type === "customer.subscription.deleted"
     ) {
       const sub = event.data.object as Stripe.Subscription;
+      const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
       // current_period_end moved to the subscription item in recent API versions.
       const periodEnd = sub.items?.data?.[0]?.current_period_end ?? null;
       await supabase.from("subscriptions").upsert(
         {
-          stripe_customer_id: typeof sub.customer === "string" ? sub.customer : sub.customer.id,
+          stripe_customer_id: customerId,
           stripe_subscription_id: sub.id,
           tier: sub.metadata?.tier ?? null,
           status: sub.status,
@@ -91,6 +123,27 @@ export async function POST(req: NextRequest) {
         },
         { onConflict: "stripe_subscription_id" },
       );
+
+      // Keep the client account in step with billing. A fully cancelled
+      // subscription churns the account; everything else is just recorded.
+      try {
+        const client = await getClientByStripeCustomer(customerId);
+        if (client) {
+          if (event.type === "customer.subscription.deleted" && client.status !== "churned") {
+            await updateClient(client.id, { status: "churned", churned_at: new Date().toISOString() }, "stripe");
+          }
+          await logActivity({
+            client_id: client.id,
+            actor_type: "system",
+            event: `billing.${event.type.replace("customer.subscription.", "subscription_")}`,
+            entity_type: "subscription",
+            summary: `Subscription ${sub.status}`,
+            data: { stripe_subscription_id: sub.id, status: sub.status },
+          });
+        }
+      } catch (err) {
+        console.error("[stripe webhook] client sync failed", err instanceof Error ? err.message : String(err));
+      }
     }
   } catch (err) {
     console.error("[stripe webhook] handler error", err instanceof Error ? err.message : String(err));

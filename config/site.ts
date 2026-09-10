@@ -19,6 +19,32 @@ const _calLink = "callline/startbooking";
 const _calNamespace = "startbooking";
 const _calUrl = `https://cal.com/${_calLink}`;
 const _siteUrl = "https://tekmadev.com";
+const _portalHost = "account.tekmadev.com";
+
+/**
+ * Client portal. Served by this same app on a dedicated subdomain: the proxy
+ * rewrites `account.tekmadev.com/<path>` to the internal `/portal/<path>`
+ * routes. Locally the portal runs at `account.localhost:3000` (browsers
+ * resolve *.localhost to the loopback address without any hosts-file edit).
+ */
+export const portal = {
+  host: _portalHost,
+  url: `https://${_portalHost}`,
+  devHost: "account.localhost",
+  /** Internal route prefix the proxy rewrites to. Never appears in client URLs. */
+  internalPrefix: "/portal",
+  /** Booking link for the onboarding kickoff call. */
+  kickoffCalUrl: _calUrl,
+  /**
+   * Identifiers clients add when granting delegated access. Fill these in as
+   * the agency accounts exist; the portal shows them in the access steps.
+   */
+  agencyAccess: {
+    email: _email,
+    metaBusinessId: "",
+    googleAdsManagerId: "",
+  },
+};
 
 export const business = {
   name: "Tekmadev",
@@ -355,6 +381,7 @@ export const footerColumns = [
       { label: "Book a call", href: "/#book" },
       { label: "Email us", href: `mailto:${_email}` },
       { label: "Call us", href: `tel:${_phoneTel}` },
+      { label: "Client login", href: `https://${_portalHost}` },
     ],
   },
   {

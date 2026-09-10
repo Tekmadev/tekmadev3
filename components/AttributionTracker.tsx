@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { captureAttribution } from "@/lib/attribution";
+import { isPortalHost } from "@/lib/portal-host";
 
 /**
  * Captures first-touch / last-touch traffic source on load, then renders
@@ -9,6 +10,8 @@ import { captureAttribution } from "@/lib/attribution";
  */
 export function AttributionTracker() {
   useEffect(() => {
+    // The client portal is not a marketing surface; no attribution there.
+    if (isPortalHost(window.location.hostname)) return;
     captureAttribution();
   }, []);
 

@@ -37,7 +37,7 @@ export function PricingTiers({
     if (status === "success") {
       setBanner({
         kind: "success",
-        text: "You're in. Check your email for next steps. We'll be in touch within one business day.",
+        text: "You're in. Your client portal invite is on its way to your inbox (give it a few minutes). Set your password and your onboarding starts today.",
       });
       captureEvent("checkout_success", attributionProps(getAttribution()));
     } else if (status === "cancelled") {

@@ -19,7 +19,9 @@ const csp = [
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self' 'unsafe-inline' https://app.cal.com https://*.cal.com https://js.stripe.com https://us-assets.i.posthog.com https://us.i.posthog.com https://eu-assets.i.posthog.com https://eu.i.posthog.com",
-  "connect-src 'self' https://*.cal.com https://us.i.posthog.com https://us-assets.i.posthog.com https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.posthog.com https://vitals.vercel-insights.com https://*.vercel-insights.com",
+  // Supabase is allowed so the client portal can upload files straight to
+  // Storage from the browser (signed upload URLs; never through our servers).
+  "connect-src 'self' https://*.cal.com https://us.i.posthog.com https://us-assets.i.posthog.com https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.posthog.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://*.supabase.co",
   "frame-src 'self' https://*.cal.com https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com",
   "form-action 'self' https://checkout.stripe.com",
   "worker-src 'self' blob:",

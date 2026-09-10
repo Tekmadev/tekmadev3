@@ -13,7 +13,7 @@ import { PageviewTracker } from "@/components/PageviewTracker";
  */
 export function PublicChrome() {
   const pathname = usePathname();
-  if (pathname?.startsWith("/admin")) return null;
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/portal")) return null;
 
   return (
     <>

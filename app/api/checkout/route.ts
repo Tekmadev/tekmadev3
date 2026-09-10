@@ -69,6 +69,17 @@ export async function POST(req: NextRequest) {
     mode: "subscription",
     line_items: lineItems,
     billing_address_collection: "required",
+    // Business name and phone feed the client portal account the webhook
+    // creates the moment payment clears (see app/api/webhooks/stripe).
+    phone_number_collection: { enabled: true },
+    custom_fields: [
+      {
+        key: "business_name",
+        label: { type: "custom", custom: "Business name" },
+        type: "text",
+        optional: false,
+      },
+    ],
     success_url: `${origin}/start?checkout=success`,
     cancel_url: `${origin}/start?checkout=cancelled`,
     metadata,
