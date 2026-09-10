@@ -62,6 +62,12 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Everything except Next internals and static assets. Host checks above keep
-  // the marketing site on the fast path (no auth work).
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|avif|ico|css|js|map|txt|xml|webmanifest|woff2?)$).*)"],
+  // the marketing site on the fast path (no auth work). robots.txt and
+  // sitemap.xml are matched explicitly so the portal host can serve its own
+  // (Disallow all / no sitemap) instead of the marketing files.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|avif|ico|css|js|map|txt|xml|webmanifest|woff2?)$).*)",
+    "/robots.txt",
+    "/sitemap.xml",
+  ],
 };
