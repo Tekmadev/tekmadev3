@@ -1,7 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { activateMembershipsForUser, getMembershipsForUser } from "@/lib/clients-data";
+import { activateMembershipsForUser } from "@/lib/clients-data";
 import { portalUrl } from "@/lib/portal-host";
 import type { ActionResult } from "@/components/portal/PortalForm";
 
@@ -22,7 +22,9 @@ export async function portalSignInAction(formData: FormData): Promise<ActionResu
   if (error || !data.user) return { ok: false, message: "Wrong email or password." };
 
   // Valid credentials are not enough: the account must belong to a client.
-  const memberships = await getMembershipsForUser(data.user.id, data.user.email);
+  // A first successful sign-in also activates any invited membership.
+  const metaName = typeof data.user.user_metadata?.name === "string" ? data.user.user_metadata.name : null;
+  const memberships = await activateMembershipsForUser(data.user.id, data.user.email, metaName);
   if (memberships.length === 0) {
     await supabase.auth.signOut();
     return {
