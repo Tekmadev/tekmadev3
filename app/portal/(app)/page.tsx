@@ -14,6 +14,7 @@ import {
 } from "@/lib/onboarding-data";
 import { StageTracker } from "@/components/portal/StageTracker";
 import { TaskItem } from "@/components/portal/TaskList";
+import { LinkPending } from "@/components/portal/LinkPending";
 import { Badge, EmptyState, Notice, PageHeader, Panel, ProgressBar, btnSecondary, fmtDate, fmtDateTime } from "@/components/portal/ui";
 import { completeTaskAction } from "./actions";
 
@@ -71,8 +72,9 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
             title="What we need from you"
             description={needFromYou.length ? "Short list. Each one unblocks the build." : undefined}
             action={
-              <Link href="/onboarding" className="text-sm text-ink-3 hover:text-ink">
+              <Link href="/onboarding" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink">
                 Full checklist
+                <LinkPending />
               </Link>
             }
           >
@@ -92,8 +94,9 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
               title="Your guarantee"
               description={`${guarantee.target} booked calls in ${guarantee.windowDays} days, or we work free until you hit it.`}
               action={
-                <Link href="/calls" className="text-sm text-ink-3 hover:text-ink">
+                <Link href="/calls" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink">
                   See every call
+                  <LinkPending />
                 </Link>
               }
             >
@@ -157,8 +160,9 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
           <Panel
             title="Updates"
             action={
-              <Link href="/settings#notifications" className="text-sm text-ink-3 hover:text-ink">
+              <Link href="/settings#notifications" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink">
                 All
+                <LinkPending />
               </Link>
             }
           >

@@ -26,6 +26,7 @@ import { cn } from "@/lib/cn";
 import { business } from "@/config/site";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import type { ActionResult } from "@/components/portal/PortalForm";
+import { LinkPending } from "@/components/portal/LinkPending";
 
 export type PortalNavCounts = {
   onboarding?: number;
@@ -113,7 +114,10 @@ export function PortalShell({
               active ? "bg-surface font-medium text-ink shadow-sm" : "text-ink-3 hover:bg-surface/60 hover:text-ink",
             )}
           >
-            <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-gold" : "text-ink-4")} />
+            <LinkPending
+              className="h-[18px] w-[18px] shrink-0 text-gold"
+              idle={<Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-gold" : "text-ink-4")} />}
+            />
             <span className="flex-1">{item.label}</span>
             {count ? (
               <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[11px] font-semibold text-gold-deep">{count}</span>

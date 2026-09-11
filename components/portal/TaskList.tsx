@@ -6,6 +6,7 @@ import { STAGES, isTaskOpen, type OnboardingTask } from "@/lib/onboarding-data";
 import { Badge, btnSecondary, fmtDate } from "@/components/portal/ui";
 import { SubmitButton } from "@/components/portal/SubmitButton";
 import { PortalForm, type ActionResult } from "@/components/portal/PortalForm";
+import { LinkPending } from "@/components/portal/LinkPending";
 
 /** Where a task sends the client to do the thing. */
 export function taskHref(t: OnboardingTask): string | null {
@@ -76,7 +77,7 @@ export function TaskItem({
             {href && (
               <Link href={href} className={btnSecondary}>
                 {task.kind === "esign" ? "Review and accept" : task.kind === "approval" ? "Review" : "Open"}
-                <ArrowRight className="h-3.5 w-3.5" />
+                <LinkPending idle={<ArrowRight className="h-3.5 w-3.5" />} />
               </Link>
             )}
             {canSelfComplete && completeAction && (
