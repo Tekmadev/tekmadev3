@@ -10,6 +10,7 @@ import {
   upsertMember,
   type MembershipWithClient,
 } from "@/lib/clients-data";
+import { leadWelcomeEmail } from "@/lib/mail/welcome";
 
 /**
  * Self-serve accounts. A person who signs up on the portal (email + password,
@@ -128,6 +129,9 @@ export async function ensureLeadAccount(user: User): Promise<MembershipWithClien
   });
 
   if (created) {
+    // Their email is verified by this point (confirmed sign-up, or Google),
+    // so the portal link in the welcome will work the moment they open it.
+    const mail = leadWelcomeEmail({ businessName: client.business_name, firstName: (name || "").split(" ")[0] || null });
     await createNotification({
       client_id: client.id,
       member_id: member.id,
@@ -135,6 +139,7 @@ export async function ensureLeadAccount(user: User): Promise<MembershipWithClien
       subject: `Welcome to Tekmadev, ${client.business_name}`,
       body: "Tell us about your business and we can show you exactly what a booked-call system looks like for you. No card, no commitment.",
       action_url: "/intake",
+      email: { to: email, html: mail.html, subject: mail.subject, tags: mail.tags },
     });
   }
 

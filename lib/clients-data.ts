@@ -1,4 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { offerName } from "@/config/products";
+import { sendMail } from "@/lib/mail/send";
+import { clientWelcomeEmail } from "@/lib/mail/welcome";
 
 /**
  * Client accounts, their people, the activity trail, and notifications.
@@ -341,6 +344,27 @@ export async function activateMembershipsForUser(userId: string, email: string |
         summary: `${name || email || m.email} joined the portal`,
         visibility: "client",
       });
+
+      // They can reach the portal from this moment on, so the welcome (and
+      // its "open your onboarding" link) is safe to send now and not before.
+      const to = (email || m.email || "").trim().toLowerCase();
+      if (to) {
+        const mail = clientWelcomeEmail({
+          businessName: m.client.business_name,
+          firstName: (name || m.name || "").split(" ")[0] || null,
+          planName: offerName(m.client.plan_id),
+          isOwner: m.role === "owner" || m.role === "admin",
+        });
+        await createNotification({
+          client_id: m.client_id,
+          member_id: m.id,
+          template_key: "welcome_member",
+          subject: mail.subject,
+          body: "Your portal is open. Your checklist and everything we need from you is inside.",
+          action_url: "/onboarding",
+          email: { to, html: mail.html, tags: mail.tags },
+        });
+      }
     }
   }
   return memberships;
@@ -454,6 +478,12 @@ export async function createNotification(input: {
   provider?: string | null;
   provider_message_id?: string | null;
   metadata?: Record<string, unknown>;
+  /**
+   * Also deliver this one by email. The send is logged as its own row with
+   * the real outcome, so the in-app copy is never held up by the mailer and
+   * a failed send is visible instead of silent.
+   */
+  email?: { to: string; html: string; subject?: string; tags?: { name: string; value: string }[] };
 }): Promise<void> {
   const channel = input.channel ?? "in_app";
   const { error } = await db().from("client_notifications").insert({
@@ -471,6 +501,38 @@ export async function createNotification(input: {
     metadata: input.metadata ?? {},
   });
   if (error) console.error("[client_notifications] insert failed", error.message);
+
+  if (input.email) await deliverEmail(input, input.email);
+}
+
+/** Sends one transactional email and records the outcome. Never throws. */
+async function deliverEmail(
+  input: { client_id: string; member_id?: string | null; template_key?: string | null; subject: string; action_url?: string | null; metadata?: Record<string, unknown> },
+  email: { to: string; html: string; subject?: string; tags?: { name: string; value: string }[] },
+): Promise<void> {
+  const subject = email.subject ?? input.subject;
+  const result = await sendMail({ to: email.to, subject, html: email.html, tags: email.tags });
+
+  const status: ClientNotification["status"] = result.ok ? "sent" : result.skipped ? "queued" : "failed";
+  const { error } = await db().from("client_notifications").insert({
+    client_id: input.client_id,
+    member_id: input.member_id ?? null,
+    channel: "email",
+    template_key: input.template_key ?? null,
+    subject,
+    body: null,
+    action_url: input.action_url ?? null,
+    status,
+    provider: "resend",
+    provider_message_id: result.ok ? result.id : null,
+    sent_at: result.ok ? new Date().toISOString() : null,
+    metadata: {
+      ...(input.metadata ?? {}),
+      to: email.to,
+      ...(result.ok ? {} : { error: result.skipped ? result.reason : result.error }),
+    },
+  });
+  if (error) console.error("[client_notifications] email log failed", error.message);
 }
 
 export async function listInAppNotifications(clientId: string, memberId: string, limit = 20): Promise<ClientNotification[]> {
