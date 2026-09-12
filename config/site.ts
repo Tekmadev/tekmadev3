@@ -356,11 +356,51 @@ export const trustSignals: TrustSignal[] = [
   { iconName: "Zap", text: "System live in 14 days if you move forward" },
 ];
 
+/**
+ * The product line-up behind the nav dropdown. Every offer Tekmadev sells is
+ * a "line" you switch on, hence Webline, Calline, GASline.
+ *
+ * An item with no `href` renders as coming soon: shown, dimmed, not clickable.
+ * Add the href (and a blurb) the day it ships and it becomes a live link with
+ * no other change.
+ *
+ * Note on the Growth System: it points at the public offer section, never at
+ * /start. Prices stay private and quoted on a qualification call, so /start
+ * is noindex and must not be linked from anywhere public.
+ */
+export type NavProduct = {
+  name: string;
+  /** Omit for coming soon. */
+  href?: string;
+  /** One line, benefit first. Optional while a product is unannounced. */
+  blurb?: string;
+  badge?: string;
+};
+
+export const productNav: { label: string; blurb: string; items: NavProduct[] } = {
+  label: "What we build",
+  blurb: "One system per problem. Buy the piece you need now, add the rest when you are ready.",
+  items: [
+    {
+      name: "Growth System",
+      href: "/#pricing",
+      blurb: "The full engine. Every call answered, every lead chased, 30 booked calls in 60 days or you don't pay.",
+      badge: "Flagship",
+    },
+    {
+      name: "Webline",
+      href: "/webline",
+      blurb: "A startup website that ranks on Google and gets cited by AI. Live in 14 days, one payment.",
+      badge: "New",
+    },
+    { name: "Calline", badge: "Coming soon" },
+    { name: "GASline", badge: "Coming soon" },
+  ],
+};
+
 export const navLinks = [
   { href: "/#system", label: "The System" },
   { href: "/#proof", label: "Proof" },
-  { href: "/#pricing", label: "Pricing" },
-  { href: "/webline", label: "Webline" },
   { href: "/guides", label: "Guides" },
   { href: "/#faq", label: "FAQ" },
 ];
