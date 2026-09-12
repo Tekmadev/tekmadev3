@@ -7,7 +7,9 @@ import { getSupabaseAdmin } from "@/lib/supabase";
  * queries to the right client_id.
  */
 
-export type ClientStatus = "pending" | "onboarding" | "live" | "paused" | "churned";
+export type ClientStatus = "lead" | "pending" | "onboarding" | "live" | "paused" | "churned";
+/** How the account came to exist. */
+export type ClientSource = "admin" | "stripe" | "self_serve" | "import";
 export type GuaranteeStatus = "not_started" | "running" | "met" | "extended" | "waived" | "not_eligible";
 export type GuaranteeCountRule = "booked" | "showed";
 
@@ -24,6 +26,7 @@ export type Client = {
   timezone: string;
   address: Record<string, unknown>;
   status: ClientStatus;
+  source: ClientSource;
   plan_id: string | null;
   stripe_customer_id: string | null;
   lead_id: string | null;
@@ -120,6 +123,7 @@ export function slugify(input: string): string {
 }
 
 export const CLIENT_STATUS_LABEL: Record<ClientStatus, string> = {
+  lead: "Lead",
   pending: "Pending",
   onboarding: "Onboarding",
   live: "Live",

@@ -2,8 +2,16 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { activateMembershipsForUser } from "@/lib/clients-data";
+import { ensureLeadAccount } from "@/lib/lead-accounts";
+import { isAllowedAdmin } from "@/lib/admin";
 import { portalUrl } from "@/lib/portal-host";
 import type { ActionResult } from "@/components/portal/PortalForm";
+
+const ATTRIBUTION_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "fbclid", "ttclid", "msclkid", "li_fat_id", "referrer", "landing_page"] as const;
+
+function s(v: FormDataEntryValue | null, max = 200): string {
+  return String(v ?? "").trim().slice(0, max);
+}
 
 /**
  * Auth actions for the portal. They return results instead of redirecting;
@@ -19,21 +27,94 @@ export async function portalSignInAction(formData: FormData): Promise<ActionResu
   if (!supabase) return { ok: false, message: "Login is not configured yet." };
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error && /not confirmed/i.test(error.message)) {
+    return { ok: false, message: "Confirm your email first: open the link we sent you, then sign in." };
+  }
   if (error || !data.user) return { ok: false, message: "Wrong email or password." };
 
-  // Valid credentials are not enough: the account must belong to a client.
-  // A first successful sign-in also activates any invited membership.
+  // A first successful sign-in activates any invited membership. Someone with
+  // a verified login but no client account gets a free lead account, unless
+  // the login belongs to staff (admins use the admin app, not the portal).
   const metaName = typeof data.user.user_metadata?.name === "string" ? data.user.user_metadata.name : null;
-  const memberships = await activateMembershipsForUser(data.user.id, data.user.email, metaName);
+  let memberships = await activateMembershipsForUser(data.user.id, data.user.email, metaName);
   if (memberships.length === 0) {
-    await supabase.auth.signOut();
-    return {
-      ok: false,
-      message: "That login exists but is not attached to a client account. Use the email your invite was sent to, or contact us.",
-    };
+    if (await isAllowedAdmin(data.user.email)) {
+      await supabase.auth.signOut();
+      return { ok: false, message: "That is a Tekmadev staff login. Use the admin dashboard, or sign in with a client email." };
+    }
+    memberships = await ensureLeadAccount(data.user);
+    if (memberships.length === 0) {
+      await supabase.auth.signOut();
+      return { ok: false, message: "We could not open an account for that login. Email us and we will sort it out." };
+    }
+    return { ok: true, redirect: "/?welcome=lead" };
   }
 
   return { ok: true, redirect: "/" };
+}
+
+/**
+ * Self-serve sign-up. Supabase sends the confirmation email; the account
+ * (client + owner membership) is only created once the email is verified,
+ * in /auth/confirm, so nobody can pre-register someone else's address.
+ */
+export async function portalSignUpAction(formData: FormData): Promise<ActionResult> {
+  // Honeypot: real people never fill a hidden field.
+  if (s(formData.get("website"))) return { ok: true, message: "Check your inbox to confirm your email." };
+
+  const name = s(formData.get("name"), 120);
+  const businessName = s(formData.get("business_name"), 200);
+  const email = s(formData.get("email"), 200).toLowerCase();
+  const password = String(formData.get("password") || "");
+  const accepted = formData.get("accept") === "on";
+
+  if (!name) return { ok: false, message: "Tell us your name." };
+  if (!businessName) return { ok: false, message: "Tell us your business or startup name. A working name is fine." };
+  if (!email.includes("@")) return { ok: false, message: "Enter a valid email address." };
+  if (password.length < 8) return { ok: false, message: "Password must be at least 8 characters." };
+  if (!accepted) return { ok: false, message: "Please accept the Terms and Privacy Policy to continue." };
+
+  const attribution: Record<string, string> = {};
+  for (const k of ATTRIBUTION_KEYS) {
+    const v = s(formData.get(k), 480);
+    if (v) attribution[k] = v;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return { ok: false, message: "Sign-up is not configured yet." };
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: portalUrl("/auth/confirm"),
+      data: { name, business_name: businessName, attribution, terms_accepted_at: new Date().toISOString() },
+    },
+  });
+
+  if (error) {
+    console.error("[portal signup]", error.message);
+    if (/rate limit|too many/i.test(error.message)) return { ok: false, message: "Too many sign-ups from this network. Try again in a few minutes." };
+    if (/already|exists|registered/i.test(error.message)) return { ok: false, message: "An account with that email already exists. Sign in instead, or reset your password." };
+    if (/sending confirmation email/i.test(error.message)) return { ok: false, message: "We could not send the confirmation email to that address. Check it and try again, or use Google." };
+    return { ok: false, message: "Could not create your account. Try again, or use Google." };
+  }
+
+  // Confirmations off: the session is live, open the account now.
+  if (data.session && data.user) {
+    await ensureLeadAccount(data.user);
+    return { ok: true, redirect: "/?welcome=lead" };
+  }
+
+  // Supabase answers an already-registered email with an empty identities list.
+  if (data.user && data.user.identities?.length === 0) {
+    return { ok: false, message: "An account with that email already exists. Sign in instead, or reset your password." };
+  }
+
+  return {
+    ok: true,
+    message: `Almost there. We sent a confirmation link to ${email}. Open it to finish creating your account. Check spam if it is not there in a minute.`,
+  };
 }
 
 /**

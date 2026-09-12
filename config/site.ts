@@ -384,6 +384,7 @@ export const footerColumns = [
       { label: "Email us", href: `mailto:${_email}` },
       { label: "Call us", href: `tel:${_phoneTel}` },
       { label: "Client login", href: `https://${_portalHost}` },
+      { label: "Create a free account", href: `https://${_portalHost}/signup` },
     ],
   },
   {

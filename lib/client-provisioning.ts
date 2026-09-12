@@ -8,6 +8,7 @@ import {
   createNotification,
   db,
   getClientByEmail,
+  getClientById,
   getClientByStripeCustomer,
   logActivity,
   updateClient,
@@ -20,8 +21,10 @@ import {
 import {
   createAccessGrant,
   createAgreement,
+  completeTaskByKey,
   createOnboardingRun,
   getActiveOnboarding,
+  getLatestIntake,
   listAccessGrants,
   listAgreements,
   listTasks,
@@ -38,6 +41,8 @@ import { portalUrl } from "@/lib/portal-host";
  */
 
 export type ProvisionInput = {
+  /** Known account (Checkout's client_reference_id from a portal-started checkout). */
+  client_id?: string | null;
   business_name: string;
   email: string;
   name?: string | null;
@@ -94,9 +99,14 @@ export async function provisionClient(input: ProvisionInput): Promise<ProvisionR
   // One-time products (Webline) reuse plan_id; no guarantee, website-only checklist.
   const product = getProductMeta(input.plan_id);
 
-  // 1. Find or create the client.
+  // 1. Find or create the client. A self-serve lead who pays is found by the
+  //    id the portal put on the checkout, then by Stripe customer, then email.
   let client: Client | null = null;
-  if (input.stripe_customer_id) client = await getClientByStripeCustomer(input.stripe_customer_id);
+  if (input.client_id) {
+    const known = await getClientById(input.client_id);
+    if (known && !known.deleted_at) client = known;
+  }
+  if (!client && input.stripe_customer_id) client = await getClientByStripeCustomer(input.stripe_customer_id);
   if (!client) client = await getClientByEmail(email);
 
   let createdClient = false;
@@ -109,6 +119,7 @@ export async function provisionClient(input: ProvisionInput): Promise<ProvisionR
       stripe_customer_id: input.stripe_customer_id ?? null,
       lead_id: input.lead_id ?? null,
       status: "pending",
+      source: input.actor_type === "system" ? "stripe" : "admin",
       guarantee_eligible: tier?.guarantee ?? false,
       guarantee_status: tier?.guarantee ? "not_started" : "not_eligible",
       created_by: input.actor_email ?? input.actor_type,
@@ -167,6 +178,15 @@ export async function provisionClient(input: ProvisionInput): Promise<ProvisionR
       target_live_date: new Date(Date.now() + liveDays * 86_400_000).toISOString().slice(0, 10),
     });
     hasKickoff = run.tasks.some((t) => t.key === "welcome.book_kickoff");
+
+    // A lead who already told us about their business skips that step.
+    const intake = await getLatestIntake(client.id);
+    if (intake && (intake.status === "submitted" || intake.status === "reviewed")) {
+      await completeTaskByKey(run.onboarding.id, "intake.business_profile", "system");
+    }
+    if (client.lead_id) {
+      await db().from("leads").update({ status: "converted" }).eq("id", client.lead_id);
+    }
     onboarding = run.onboarding;
     createdOnboarding = true;
     await ensureSupportingRows(client, run.tasks);
@@ -179,7 +199,7 @@ export async function provisionClient(input: ProvisionInput): Promise<ProvisionR
       summary: "Onboarding started",
       visibility: "client",
     });
-    if (client.status === "pending") {
+    if (client.status === "pending" || client.status === "lead") {
       client = await updateClient(client.id, { status: "onboarding" });
     }
   } else {

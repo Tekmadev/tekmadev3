@@ -10,13 +10,14 @@ export default async function LeadsPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <PageHeader title="Leads" subtitle={`${leads.length} most recent bookings and leads`} />
+      <PageHeader title="Leads" subtitle={`${leads.length} most recent bookings and portal sign-ups`} />
 
       <Panel title="All leads">
         <DataTable
-          head={["When", "Name", "Email", "Phone", "Status", "Booking", "Source", "Campaign"]}
+          head={["When", "Type", "Name", "Email", "Phone", "Status", "Booking", "Source", "Campaign"]}
           rows={leads.map((r) => [
             fmtDateTime(r.created_at),
+            r.source === "portal_signup" ? "Portal sign-up" : r.source === "cal_booking" ? "Booked call" : txt(r.source),
             txt(r.name),
             txt(r.email),
             txt(r.phone),
@@ -25,7 +26,7 @@ export default async function LeadsPage() {
             txt(r.utm_source),
             txt(r.utm_campaign),
           ])}
-          empty="No leads yet. They appear here once the Cal.com webhook is connected."
+          empty="No leads yet. Booked calls and portal sign-ups appear here."
         />
       </Panel>
     </div>

@@ -1,9 +1,10 @@
+import Link from "next/link";
 import { requireClient } from "@/lib/portal-auth";
 import { derivedStage, getActiveOnboarding, listTasks, stagesInRun, taskProgress } from "@/lib/onboarding-data";
 import { isProductPlan } from "@/config/products";
 import { StageTracker } from "@/components/portal/StageTracker";
 import { TaskList } from "@/components/portal/TaskList";
-import { EmptyState, Notice, PageHeader, Panel, fmtDate } from "@/components/portal/ui";
+import { EmptyState, Notice, PageHeader, Panel, btnPrimary, fmtDate } from "@/components/portal/ui";
 import { completeTaskAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +28,16 @@ export default async function OnboardingPage() {
         }
       />
 
-      {!onboarding ? (
+      {client.status === "lead" ? (
+        <Panel>
+          <EmptyState title="No plan yet" body="Your onboarding starts the minute you pick a plan. Until then, tell us about your business so we can hit the ground running." />
+          <div className="mt-2 flex justify-center">
+            <Link href="/plans" className={btnPrimary}>
+              See plans
+            </Link>
+          </div>
+        </Panel>
+      ) : !onboarding ? (
         <EmptyState title="No onboarding in progress" body={oneTime ? "Your website is live. If you add a growth plan, a new checklist appears here." : "Your system is live. If you upgrade your plan, a new checklist appears here."} />
       ) : (
         <>

@@ -38,6 +38,9 @@ import {
 } from "@/lib/onboarding-data";
 import { INTAKE_FIELDS, INTAKE_SCHEMA_VERSION, intakeCompletion, parseIntakeForm } from "@/lib/intake-schema";
 import { inviteMember, sendPortalInvite } from "@/lib/client-provisioning";
+import { NOT_CONFIGURED, prepareCheckout } from "@/lib/checkout";
+import { isProductPlan } from "@/config/products";
+import { business } from "@/config/site";
 import { portalUrl } from "@/lib/portal-host";
 import type { ActionResult } from "@/components/portal/PortalForm";
 import type { UploadTicket } from "@/components/portal/AssetUploader";
@@ -538,5 +541,58 @@ export async function billingPortalAction(): Promise<ActionResult> {
   } catch (err) {
     console.error("[billing portal]", err instanceof Error ? err.message : String(err));
     return unavailable;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Plans (free accounts): start a checkout tied to THIS account
+// ---------------------------------------------------------------------------
+
+/**
+ * A lead picks a plan. The session carries their email and account id, so
+ * the Stripe webhook turns this same account into the onboarding instead of
+ * creating a second client keyed on a different email.
+ */
+export async function startCheckoutAction(formData: FormData): Promise<ActionResult> {
+  const sess = await session("admin");
+  if (isResult(sess)) return sess;
+  if (sess.client.status !== "lead") return { ok: false, message: "This account already has a plan. Email us to change it." };
+
+  const offer = s(formData.get("offer"), 40);
+  const secret = process.env.STRIPE_SECRET_KEY;
+  if (!secret || !offer) return { ok: false, message: NOT_CONFIGURED };
+
+  const stripe = new Stripe(secret);
+  const product = isProductPlan(offer);
+  const attribution = sess.client.metadata?.attribution;
+  const prepared = await prepareCheckout(stripe, {
+    tier: product ? undefined : offer,
+    product: product ? offer : undefined,
+    attribution: attribution && typeof attribution === "object" ? (attribution as Record<string, unknown>) : undefined,
+    origin: business.url,
+    urls: { success: portalUrl("/?checkout=success"), cancel: portalUrl("/plans?checkout=cancelled") },
+    customerEmail: sess.email,
+    clientReferenceId: sess.client.id,
+    businessName: sess.client.business_name,
+  });
+  if (!prepared.ok) return { ok: false, message: prepared.error };
+
+  try {
+    const checkout = await stripe.checkout.sessions.create(prepared.params);
+    if (!checkout.url) return { ok: false, message: NOT_CONFIGURED };
+    await logActivity({
+      client_id: sess.client.id,
+      actor_type: "client",
+      actor_email: sess.email,
+      event: "checkout.started",
+      entity_type: "client",
+      entity_id: sess.client.id,
+      summary: `${who(sess)} started checkout for ${offer}`,
+      data: { offer, stripe_checkout_session_id: checkout.id },
+    });
+    return { ok: true, redirect: checkout.url };
+  } catch (err) {
+    console.error("[portal checkout]", err instanceof Error ? err.message : String(err));
+    return { ok: false, message: "Couldn't start checkout. Please try again or book a call." };
   }
 }

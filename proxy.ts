@@ -53,8 +53,8 @@ export async function proxy(request: NextRequest) {
       const stripped = pathname.slice(portal.internalPrefix.length) || "/";
       return NextResponse.redirect(`${portalOrigin()}${stripped}${search}`, 308);
     }
-    if (pathname === "/login") {
-      return NextResponse.redirect(`${portalOrigin()}/login`, 308);
+    if (pathname === "/login" || pathname === "/signup") {
+      return NextResponse.redirect(`${portalOrigin()}${pathname}${search}`, 308);
     }
   }
 

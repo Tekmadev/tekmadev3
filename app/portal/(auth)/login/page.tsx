@@ -14,7 +14,8 @@ export const dynamic = "force-dynamic";
 // Errors that arrive by URL from the OAuth callback (route handlers redirect).
 const ERRORS: Record<string, string> = {
   google: "Google sign-in did not complete. Try again, or use your email and password.",
-  noaccount: "That Google account is not attached to a client account. Sign in with the email your invite was sent to, or contact us.",
+  noaccount: "That is a Tekmadev staff login. Use the admin dashboard, or sign in with a client email.",
+  link: "That link has expired or was already used. Sign in below, or request a new one.",
 };
 
 function GoogleMark() {
@@ -88,6 +89,9 @@ export default async function PortalLogin({ searchParams }: { searchParams: Prom
       )}
 
       <div className="mt-6 flex flex-col gap-2 text-sm text-ink-3">
+        <Link href="/signup" className="font-medium text-ink transition-colors hover:text-gold">
+          New here? Create a free account
+        </Link>
         <Link href="/forgot" className="transition-colors hover:text-ink">
           Forgot password, or never set one?
         </Link>
@@ -96,7 +100,7 @@ export default async function PortalLogin({ searchParams }: { searchParams: Prom
         </a>
       </div>
       <p className="mt-4 text-xs text-ink-4">
-        Google works with the same email your invite was sent to. Any other Google account will be turned away.
+        Invited by us? Use the email your invite was sent to. Any other Google account opens a free account you can upgrade anytime.
       </p>
     </>
   );

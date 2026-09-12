@@ -16,6 +16,7 @@ import {
   CreditCard,
   Users,
   Settings,
+  Sparkles,
   LogOut,
   Menu,
   X,
@@ -28,8 +29,11 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import type { ActionResult } from "@/components/portal/PortalForm";
 import { LinkPending } from "@/components/portal/LinkPending";
 
-/** Which optional sections this client has. Booked calls only make sense on growth plans. */
-export type PortalNavFeatures = { bookedCalls?: boolean };
+/**
+ * Which sections this client has. Booked calls only make sense on growth
+ * plans; a lead (signed up, not paid) sees the short menu plus Plans.
+ */
+export type PortalNavFeatures = { bookedCalls?: boolean; lead?: boolean };
 
 export type PortalNavCounts = {
   onboarding?: number;
@@ -44,6 +48,7 @@ const NAV: NavItem[] = [
   { href: "/", label: "Home", icon: LayoutDashboard },
   { href: "/onboarding", label: "Onboarding", icon: ListChecks, countKey: "onboarding" },
   { href: "/intake", label: "Your business", icon: ClipboardList },
+  { href: "/plans", label: "Plans", icon: Sparkles },
   { href: "/access", label: "Access", icon: KeyRound },
   { href: "/assets", label: "Files", icon: FolderUp },
   { href: "/approvals", label: "Approvals", icon: BadgeCheck, countKey: "approvals" },
@@ -53,6 +58,8 @@ const NAV: NavItem[] = [
   { href: "/team", label: "Team", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
+
+const LEAD_NAV = ["/", "/intake", "/plans", "/assets", "/team", "/settings"];
 
 export function PortalShell({
   clientName,
@@ -104,7 +111,11 @@ export function PortalShell({
     return href === "/" ? p === "/" : p.startsWith(href);
   };
 
-  const items = NAV.filter((item) => item.href !== "/calls" || features.bookedCalls !== false);
+  const items = NAV.filter((item) => {
+    if (features.lead) return LEAD_NAV.includes(item.href);
+    if (item.href === "/plans") return false;
+    return item.href !== "/calls" || features.bookedCalls !== false;
+  });
 
   const nav = (
     <nav className="flex flex-col gap-1 px-3 py-2">

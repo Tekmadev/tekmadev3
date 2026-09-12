@@ -141,7 +141,7 @@ export async function getLeads(limit = 200): Promise<Row[]> {
   if (!supabase) return [];
   const { data } = await supabase
     .from("leads")
-    .select("created_at,name,email,phone,status,booking_start,utm_source,utm_medium,utm_campaign,referrer")
+    .select("created_at,source,name,email,phone,status,booking_start,utm_source,utm_medium,utm_campaign,referrer")
     .order("created_at", { ascending: false })
     .limit(limit);
   return (data ?? []) as Row[];

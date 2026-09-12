@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Hammer, Lock, Rocket, Settings2 } from "lucide-react";
+import { Building2, Hammer, Lock, Rocket, Settings2, UserPlus } from "lucide-react";
 import { requireAdmin } from "@/lib/admin";
 import { CLIENT_STATUS_LABEL, listClients, type ClientStatus } from "@/lib/clients-data";
 import {
@@ -19,6 +19,7 @@ import { cn } from "@/lib/cn";
 export const dynamic = "force-dynamic";
 
 const STATUS_TONE: Record<ClientStatus, Tone> = {
+  lead: "muted",
   pending: "neutral",
   onboarding: "gold",
   live: "ok",
@@ -28,6 +29,7 @@ const STATUS_TONE: Record<ClientStatus, Tone> = {
 
 const FILTERS: { key: string; label: string }[] = [
   { key: "", label: "Active" },
+  { key: "lead", label: "Leads" },
   { key: "onboarding", label: "Onboarding" },
   { key: "live", label: "Live" },
   { key: "pending", label: "Pending" },
@@ -49,7 +51,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const all = await listClients();
   const clients = all.filter((c) => {
     if (filter === "all") return true;
-    if (filter === "") return c.status !== "churned";
+    if (filter === "") return c.status !== "churned" && c.status !== "lead";
     return c.status === filter;
   });
 
@@ -69,6 +71,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   });
 
   const counts = {
+    leads: all.filter((c) => c.status === "lead").length,
     onboarding: all.filter((c) => c.status === "onboarding" || c.status === "pending").length,
     live: all.filter((c) => c.status === "live").length,
     blocked: onboardings.filter((o) => o.blocked).length,
@@ -89,7 +92,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
 
       {params.deleted === "1" && <Notice kind="ok">Client moved to trash.</Notice>}
 
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <StatCard label="Leads" value={counts.leads} icon={UserPlus} sub="signed up, not paid" />
         <StatCard label="Onboarding" value={counts.onboarding} icon={Hammer} />
         <StatCard label="Live" value={counts.live} icon={Rocket} />
         <StatCard label="Blocked" value={counts.blocked} icon={Lock} sub="waiting on something" />

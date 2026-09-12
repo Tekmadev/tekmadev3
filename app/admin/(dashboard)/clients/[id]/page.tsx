@@ -35,7 +35,7 @@ import { deleteClientAction, goLiveAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_TONE: Record<string, Tone> = { pending: "neutral", onboarding: "gold", live: "ok", paused: "warn", churned: "muted" };
+const STATUS_TONE: Record<string, Tone> = { lead: "muted", pending: "neutral", onboarding: "gold", live: "ok", paused: "warn", churned: "muted" };
 
 const SECTIONS = [
   ["onboarding", "Onboarding"],

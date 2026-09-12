@@ -2,14 +2,17 @@ import { type NextRequest } from "next/server";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { activateMembershipsForUser } from "@/lib/clients-data";
+import { ensureLeadAccount } from "@/lib/lead-accounts";
+import { isAllowedAdmin } from "@/lib/admin";
 import { isPortalHost } from "@/lib/portal-host";
 
 /**
  * OAuth (Google) return leg. Supabase sends the browser here with a PKCE
- * `code`; we exchange it for a session on THIS host, then apply the portal's
- * membership gate: a Google account that is not attached to a client is
- * signed straight back out. The URL must be in Supabase's Redirect URLs
- * allowlist (https://account.tekmadev.com/auth/callback and the localhost one).
+ * `code`; we exchange it for a session on THIS host. Existing members go to
+ * their dashboard; a Google account with no client yet gets a free lead
+ * account (Google has verified the email), unless it is a staff login. The
+ * URL must be in Supabase's Redirect URLs allowlist
+ * (https://account.tekmadev.com/auth/callback and the localhost one).
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -40,11 +43,20 @@ export async function GET(request: NextRequest) {
     (typeof user.user_metadata?.name === "string" && user.user_metadata.name) ||
     null;
   const memberships = await activateMembershipsForUser(user.id, user.email, name);
-  if (memberships.length === 0) {
+  if (memberships.length > 0) {
+    const firstTime = memberships.some((m) => m.status === "invited");
+    redirect(firstTime ? "/?welcome=1" : "/");
+  }
+
+  if (await isAllowedAdmin(user.email)) {
     await supabase.auth.signOut();
     redirect("/login?e=noaccount");
   }
 
-  const firstTime = memberships.some((m) => m.status === "invited");
-  redirect(firstTime ? "/?welcome=1" : "/");
+  const created = await ensureLeadAccount(user);
+  if (created.length === 0) {
+    await supabase.auth.signOut();
+    redirect(fail);
+  }
+  redirect("/?welcome=lead");
 }

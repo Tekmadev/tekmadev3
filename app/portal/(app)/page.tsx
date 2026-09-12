@@ -8,6 +8,7 @@ import { listInAppNotifications } from "@/lib/clients-data";
 import {
   derivedStage,
   getActiveOnboarding,
+  getLatestIntake,
   guaranteeSummary,
   listBookedCalls,
   listTasks,
@@ -15,6 +16,7 @@ import {
   taskProgress,
 } from "@/lib/onboarding-data";
 import { StageTracker } from "@/components/portal/StageTracker";
+import { LeadHome } from "@/components/portal/LeadHome";
 import { TaskItem } from "@/components/portal/TaskList";
 import { LinkPending } from "@/components/portal/LinkPending";
 import { Badge, EmptyState, Notice, PageHeader, Panel, ProgressBar, btnSecondary, fmtDate, fmtDateTime } from "@/components/portal/ui";
@@ -22,8 +24,15 @@ import { completeTaskAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function PortalHome({ searchParams }: { searchParams: Promise<{ welcome?: string; e?: string }> }) {
+export default async function PortalHome({ searchParams }: { searchParams: Promise<{ welcome?: string; e?: string; checkout?: string }> }) {
   const [{ client, member }, params] = await Promise.all([requireClient(), searchParams]);
+
+  // Free account: no plan yet, so no checklist. Three steps toward one.
+  if (client.status === "lead") {
+    const intake = await getLatestIntake(client.id);
+    return <LeadHome client={client} member={member} intake={intake} welcome={params.welcome === "lead"} checkout={params.checkout} />;
+  }
+
   const onboarding = await getActiveOnboarding(client.id);
   const [tasks, calls, notifications] = await Promise.all([
     onboarding ? listTasks(onboarding.id) : Promise.resolve([]),
@@ -60,6 +69,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
             : "You are in. Two things to do today: accept your agreement and book your kickoff call. Everything else we handle."}
         </Notice>
       )}
+      {params.checkout === "success" && <Notice kind="ok">Payment received. Your onboarding has started: the checklist below is yours.</Notice>}
       {params.e === "forbidden" && <Notice kind="err">That page is for account admins.</Notice>}
 
       {onboarding ? (

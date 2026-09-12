@@ -1,0 +1,61 @@
+<!--
+  Supabase Auth template: "Confirm signup".
+  Paste into Supabase -> Authentication -> Email Templates -> Confirm signup.
+
+  The link uses {{ .RedirectTo }} (the redirectTo the app passes, e.g.
+  https://account.tekmadev.com/auth/confirm) plus the token hash, so our own
+  /auth/confirm route verifies it on the portal host. {{ .RedirectTo }} only
+  carries the app's value when that URL is in Authentication -> URL
+  Configuration -> Redirect URLs; otherwise it falls back to the Site URL.
+-->
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="light only">
+  <meta name="supported-color-schemes" content="light only">
+  <title>Confirm your email to open your Tekmadev account</title>
+</head>
+<body style="margin:0;padding:0;background:#efeae0;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">One click confirms your email and opens your free account.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#efeae0;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" border="0" style="width:480px;max-width:480px;">
+          <tr>
+            <td align="center" style="padding:4px 0 24px;">
+              <img src="https://res.cloudinary.com/dnly2ngqc/image/upload/f_png,w_180/v1756916100/TMD2_logo_dom1iq.png" width="60" height="60" alt="Tekmadev" style="display:block;border:0;outline:none;text-decoration:none;width:60px;height:60px;">
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#ffffff;border:1px solid #e7e1d5;border-radius:16px;padding:40px;">
+              <h1 style="margin:0 0 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.3px;line-height:1.25;color:#0d0c0a;">Confirm your email</h1>
+              <p style="margin:0 0 22px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.65;color:#5a564d;">Welcome to Tekmadev. Confirm your email to open your free account. From there you can tell us about your business, book a free audit, and pick a plan whenever you are ready.</p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 4px;">
+                <tr>
+                  <td align="center" bgcolor="#a17a4f" style="border-radius:999px;">
+                    <a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup" target="_blank" style="display:inline-block;padding:14px 34px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;font-weight:700;line-height:1;color:#ffffff;text-decoration:none;border-radius:999px;">Confirm my email</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:22px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;color:#8a857a;">Or paste this link into your browser:</p>
+              <p style="margin:6px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.5;word-break:break-all;"><a href="{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup" target="_blank" style="color:#a17a4f;text-decoration:none;">{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=signup</a></p>
+              <p style="margin:24px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.6;color:#8a857a;">This link works once and expires after a short time. If it has expired, sign up again on the portal. If you did not create a Tekmadev account, you can safely ignore this email.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 8px 8px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.7;color:#8a857a;">
+              <strong style="color:#5a564d;">Tekmadev Innovation Inc.</strong><br>
+              <a href="https://tekmadev.com" target="_blank" style="color:#a17a4f;text-decoration:none;">tekmadev.com</a><br><br>
+              This is an automated message about your Tekmadev account.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

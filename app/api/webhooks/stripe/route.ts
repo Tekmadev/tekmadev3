@@ -71,6 +71,7 @@ async function handleOrderSession(stripe: Stripe, s: Stripe.Checkout.Session, st
     const businessName = order.business_name || order.name || order.email.split("@")[1] || "New client";
     try {
       await provisionClient({
+        client_id: s.client_reference_id ?? null,
         business_name: businessName,
         email: order.email,
         name: order.name,
@@ -205,6 +206,7 @@ export async function POST(req: NextRequest) {
         const businessName = businessField?.text?.value?.trim() || s.customer_details?.name || email.split("@")[1] || "New client";
         try {
           await provisionClient({
+            client_id: s.client_reference_id ?? null,
             business_name: businessName,
             email,
             name: s.customer_details?.name ?? null,
