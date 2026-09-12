@@ -11,7 +11,7 @@ import {
   listTasksForOnboardings,
   stageLabel,
 } from "@/lib/onboarding-data";
-import { getTierMeta } from "@/config/pricing";
+import { offerName } from "@/config/products";
 import { PageHeader, StatCard, Panel, Notice } from "@/components/admin/ui";
 import { Badge, btnPrimary, btnSecondary, fmtDate, type Tone } from "@/components/portal/ui";
 import { cn } from "@/lib/cn";
@@ -125,7 +125,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-ink">{c.business_name}</p>
                         <p className="truncate text-xs text-ink-4">
-                          {getTierMeta(c.plan_id ?? "")?.name ?? c.plan_id ?? "No plan"} · {c.primary_email}
+                          {offerName(c.plan_id) ?? c.plan_id ?? "No plan"} · {c.primary_email}
                         </p>
                       </div>
                       <Badge tone={STATUS_TONE[c.status]}>{CLIENT_STATUS_LABEL[c.status]}</Badge>
@@ -171,7 +171,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                         </Link>
                         <p className="text-xs text-ink-4">{c.primary_email}</p>
                       </td>
-                      <td className="py-2.5 pr-4 text-ink-2">{getTierMeta(c.plan_id ?? "")?.name ?? c.plan_id ?? "-"}</td>
+                      <td className="py-2.5 pr-4 text-ink-2">{offerName(c.plan_id) ?? c.plan_id ?? "-"}</td>
                       <td className="py-2.5 pr-4">
                         <Badge tone={STATUS_TONE[c.status]}>{CLIENT_STATUS_LABEL[c.status]}</Badge>
                       </td>

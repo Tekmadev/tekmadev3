@@ -73,7 +73,7 @@ export const business = {
   },
   legalDates: {
     effective: "2026-05-16",
-    lastUpdated: "2026-06-18",
+    lastUpdated: "2026-09-12",
   },
   phone: {
     tel: _phoneTel,
@@ -360,6 +360,7 @@ export const navLinks = [
   { href: "/#system", label: "The System" },
   { href: "/#proof", label: "Proof" },
   { href: "/#pricing", label: "Pricing" },
+  { href: "/webline", label: "Webline" },
   { href: "/guides", label: "Guides" },
   { href: "/#faq", label: "FAQ" },
 ];
@@ -371,6 +372,7 @@ export const footerColumns = [
       { label: "The System", href: "/#system" },
       { label: "Proof", href: "/#proof" },
       { label: "Pricing", href: "/#pricing" },
+      { label: "Webline for startups", href: "/webline" },
       { label: "Guides", href: "/guides" },
       { label: "FAQ", href: "/#faq" },
     ],

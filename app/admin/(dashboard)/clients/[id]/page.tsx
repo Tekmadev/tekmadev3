@@ -17,7 +17,8 @@ import {
   stageLabel,
   taskProgress,
 } from "@/lib/onboarding-data";
-import { getTierMeta } from "@/config/pricing";
+import { offerName } from "@/config/products";
+import { getLatestOrderForClient, paymentMethodLabel } from "@/lib/orders-data";
 import { portalUrl } from "@/lib/portal-host";
 import { PageHeader, Panel, Notice, StatCard, fmtMoney } from "@/components/admin/ui";
 import { Badge, btnSecondary, fmtBytes, fmtDate, fmtDateTime, humanize, type Tone } from "@/components/portal/ui";
@@ -62,7 +63,7 @@ export default async function ClientDetailPage({
   if (!client || client.deleted_at) notFound();
 
   const onboarding = await getActiveOnboarding(client.id);
-  const [tasks, intake, grants, assets, approvals, agreements, calls, members, activity, subscription] = await Promise.all([
+  const [tasks, intake, grants, assets, approvals, agreements, calls, members, activity, subscription, order] = await Promise.all([
     onboarding ? listTasks(onboarding.id) : Promise.resolve([]),
     getLatestIntake(client.id),
     listAccessGrants(client.id),
@@ -73,18 +74,19 @@ export default async function ClientDetailPage({
     listMembers(client.id),
     listActivity(client.id, { visibility: "all", limit: 100 }),
     getLatestSubscriptionForClient(client),
+    getLatestOrderForClient(client),
   ]);
   const assetsWithUrls = await Promise.all(assets.map(async (a) => ({ ...a, url: await signedAssetUrl(a.storage_path, 60 * 30) })));
 
   const progress = taskProgress(tasks);
   const stage = onboarding ? derivedStage(onboarding, tasks) : null;
-  const tier = client.plan_id ? getTierMeta(client.plan_id) : undefined;
+  const planName = offerName(client.plan_id);
 
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
         title={client.business_name}
-        subtitle={`${tier?.name ?? client.plan_id ?? "No plan"} · ${client.primary_email}${client.primary_phone ? ` · ${client.primary_phone}` : ""}`}
+        subtitle={`${planName ?? client.plan_id ?? "No plan"} · ${client.primary_email}${client.primary_phone ? ` · ${client.primary_phone}` : ""}`}
       >
         <Badge tone={STATUS_TONE[client.status] ?? "neutral"}>{CLIENT_STATUS_LABEL[client.status]}</Badge>
         {onboarding?.blocked && <Badge tone="signal">Blocked</Badge>}
@@ -116,8 +118,14 @@ export default async function ClientDetailPage({
         <StatCard label="Booked calls" value={calls.filter((c) => c.qualified).length} sub={client.guarantee_eligible ? `target ${client.guarantee_target}` : "no guarantee"} />
         <StatCard
           label="Billing"
-          value={subscription ? humanize(subscription.status) : "-"}
-          sub={subscription ? `${fmtMoney(subscription.amount_total, subscription.currency)} · ${subscription.current_period_end ? fmtDate(subscription.current_period_end) : ""}` : "no subscription"}
+          value={subscription ? humanize(subscription.status) : order ? humanize(order.status) : "-"}
+          sub={
+            subscription
+              ? `${fmtMoney(subscription.amount_total, subscription.currency)} · ${subscription.current_period_end ? fmtDate(subscription.current_period_end) : ""}`
+              : order
+                ? `${fmtMoney(order.amount_total, order.currency)} one-time · ${paymentMethodLabel(order.payment_method_type)}`
+                : "no billing record"
+          }
         />
       </section>
 

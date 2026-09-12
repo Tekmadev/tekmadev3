@@ -406,6 +406,10 @@ export const termsOfService: LegalDoc = {
           type: "p",
           text: "Specific deliverables, integrations, target volumes, and timelines for a given engagement are set out in the Order Form.",
         },
+        {
+          type: "p",
+          text: "Tekmadev also sells fixed-scope website packages at a one-time price (for example, Webline). Those packages are governed by Section 5A and are not part of a Growth System engagement unless an Order Form says so.",
+        },
       ],
     },
     {
@@ -450,11 +454,38 @@ export const termsOfService: LegalDoc = {
             "A one-time setup fee and a recurring monthly fee, as set out in the Order Form. The setup fee covers the design, build, and installation of the growth system and the assets delivered to the Client, which the Client retains, and is non-refundable.",
             "A performance guarantee: if the system does not produce 30 Qualified Booked Calls within 60 days of go-live, Tekmadev will not invoice further fees for that period and will continue to operate the system at no additional charge until the target is reached, as set out in Section 4 and the Order Form.",
             "Fees are quoted in Canadian dollars (CAD) unless otherwise stated and are exclusive of applicable taxes (HST, GST, QST), which will be added where applicable.",
+            "One-time website packages (Section 5A) are paid in full at checkout. Where a buy-now-pay-later option (such as Afterpay, Klarna, or Affirm) is offered at checkout, the instalment agreement is between the Client and that provider and is subject to the provider's terms and approval; Tekmadev receives the full package fee at checkout.",
           ],
         },
         {
           type: "p",
           text: "Invoices are due within the period stated on the invoice (default: net 15). Past-due amounts bear interest at the lesser of 1.5% per month (19.56% per annum) or the maximum rate permitted by law. The Client is responsible for collection costs, including reasonable legal fees, on overdue amounts.",
+        },
+      ],
+    },
+    {
+      id: "one-time-packages",
+      title: "5A. One-time website packages (Webline)",
+      blocks: [
+        {
+          type: "p",
+          text: "Webline is a fixed-scope website package sold at a one-time price shown on the Webline page at the time of purchase. Unless the Webline page or an Order Form says otherwise, the package includes: a custom-designed website of up to five pages; copy written by Tekmadev from the Client's intake; a search foundation (metadata, structured data, sitemap, search console setup) and an AI-search layer (llms.txt, FAQ markup, entity-rich copy); lead capture (contact form, click-to-call, booking link, analytics); launch on the Client's domain with SSL; a walkthrough video; and 30 days of post-launch fixes limited to defects and minor content edits.",
+        },
+        {
+          type: "p",
+          text: "Timeline. Tekmadev targets a homepage design concept within five business days and a live website within 14 days, in each case counted from the day Tekmadev has received the Client's completed intake, brand assets, and domain access. Delays in providing those inputs extend the timeline by the same period.",
+        },
+        {
+          type: "p",
+          text: "Design approval and refunds. The Client approves the homepage design concept in the client portal before the remaining pages are built. The concept includes one revision round. If, after that revision, the Client does not wish to proceed, the Client may cancel in writing and Tekmadev will refund the package fee in full within 10 business days. Once the Client approves the concept, or once the build proceeds with the Client's knowledge, the package fee is non-refundable except as required by applicable consumer protection law.",
+        },
+        {
+          type: "p",
+          text: "Ownership. On payment in full, the Client owns the delivered website, its design, and its copy. Tekmadev retains ownership of its pre-existing tools, templates, and know-how used to build it, and grants the Client a perpetual licence to use them as embedded in the delivered site. Domain registration and hosting accounts are opened or kept in the Client's name.",
+        },
+        {
+          type: "p",
+          text: "Exclusions. The package fee does not include domain registration or renewal, hosting fees above a free tier, paid stock imagery, third-party software subscriptions, logo design, additional pages, integrations, ongoing maintenance, or marketing services. Any of these may be quoted separately in writing before work starts. The performance guarantee in Section 4 does not apply to one-time website packages.",
         },
       ],
     },

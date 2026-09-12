@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { AGREEMENTS } from "@/config/agreements";
 import { getTierMeta } from "@/config/pricing";
+import { getProductMeta } from "@/config/products";
 import { accessProvider, type AccessProviderKey } from "@/lib/access-providers";
 import {
   createClient,
@@ -44,6 +45,8 @@ export type ProvisionInput = {
   plan_id: string | null;
   stripe_customer_id?: string | null;
   subscription_id?: string | null;
+  /** One-time purchase (orders.id) that paid for this account. */
+  order_id?: string | null;
   lead_id?: string | null;
   actor_type: ActivityActor;
   actor_email?: string | null;
@@ -88,6 +91,8 @@ export async function sendPortalInvite(email: string, name?: string | null): Pro
 export async function provisionClient(input: ProvisionInput): Promise<ProvisionResult> {
   const email = input.email.trim().toLowerCase();
   const tier = input.plan_id ? getTierMeta(input.plan_id) : undefined;
+  // One-time products (Webline) reuse plan_id; no guarantee, website-only checklist.
+  const product = getProductMeta(input.plan_id);
 
   // 1. Find or create the client.
   let client: Client | null = null;
@@ -132,9 +137,12 @@ export async function provisionClient(input: ProvisionInput): Promise<ProvisionR
     if (Object.keys(patch).length) client = await updateClient(client.id, patch, input.actor_email ?? undefined);
   }
 
-  // 2. Link the Stripe subscription record.
+  // 2. Link the Stripe billing record (subscription or one-time order).
   if (input.subscription_id) {
     await db().from("subscriptions").update({ client_id: client.id }).eq("id", input.subscription_id);
+  }
+  if (input.order_id) {
+    await db().from("orders").update({ client_id: client.id }).eq("id", input.order_id);
   }
 
   // 3. Owner membership.
@@ -148,13 +156,17 @@ export async function provisionClient(input: ProvisionInput): Promise<ProvisionR
 
   // 4. Onboarding run + checklist.
   let createdOnboarding = false;
+  let hasKickoff = !product;
   let onboarding = await getActiveOnboarding(client.id);
   if (!onboarding) {
+    const liveDays = product?.onboarding.targetLiveDays ?? 14;
     const run = await createOnboardingRun({
       client_id: client.id,
       plan_id: client.plan_id,
       created_by: input.actor_email ?? input.actor_type,
+      target_live_date: new Date(Date.now() + liveDays * 86_400_000).toISOString().slice(0, 10),
     });
+    hasKickoff = run.tasks.some((t) => t.key === "welcome.book_kickoff");
     onboarding = run.onboarding;
     createdOnboarding = true;
     await ensureSupportingRows(client, run.tasks);
@@ -196,7 +208,9 @@ export async function provisionClient(input: ProvisionInput): Promise<ProvisionR
       member_id: member.id,
       template_key: "welcome",
       subject: `Welcome to Tekmadev, ${client.business_name}`,
-      body: "Your onboarding has started. Two quick things to do today: accept your agreement and book your kickoff call.",
+      body: hasKickoff
+        ? "Your onboarding has started. Two quick things to do today: accept your agreement and book your kickoff call."
+        : "Your build has started. Two quick things to do today: accept your agreement and tell us about your business. We start designing the moment we have them.",
       action_url: "/onboarding",
     });
   }

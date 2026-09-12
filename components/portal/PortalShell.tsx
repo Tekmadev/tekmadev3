@@ -28,6 +28,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import type { ActionResult } from "@/components/portal/PortalForm";
 import { LinkPending } from "@/components/portal/LinkPending";
 
+/** Which optional sections this client has. Booked calls only make sense on growth plans. */
+export type PortalNavFeatures = { bookedCalls?: boolean };
+
 export type PortalNavCounts = {
   onboarding?: number;
   approvals?: number;
@@ -58,6 +61,7 @@ export function PortalShell({
   memberName,
   email,
   counts,
+  features = {},
   signOutAction,
   switchClientAction,
   children,
@@ -68,6 +72,7 @@ export function PortalShell({
   memberName: string | null;
   email: string;
   counts: PortalNavCounts;
+  features?: PortalNavFeatures;
   signOutAction: () => Promise<ActionResult>;
   switchClientAction: (formData: FormData) => Promise<ActionResult>;
   children: React.ReactNode;
@@ -99,9 +104,11 @@ export function PortalShell({
     return href === "/" ? p === "/" : p.startsWith(href);
   };
 
+  const items = NAV.filter((item) => item.href !== "/calls" || features.bookedCalls !== false);
+
   const nav = (
     <nav className="flex flex-col gap-1 px-3 py-2">
-      {NAV.map((item) => {
+      {items.map((item) => {
         const active = isActive(item.href);
         const Icon = item.icon;
         const count = item.countKey ? counts[item.countKey] : undefined;

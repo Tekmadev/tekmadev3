@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin";
 import { tierMeta } from "@/config/pricing";
+import { productMeta } from "@/config/products";
 import { PageHeader, Panel, Notice } from "@/components/admin/ui";
 import { Field, inputCls, selectCls } from "@/components/portal/ui";
 import { SubmitButton } from "@/components/portal/SubmitButton";
@@ -34,12 +35,21 @@ export default async function NewClientPage({ searchParams }: { searchParams: Pr
           </Field>
           <Field label="Plan" htmlFor="plan_id" help="Drives which checklist tasks are created and whether the guarantee applies.">
             <select id="plan_id" name="plan_id" defaultValue="grow" className={selectCls}>
-              {tierMeta.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                  {t.guarantee ? " (guarantee)" : ""}
-                </option>
-              ))}
+              <optgroup label="Growth plans">
+                {tierMeta.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                    {t.guarantee ? " (guarantee)" : ""}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="One-time products">
+                {productMeta.map((pr) => (
+                  <option key={pr.id} value={pr.id}>
+                    {pr.name} (one-time, website only)
+                  </option>
+                ))}
+              </optgroup>
               <option value="">No plan yet</option>
             </select>
           </Field>

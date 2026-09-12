@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarCheck, Mail, Phone, Target } from "lucide-react";
 import { business, portal } from "@/config/site";
 import { getTierMeta } from "@/config/pricing";
+import { getProductMeta } from "@/config/products";
 import { requireClient } from "@/lib/portal-auth";
 import { listInAppNotifications } from "@/lib/clients-data";
 import {
@@ -10,6 +11,7 @@ import {
   guaranteeSummary,
   listBookedCalls,
   listTasks,
+  stagesInRun,
   taskProgress,
 } from "@/lib/onboarding-data";
 import { StageTracker } from "@/components/portal/StageTracker";
@@ -34,6 +36,8 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
   const needFromYou = progress.clientOpen.slice(0, 5);
   const guarantee = guaranteeSummary(client, calls);
   const tier = client.plan_id ? getTierMeta(client.plan_id) : undefined;
+  const product = getProductMeta(client.plan_id);
+  const planLabel = tier ? `${tier.name} plan` : product ? product.name : "Your plan";
   const firstName = (member.name || "").split(" ")[0];
 
   return (
@@ -42,7 +46,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
         title={firstName ? `Welcome back, ${firstName}` : `Welcome, ${client.business_name}`}
         subtitle={
           <>
-            {tier ? `${tier.name} plan` : "Your plan"}
+            {planLabel}
             {onboarding?.target_live_date ? ` · target go-live ${fmtDate(onboarding.target_live_date)}` : ""}
             {client.live_at ? ` · live since ${fmtDate(client.live_at)}` : ""}
           </>
@@ -51,18 +55,22 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
 
       {params.welcome === "1" && (
         <Notice kind="ok">
-          You are in. Two things to do today: accept your agreement and book your kickoff call. Everything else we handle.
+          {product
+            ? "You are in. Two things to do today: accept your agreement and tell us about your business. We start designing the moment we have them."
+            : "You are in. Two things to do today: accept your agreement and book your kickoff call. Everything else we handle."}
         </Notice>
       )}
       {params.e === "forbidden" && <Notice kind="err">That page is for account admins.</Notice>}
 
       {onboarding ? (
         <Panel>
-          <StageTracker current={stage} percent={progress.percent} />
+          <StageTracker current={stage} percent={progress.percent} stages={stagesInRun(tasks)} />
         </Panel>
       ) : (
         <Panel title="Onboarding">
-          <p className="text-sm text-ink-3">Your onboarding is complete. Your growth system is running.</p>
+          <p className="text-sm text-ink-3">
+            {product ? "Your onboarding is complete. Your website is live." : "Your onboarding is complete. Your growth system is running."}
+          </p>
         </Panel>
       )}
 
@@ -129,10 +137,11 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
               )}
             </Panel>
           ) : (
-            <Panel title="Your plan">
+            <Panel title={product ? `Your ${product.name}` : "Your plan"}>
               <p className="text-sm text-ink-3">
-                {tier?.name ?? "Convert"} captures and converts every lead that reaches you. The booked-call guarantee and
-                done-for-you ads are part of Grow. Ask your strategist about upgrading when you are ready for more volume.
+                {product
+                  ? `${product.name} is a one-time build: ${product.tagline} When you are ready for booked calls on autopilot, the Convert and Grow systems plug straight into this site. No rebuild.`
+                  : `${tier?.name ?? "Convert"} captures and converts every lead that reaches you. The booked-call guarantee and done-for-you ads are part of Grow. Ask your strategist about upgrading when you are ready for more volume.`}
               </p>
             </Panel>
           )}

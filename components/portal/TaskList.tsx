@@ -50,6 +50,7 @@ export function TaskItem({
   const open = isTaskOpen(task);
   const href = taskHref(task);
   const isKickoff = task.key === "welcome.book_kickoff";
+  const isBookable = task.owner === "client" && task.kind === "call";
   const canSelfComplete = task.owner === "client" && open && (task.kind === "checklist" || task.kind === "call");
 
   return (
@@ -68,7 +69,7 @@ export function TaskItem({
         </div>
         {open && task.owner === "client" && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {isKickoff && (
+            {isBookable && (
               <a href={portal.kickoffCalUrl} target="_blank" rel="noopener" className={btnSecondary}>
                 Pick a time
                 <ExternalLink className="h-3.5 w-3.5" />

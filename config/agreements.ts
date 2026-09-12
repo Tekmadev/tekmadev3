@@ -21,7 +21,12 @@ export type AgreementDefinition = {
   acceptLabel: string;
 };
 
-export const AGREEMENTS: Record<"service_agreement", AgreementDefinition> = {
+/**
+ * Keyed by the `agreement_kind` an onboarding template names in its payload.
+ * The portal looks definitions up by `kind`, so each definition needs a
+ * distinct kind (Webline uses `order_form`: the Terms plus a fixed scope).
+ */
+export const AGREEMENTS: Record<"service_agreement" | "webline_agreement", AgreementDefinition> = {
   service_agreement: {
     kind: "service_agreement",
     title: `${business.name} Service Agreement`,
@@ -35,5 +40,20 @@ export const AGREEMENTS: Record<"service_agreement", AgreementDefinition> = {
       "We never store your passwords. Access is granted through partner or manager invitations you control and can revoke.",
     ],
     acceptLabel: "I have read and accept the Service Agreement",
+  },
+  webline_agreement: {
+    kind: "order_form",
+    title: `${business.name} Webline Agreement`,
+    version: business.legalDates.lastUpdated,
+    url: `${business.url}/terms#one-time-packages`,
+    summary: [
+      "Webline is a fixed-scope website: custom design, up to 5 pages with the copy written for you, and the SEO, GEO, and AEO foundation, launched on your domain. Paid once. No monthly fee from us.",
+      "You see your homepage design concept by day 5 and approve it before we build the rest. Once we have your content and access, your site goes live within 14 days.",
+      "If you do not love the concept after a revision round, you can cancel for a full refund. Once you approve the concept and the build proceeds, the fee is non-refundable.",
+      "You own the site, the design, and the copy the moment it is live. Domain and hosting stay in your name. We never store your passwords.",
+      "Pay-in-4 plans are agreements between you and Afterpay, Klarna, or Affirm. We receive the full amount at checkout; your instalments are handled by them.",
+      "Post-launch fixes are included for 30 days. Anything beyond the agreed scope is quoted separately before any work starts.",
+    ],
+    acceptLabel: "I have read and accept the Webline Agreement",
   },
 };

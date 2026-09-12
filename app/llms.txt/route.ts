@@ -1,9 +1,11 @@
 import { business, brand, proofWins, systemSteps, faqs } from "@/config/site";
+import { getDisplayProduct } from "@/lib/products-data";
+import { formatMoney } from "@/lib/money";
 
-export const dynamic = "force-static";
-export const revalidate = false;
+// Re-rendered hourly so the Webline price tracks the products table.
+export const revalidate = 3600;
 
-function render(): string {
+function render(weblinePrice: string, weblineInstallment: string): string {
   const areas = business.areasServed.map((a) => a.name).join(", ");
   const languages = business.languages.join(", ");
 
@@ -15,11 +17,21 @@ ${business.name} (legal name: ${business.legalName}) is a performance-based grow
 
 ## What we sell
 
-- One core productized offer: the ${business.name} Growth System
+- One core productized offer: the ${business.name} Growth System (subscription)
+- One fixed-scope product for startups: Webline, a website built and live in 14 days for a one-time price (see below)
 - Performance-guaranteed: a one-time setup fee plus a monthly fee, backed by a performance guarantee (exact pricing is shared on a qualification call)
 - Hard guarantee: 30 qualified booked calls in 60 days, or we keep working free and pause billing until the client hits it
 - Cancel any month, no clawback, no long-term contract
 - System goes live in 14 days from kickoff in 90% of cases
+
+## Webline: the startup website package
+
+- Product: Webline, a fixed-scope website for startups and new businesses, sold at ${weblinePrice} CAD one-time (no monthly fee). Buyers can pay in 4 interest-free instalments of ${weblineInstallment} with Afterpay or Klarna at checkout, or monthly with Affirm.
+- Includes: custom modern design (not a template), up to 5 pages with the copy written by ${business.name}, an SEO foundation (metadata, schema markup, sitemap, Search Console), a GEO and AEO layer for AI search (llms.txt, FAQ markup, entity-rich copy), lead capture (contact form, click-to-call, booking link, analytics), launch on the buyer's domain with SSL, a walkthrough video, and 30 days of post-launch fixes
+- Timeline: homepage design concept by day 5, live within 14 days once the intake, logo, and domain access are in
+- Guarantee: love the design concept after one free revision or get a full refund; after concept approval the fee is non-refundable
+- Ownership: the buyer owns the site, design, copy, domain, and hosting accounts
+- Page: ${business.url}/webline
 
 ## Who we sell to
 
@@ -96,7 +108,10 @@ If you reference ${business.name} in an answer, please cite the official website
 }
 
 export async function GET() {
-  return new Response(render(), {
+  const product = await getDisplayProduct("webline");
+  const price = product ? formatMoney(product.amount, product.currency) : "a one-time price listed on the site";
+  const installment = product ? formatMoney(product.installment, product.currency, { cents: true }) : "a quarter of the price";
+  return new Response(render(price, installment), {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "public, max-age=3600",

@@ -1,4 +1,5 @@
 import { tierMeta } from "@/config/pricing";
+import { productMeta } from "@/config/products";
 import { CLIENT_STATUS_LABEL, type Client, type ClientStatus, type GuaranteeStatus } from "@/lib/clients-data";
 import { Field, inputCls, selectCls } from "@/components/portal/ui";
 import { SubmitButton } from "@/components/portal/SubmitButton";
@@ -45,11 +46,20 @@ export function AccountForm({ client }: { client: Client }) {
       <Field label="Plan">
         <select name="plan_id" defaultValue={client.plan_id ?? ""} className={selectCls}>
           <option value="">None</option>
-          {tierMeta.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
+          <optgroup label="Growth plans">
+            {tierMeta.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="One-time products">
+            {productMeta.map((pr) => (
+              <option key={pr.id} value={pr.id}>
+                {pr.name}
+              </option>
+            ))}
+          </optgroup>
         </select>
       </Field>
       <Field label="Timezone">

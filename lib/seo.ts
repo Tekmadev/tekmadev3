@@ -134,6 +134,61 @@ export const offerJsonLd = {
   seller: { "@id": `${SITE_URL}#organization` },
 };
 
+/**
+ * Product + Offer schema for a one-time package (Webline). The price is
+ * passed in from the products table so the markup never drifts from checkout.
+ */
+export function productJsonLd(p: {
+  id: string;
+  name: string;
+  description: string;
+  path: string;
+  priceCents: number;
+  currency: string;
+  image?: string;
+  features?: string[];
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": `${SITE_URL}${p.path}#product`,
+    name: p.name,
+    description: p.description,
+    sku: p.id,
+    category: "Website design and development",
+    brand: { "@type": "Brand", name: SITE_NAME },
+    manufacturer: { "@id": `${SITE_URL}#organization` },
+    ...(p.image ? { image: [p.image] } : {}),
+    ...(p.features?.length
+      ? { additionalProperty: p.features.map((f) => ({ "@type": "PropertyValue", name: "Included", value: f })) }
+      : {}),
+    offers: {
+      "@type": "Offer",
+      "@id": `${SITE_URL}${p.path}#offer`,
+      url: `${SITE_URL}${p.path}`,
+      price: (p.priceCents / 100).toFixed(2),
+      priceCurrency: p.currency.toUpperCase(),
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: (p.priceCents / 100).toFixed(2),
+        priceCurrency: p.currency.toUpperCase(),
+        billingIncrement: 1,
+        unitText: "one-time",
+      },
+      availability: "https://schema.org/InStock",
+      itemCondition: "https://schema.org/NewCondition",
+      eligibleRegion: areaServedSchema,
+      seller: { "@id": `${SITE_URL}#organization` },
+      acceptedPaymentMethod: [
+        { "@type": "PaymentMethod", name: "Credit card" },
+        { "@type": "PaymentMethod", name: "Afterpay (pay in 4)" },
+        { "@type": "PaymentMethod", name: "Klarna (pay in 4)" },
+        { "@type": "PaymentMethod", name: "Affirm" },
+      ],
+    },
+  };
+}
+
 export const faqJsonLd = {
   "@context": "https://schema.org",
   "@type": "FAQPage",

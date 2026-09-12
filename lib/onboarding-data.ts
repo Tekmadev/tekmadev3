@@ -506,6 +506,16 @@ export function taskProgress(tasks: OnboardingTask[]): TaskProgress {
  * moment a client finishes something. We show whichever is further along, so
  * the tracker never lags and never slides backwards after go-live.
  */
+/**
+ * Stage keys that actually have tasks in this run, in pipeline order. Website
+ * only checklists (Webline) skip kickoff and optimizing, so the tracker shows
+ * five steps instead of seven.
+ */
+export function stagesInRun(tasks: OnboardingTask[]): OnboardingStage[] {
+  const present = new Set(tasks.map((t) => t.stage));
+  return STAGES.filter((s) => s.key !== "complete" && present.has(s.key)).map((s) => s.key);
+}
+
 export function derivedStage(onboarding: ClientOnboarding, tasks: OnboardingTask[]): OnboardingStage {
   if (onboarding.completed_at) return "complete";
   let fromTasks: OnboardingStage = onboarding.stage;

@@ -1,6 +1,7 @@
 import { requireClient } from "@/lib/portal-auth";
 import { getActiveOnboarding, isTaskOpen, listAgreements, listApprovals, listTasks } from "@/lib/onboarding-data";
 import { listInAppNotifications } from "@/lib/clients-data";
+import { isProductPlan } from "@/config/products";
 import { PortalShell } from "@/components/portal/PortalShell";
 import { portalSignOutAction } from "../(auth)/actions";
 import { switchClientAction } from "./actions";
@@ -34,6 +35,7 @@ export default async function PortalAppLayout({ children }: { children: React.Re
       memberName={member.name}
       email={session.email}
       counts={counts}
+      features={{ bookedCalls: !isProductPlan(client.plan_id) }}
       signOutAction={portalSignOutAction}
       switchClientAction={switchClientAction}
     >

@@ -4,13 +4,23 @@ import { STAGES, stageIndex, type OnboardingStage } from "@/lib/onboarding-data"
 import { ProgressBar } from "@/components/portal/ui";
 
 /**
- * The onboarding pipeline. On phones it is a compact "step X of 7" with a
+ * The onboarding pipeline. On phones it is a compact "step X of N" with a
  * progress bar and a scrollable row of steps; on wider screens the full row.
+ * `stages` limits the row to the stages this run actually has (a website-only
+ * checklist skips kickoff and optimizing); omit it to show the full pipeline.
  */
-export function StageTracker({ current, percent }: { current: OnboardingStage; percent: number }) {
-  const idx = stageIndex(current);
-  const steps = STAGES.filter((s) => s.key !== "complete");
-  const label = STAGES[idx]?.label ?? "Onboarding";
+export function StageTracker({
+  current,
+  percent,
+  stages,
+}: {
+  current: OnboardingStage;
+  percent: number;
+  stages?: OnboardingStage[];
+}) {
+  const steps = STAGES.filter((s) => s.key !== "complete" && (!stages || stages.includes(s.key) || s.key === current));
+  const idx = current === "complete" ? steps.length : Math.max(0, steps.findIndex((s) => s.key === current));
+  const label = STAGES[stageIndex(current)]?.label ?? "Onboarding";
   const stepNo = Math.min(idx + 1, steps.length);
 
   return (
@@ -28,7 +38,10 @@ export function StageTracker({ current, percent }: { current: OnboardingStage; p
         <ProgressBar percent={percent} />
       </div>
 
-      <ol className="mt-5 -mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1 sm:grid sm:grid-cols-7 sm:gap-0 sm:overflow-visible">
+      <ol
+        style={{ "--cols": steps.length } as React.CSSProperties}
+        className="mt-5 -mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1 sm:grid sm:grid-cols-[repeat(var(--cols),minmax(0,1fr))] sm:gap-0 sm:overflow-visible"
+      >
         {steps.map((s, i) => {
           const done = current === "complete" || i < idx;
           const active = i === idx && current !== "complete";
