@@ -1,5 +1,6 @@
 import { ExternalLink } from "lucide-react";
 import { AGREEMENTS } from "@/config/agreements";
+import { isProductPlan } from "@/config/products";
 import { requireClient } from "@/lib/portal-auth";
 import { listAgreements } from "@/lib/onboarding-data";
 import { Badge, EmptyState, Field, Notice, PageHeader, Panel, btnSecondary, inputCls, fmtDateTime } from "@/components/portal/ui";
@@ -18,7 +19,14 @@ export default async function AgreementsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Agreements" subtitle="What we deliver, what counts as a booked call, and when your guarantee starts. In writing." />
+      <PageHeader
+        title="Agreements"
+        subtitle={
+          isProductPlan(client.plan_id)
+            ? "What we build, what you get, and when it goes live. In writing."
+            : "What we deliver, what counts as a booked call, and when your guarantee starts. In writing."
+        }
+      />
 
       {agreements.length === 0 && <EmptyState title="No agreements yet" body="Your service agreement appears here once onboarding starts." />}
 
