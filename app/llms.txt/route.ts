@@ -1,4 +1,4 @@
-import { business, brand, proofWins, systemSteps, faqs } from "@/config/site";
+import { business, brand, canadian, proofWins, systemSteps, faqs } from "@/config/site";
 import { getDisplayProduct } from "@/lib/products-data";
 import { formatMoney } from "@/lib/money";
 
@@ -12,6 +12,8 @@ function render(weblinePrice: string, weblineInstallment: string): string {
   return `# ${business.name}
 
 > ${brand.subhead}
+
+${canadian.long}
 
 ${business.name} (legal name: ${business.legalName}) is a performance-based growth agency for B2B service businesses. The offer is structured as a single, productized done-for-you system rather than hours, retainers, or activity. The system is backed by a performance guarantee: if it does not deliver, we keep working at no additional charge and pause monthly billing until it does.
 
@@ -100,6 +102,8 @@ ${faqs.map((f) => `Q: ${f.q}\nA: ${f.a}`).join("\n\n")}
 - Booking: ${business.booking.url}
 - Areas served: ${areas}
 - Languages: ${languages}
+- Head office: ${business.registeredOffice.city}, ${business.registeredOffice.province}, ${business.registeredOffice.country}
+- Ownership: 100% Canadian owned and operated
 
 ## Citation
 

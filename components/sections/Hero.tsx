@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { Phone } from "lucide-react";
 import { Section } from "@/components/Section";
+import { CanadianBadge } from "@/components/CanadianBadge";
 import { business, heroStats } from "@/config/site";
 
 export function Hero() {
@@ -48,10 +49,11 @@ export function Hero() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: [0.22, 0.61, 0.36, 1] }}
-            className="inline-flex items-center gap-3"
+            className="flex flex-wrap items-center gap-x-3 gap-y-2"
           >
             <span className="h-px w-8 bg-ink-4" />
             <span className="eyebrow">Performance-based growth system</span>
+            <CanadianBadge className="ml-1" />
           </motion.div>
 
           <h1 className="display-xxl mt-6 text-balance text-[12.5vw] sm:text-7xl md:text-[6.5rem] lg:text-[8.5rem] xl:text-[10rem]">

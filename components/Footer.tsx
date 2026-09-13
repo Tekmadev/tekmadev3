@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Phone, Mail } from "lucide-react";
 import { business, footerColumns, footerCopy } from "@/config/site";
+import { CanadianBadge } from "@/components/CanadianBadge";
 
 export function Footer() {
   return (
@@ -40,6 +41,8 @@ export function Footer() {
                 {business.email}
               </a>
             </div>
+
+            <CanadianBadge variant="block" className="mt-8" />
           </div>
 
           <div className="grid grid-cols-2 gap-10 md:col-span-7 md:grid-cols-3">

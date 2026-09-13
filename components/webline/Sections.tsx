@@ -2,6 +2,7 @@ import { ArrowUpRight, Check, Minus, Phone, ShieldCheck, X } from "lucide-react"
 import { Section, Eyebrow } from "@/components/Section";
 import { Reveal } from "@/components/webline/Reveal";
 import { CheckoutButton } from "@/components/webline/CheckoutButton";
+import { CanadianBadge } from "@/components/CanadianBadge";
 import { webline, type WeblineCompareValue } from "@/config/webline";
 import { business, proofWins, aggregateStats } from "@/config/site";
 import { formatMoney } from "@/lib/money";
@@ -169,6 +170,7 @@ export function Proof() {
           <Eyebrow>{p.eyebrow}</Eyebrow>
           <h2 className="display-xl mt-6 text-balance text-4xl sm:text-5xl">{p.headline}</h2>
           <p className="mt-6 text-base leading-relaxed text-ink-2">{p.body}</p>
+          <CanadianBadge variant="block" className="mt-7" />
           <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-8">
             {aggregateStats.map((s) => (
               <div key={s.label}>

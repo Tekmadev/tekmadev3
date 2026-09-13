@@ -46,6 +46,14 @@ export const portal = {
   },
 };
 
+const _office = {
+  line1: "40 Courtland Ave",
+  city: "Hamilton",
+  province: "Ontario",
+  country: "Canada",
+  postalCode: "L9B 1X6",
+};
+
 export const business = {
   name: "Tekmadev",
   legalName: "Tekmadev Innovation Inc.",
@@ -56,13 +64,7 @@ export const business = {
   foundingYear: 2019,
   email: _email,
   legalEmail: _legalEmail,
-  registeredOffice: {
-    line1: "40 Courtland Ave",
-    city: "Hamilton",
-    province: "Ontario",
-    country: "Canada",
-    postalCode: "L9B 1X6",
-  },
+  registeredOffice: _office,
   jurisdictions: {
     primary: "Ontario, Canada",
   },
@@ -93,6 +95,19 @@ export const business = {
   ],
   languages: ["English", "French"],
   social: { twitter: "@tekmadev" },
+};
+
+/**
+ * Canadian ownership, written once and read by the badge component, the
+ * footer, llms.txt, and the JSON-LD. Incorporated in Ontario, founder and
+ * team in Canada, work done in Canada: the claim is about who builds it, not
+ * only where the invoice is issued, so keep it accurate if that ever changes.
+ */
+export const canadian = {
+  short: "Proudly Canadian",
+  label: "100% Canadian owned and operated",
+  place: `${_office.city}, ${_office.province}`,
+  long: `${business.legalName} is a Canadian company, 100% Canadian owned and operated. Incorporated in ${_office.province} and run from ${_office.city}, ${_office.province}. Every system we build is designed, built, and supported in Canada.`,
 };
 
 export const brand = {

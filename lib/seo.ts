@@ -47,6 +47,13 @@ export const organizationJsonLd = {
   image: `${SITE_URL}/images/logo/TMD2_logo.svg`,
   description: SITE_DESCRIPTION,
   foundingDate: String(business.foundingYear),
+  // Canadian owned and operated. Stated as an entity fact, not only an
+  // address, so answer engines can resolve "Canadian agency" queries to us.
+  foundingLocation: {
+    "@type": "Place",
+    name: `${business.registeredOffice.city}, ${business.registeredOffice.province}, ${business.registeredOffice.country}`,
+    address: postalAddress,
+  },
   founder: { "@id": `${SITE_URL}#founder` },
   slogan: brand.slogan,
   knowsAbout: brand.knowsAbout,
