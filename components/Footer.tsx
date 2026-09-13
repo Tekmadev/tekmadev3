@@ -2,11 +2,16 @@ import Image from "next/image";
 import { Phone, Mail } from "lucide-react";
 import { business, footerColumns, footerCopy } from "@/config/site";
 import { CanadianBadge } from "@/components/CanadianBadge";
+import { NewsletterSignup } from "@/components/NewsletterSignup";
 
 export function Footer() {
   return (
     <footer className="relative border-t border-line bg-bg">
       <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 lg:px-10">
+        <div className="mb-16 border-b border-line pb-14">
+          <NewsletterSignup />
+        </div>
+
         <div className="grid grid-cols-1 gap-12 md:grid-cols-12">
           <div className="md:col-span-5">
             <a href="/#top" className="flex items-center gap-3" aria-label={business.name}>

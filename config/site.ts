@@ -363,7 +363,10 @@ export const faqs: FAQ[] = [
   },
 ];
 
-export type TrustSignal = { iconName: "Clock" | "ShieldCheck" | "Zap"; text: string };
+export type TrustSignal = {
+  iconName: "Clock" | "ShieldCheck" | "Zap";
+  text: string;
+};
 
 export const trustSignals: TrustSignal[] = [
   { iconName: "Clock", text: "45 minutes · zero pressure" },
@@ -373,7 +376,7 @@ export const trustSignals: TrustSignal[] = [
 
 /**
  * The product line-up behind the nav dropdown. Every offer Tekmadev sells is
- * a "line" you switch on, hence Webline, Calline, GASline.
+ * a "line" you switch on, hence Webline, Callline, GASline.
  *
  * An item with no `href` renders as coming soon: shown, dimmed, not clickable.
  * Add the href (and a blurb) the day it ships and it becomes a live link with
@@ -392,26 +395,30 @@ export type NavProduct = {
   badge?: string;
 };
 
-export const productNav: { label: string; blurb: string; items: NavProduct[] } = {
-  label: "What we build",
-  blurb: "One system per problem. Buy the piece you need now, add the rest when you are ready.",
-  items: [
-    {
-      name: "Growth System",
-      href: "/#pricing",
-      blurb: "The full engine. Every call answered, every lead chased, 30 booked calls in 60 days or you don't pay.",
-      badge: "Flagship",
-    },
-    {
-      name: "Webline",
-      href: "/webline",
-      blurb: "A startup website that ranks on Google and gets cited by AI. Live in 14 days, one payment.",
-      badge: "New",
-    },
-    { name: "Calline", badge: "Coming soon" },
-    { name: "GASline", badge: "Coming soon" },
-  ],
-};
+export const productNav: { label: string; blurb: string; items: NavProduct[] } =
+  {
+    label: "What we build",
+    blurb:
+      "One system per problem. Buy the piece you need now, add the rest when you are ready.",
+    items: [
+      {
+        name: "Growth System",
+        href: "/#pricing",
+        blurb:
+          "The full engine. Every call answered, every lead chased, 30 booked calls in 60 days or you don't pay.",
+        badge: "Flagship",
+      },
+      {
+        name: "Webline",
+        href: "/webline",
+        blurb:
+          "A startup website that ranks on Google and gets cited by AI. Live in 14 days, one payment.",
+        badge: "New",
+      },
+      { name: "Callline", badge: "Coming soon" },
+      { name: "GASline", badge: "Coming soon" },
+    ],
+  };
 
 export const navLinks = [
   { href: "/#system", label: "The System" },
@@ -453,7 +460,8 @@ export const footerColumns = [
 ];
 
 export const footerCopy = {
-  tagline: "We install the system that fills your calendar. 30 qualified booked calls in 60 days, or we work free until you hit it.",
+  tagline:
+    "We install the system that fills your calendar. 30 qualified booked calls in 60 days, or we work free until you hit it.",
   signoff: "Built · Installed · Running",
 };
 
@@ -464,5 +472,6 @@ export const newsletterCopy = {
     "One or two emails a month on AI, automation, and the exact system we use to book 30 qualified calls in 60 days. No fluff. Unsubscribe anytime.",
   cta: "Subscribe",
   placeholder: "you@company.com",
-  disclaimer: "Join for the growth playbook. We never share your email, and you can unsubscribe in one click.",
+  disclaimer:
+    "Join for the growth playbook. We never share your email, and you can unsubscribe in one click.",
 };
