@@ -5,10 +5,17 @@ import { WhatItIs } from "@/components/sections/WhatItIs";
 import { TheSystem } from "@/components/sections/TheSystem";
 import { Proof } from "@/components/sections/Proof";
 import { Pricing } from "@/components/sections/Pricing";
+import { Webline } from "@/components/sections/Webline";
 import { FAQ } from "@/components/sections/FAQ";
 import { FinalCTA } from "@/components/sections/FinalCTA";
 import { JsonLd } from "@/components/JsonLd";
 import { faqJsonLd, howToJsonLd, offerJsonLd, serviceJsonLd } from "@/lib/seo";
+
+/**
+ * The Webline block reads its price from the products table, so the page is
+ * ISR rather than fully static. Saving a new price revalidates this path.
+ */
+export const revalidate = 600;
 
 export default function Home() {
   return (
@@ -24,6 +31,7 @@ export default function Home() {
       <TheSystem />
       <Proof />
       <Pricing />
+      <Webline />
       <FAQ />
       <FinalCTA />
       <Footer />

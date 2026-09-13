@@ -146,6 +146,8 @@ export async function updateProductAction(formData: FormData) {
   }
 
   revalidatePath(meta.path);
+  // The home page carries a Webline block with the live price on it.
+  revalidatePath("/");
   revalidatePath("/llms.txt");
   redirect("/admin/pricing?ok=1");
 }

@@ -265,6 +265,50 @@ export const webline = {
     reassurance: ["Live in 14 days", "Love the design or full refund", "Pay in 4, 0% interest"],
   },
 
+  /**
+   * The Webline block on the home page (/#webline). Written for a different
+   * reader than the sales page: someone who landed here for the growth system
+   * and turns out to be a founder who is not ready for a retainer. Its job is
+   * to sell the click to /webline, not the purchase. {price} and {installment}
+   * are filled in at render from the products table.
+   */
+  home: {
+    eyebrow: "New · Webline",
+    headline: "An agency charges $8,000 for this.",
+    accent: "You can start for {installment}.",
+    sub: "Webline is a custom startup website with SEO, GEO, and AEO built in, live on your domain in 14 days. Pick Afterpay or Klarna at checkout and the whole thing splits into four interest-free payments. You pay one today. We start building today.",
+    points: [
+      {
+        title: "Custom design, not a theme",
+        body: "Drawn around your brand. Not a $16 template that four thousand other startups already bought.",
+      },
+      {
+        title: "Five pages, written for you",
+        body: "You fill in one 15-minute form. We write every page and every headline.",
+      },
+      {
+        title: "Found by Google and by AI",
+        body: "SEO, GEO, and AEO wired in from day one, so you rank in search and get cited in AI answers.",
+      },
+      {
+        title: "Live in 14 days",
+        body: "Pay today, brief us today, launch in two weeks. Then 30 days of fixes on the house.",
+      },
+    ],
+    guarantee:
+      "You see the design on day 5. Don't love it, we revise it free. Still don't love it, you get every dollar back.",
+    card: {
+      anchor: "Bought piece by piece",
+      installHead: "4 interest-free payments of",
+      schedule: ["Today", "Week 2", "Week 4", "Week 6"],
+      installNote: "Afterpay or Klarna, decided at checkout in about a minute. 0% interest.",
+      onceLabel: "Or pay once and be done",
+      cta: "See everything you get",
+      fine: "Card, Afterpay, Klarna, or Affirm. You choose on the checkout page.",
+      badges: ["14 days to live", "Love it or full refund", "You own all of it"],
+    },
+  },
+
   sticky: {
     label: "Webline",
     cta: "Get started",
