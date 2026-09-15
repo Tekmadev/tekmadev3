@@ -3,19 +3,17 @@
 import { useRef } from "react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { Section } from "@/components/Section";
-import { webline } from "@/config/webline";
+import { fillWebline, webline, type WeblineMoney } from "@/config/webline";
 import { CheckoutButton } from "@/components/webline/CheckoutButton";
 
 export function WeblineHero({
   productId,
   purchasable,
-  price,
-  installment,
+  money,
 }: {
   productId: string;
   purchasable: boolean;
-  price: string;
-  installment: string;
+  money: WeblineMoney;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
@@ -24,7 +22,7 @@ export function WeblineHero({
   const auroraY = useTransform(scrollYProgress, [0, 1], [0, 140]);
 
   const h = webline.hero;
-  const priceLine = h.priceLine.replace("{price}", price).replace("{installment}", installment);
+  const priceLine = fillWebline(h.priceLine, money);
 
   return (
     <div ref={ref} id="top" className="relative isolate overflow-hidden pt-32 pb-20 sm:pt-40 sm:pb-28">
@@ -82,7 +80,7 @@ export function WeblineHero({
             className="mt-9 flex flex-col items-start gap-4 sm:flex-row sm:items-center"
           >
             <CheckoutButton productId={productId} purchasable={purchasable} size="lg" location="hero">
-              {h.cta} for {price}
+              {h.cta} for {money.price}
             </CheckoutButton>
             <a
               href="#included"

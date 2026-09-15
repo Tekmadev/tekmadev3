@@ -408,7 +408,7 @@ export const termsOfService: LegalDoc = {
         },
         {
           type: "p",
-          text: "Tekmadev also sells fixed-scope website packages at a one-time price (for example, Webline). Those packages are governed by Section 5A and are not part of a Growth System engagement unless an Order Form says so.",
+          text: "Tekmadev also sells fixed-scope website packages for a one-time build fee with a monthly hosting and care plan (for example, Webline). Those packages are governed by Section 5A and are not part of a Growth System engagement unless an Order Form says so.",
         },
       ],
     },
@@ -454,7 +454,7 @@ export const termsOfService: LegalDoc = {
             "A one-time setup fee and a recurring monthly fee, as set out in the Order Form. The setup fee covers the design, build, and installation of the growth system and the assets delivered to the Client, which the Client retains, and is non-refundable.",
             "A performance guarantee: if the system does not produce 30 Qualified Booked Calls within 60 days of go-live, Tekmadev will not invoice further fees for that period and will continue to operate the system at no additional charge until the target is reached, as set out in Section 4 and the Order Form.",
             "Fees are quoted in Canadian dollars (CAD) unless otherwise stated and are exclusive of applicable taxes (HST, GST, QST), which will be added where applicable.",
-            "One-time website packages (Section 5A) are paid in full at checkout. Where a buy-now-pay-later option (such as Afterpay, Klarna, or Affirm) is offered at checkout, the instalment agreement is between the Client and that provider and is subject to the provider's terms and approval; Tekmadev receives the full package fee at checkout.",
+            "Website packages (Section 5A) have a build fee paid in full at checkout and, where stated, a required monthly hosting and care plan billed to the Client's card. Where a buy-now-pay-later option (such as Afterpay, Klarna, or Affirm) is offered at checkout, the instalment agreement covers the build fee only, is between the Client and that provider, and is subject to the provider's terms and approval; Tekmadev receives the full build fee at checkout.",
           ],
         },
         {
@@ -465,11 +465,11 @@ export const termsOfService: LegalDoc = {
     },
     {
       id: "one-time-packages",
-      title: "5A. One-time website packages (Webline)",
+      title: "5A. Website packages (Webline) and Webline Care",
       blocks: [
         {
           type: "p",
-          text: "Webline is a fixed-scope website package sold at a one-time price shown on the Webline page at the time of purchase. Unless the Webline page or an Order Form says otherwise, the package includes: a custom-designed website of up to five pages; copy written by Tekmadev from the Client's intake; a search foundation (metadata, structured data, sitemap, search console setup) and an AI-search layer (llms.txt, FAQ markup, entity-rich copy); lead capture (contact form, click-to-call, booking link, analytics); launch on the Client's domain with SSL; a walkthrough video; and 30 days of post-launch fixes limited to defects and minor content edits.",
+          text: "Webline is a fixed-scope website package sold for a one-time build fee shown on the Webline page at the time of purchase, together with Webline Care as described below. Unless the Webline page or an Order Form says otherwise, the package includes: a custom-designed website of up to five pages; copy written by Tekmadev from the Client's intake; a search foundation (metadata, structured data, sitemap, search console setup) and an AI-search layer (llms.txt, FAQ markup, entity-rich copy); lead capture (contact form, click-to-call, booking link, analytics); launch on the Client's domain with SSL; a walkthrough video; and 30 days of post-launch fixes limited to defects and minor content edits.",
         },
         {
           type: "p",
@@ -477,15 +477,23 @@ export const termsOfService: LegalDoc = {
         },
         {
           type: "p",
-          text: "Design approval and refunds. The Client approves the homepage design concept in the client portal before the remaining pages are built. The concept includes one revision round. If, after that revision, the Client does not wish to proceed, the Client may cancel in writing and Tekmadev will refund the package fee in full within 10 business days. Once the Client approves the concept, or once the build proceeds with the Client's knowledge, the package fee is non-refundable except as required by applicable consumer protection law.",
+          text: "Design approval and refunds. The Client approves the homepage design concept in the client portal before the remaining pages are built. The concept includes one revision round. If, after that revision, the Client does not wish to proceed, the Client may cancel in writing and Tekmadev will refund the build fee in full within 10 business days and cancel Webline Care before any monthly charge. Once the Client approves the concept, or once the build proceeds with the Client's knowledge, the build fee is non-refundable except as required by applicable consumer protection law.",
         },
         {
           type: "p",
-          text: "Ownership. On payment in full, the Client owns the delivered website, its design, and its copy. Tekmadev retains ownership of its pre-existing tools, templates, and know-how used to build it, and grants the Client a perpetual licence to use them as embedded in the delivered site. Domain registration and hosting accounts are opened or kept in the Client's name.",
+          text: "Webline Care. Webline Care is Tekmadev's hosting and maintenance plan for Webline sites and is required for as long as Tekmadev hosts the site. It covers hosting with SSL, security and software updates, uptime monitoring, backups, small text and image edits requested by the Client, and upkeep of the site's search and AI-search foundation. It does not cover new pages, redesigns, new features, or integrations, which are quoted separately. The monthly fee and the number of days after purchase before the first charge are shown on the Webline page at the time of purchase. The Client authorises the charge by adding a payment method in the client portal; Tekmadev does not launch the site until Webline Care is set up. Fees renew monthly until cancelled.",
         },
         {
           type: "p",
-          text: "Exclusions. The package fee does not include domain registration or renewal, hosting fees above a free tier, paid stock imagery, third-party software subscriptions, logo design, additional pages, integrations, ongoing maintenance, or marketing services. Any of these may be quoted separately in writing before work starts. The performance guarantee in Section 4 does not apply to one-time website packages.",
+          text: "Cancelling Webline Care. The Client may cancel at any time, with no minimum term, from the billing page of the client portal or by writing to Tekmadev. Cancellation takes effect at the end of the monthly period already paid for, and a period that has started is not refunded except as required by applicable consumer protection law. On cancellation, Tekmadev will, on the Client's request made within 30 days after the end of the final period, transfer the site's code and content to a hosting account in the Client's name and provide reasonable instructions. After that period Tekmadev may take the hosted copy offline. Nothing in this clause affects the Client's ownership of the site described below.",
+        },
+        {
+          type: "p",
+          text: "Ownership. On payment in full, the Client owns the delivered website, its design, and its copy. Tekmadev retains ownership of its pre-existing tools, templates, and know-how used to build it, and grants the Client a perpetual licence to use them as embedded in the delivered site. Domain registration stays in the Client's name. While Webline Care is active, Tekmadev hosts the site on its own infrastructure.",
+        },
+        {
+          type: "p",
+          text: "Exclusions. The build fee and Webline Care do not include domain registration or renewal, paid stock imagery, third-party software subscriptions, logo design, additional pages, integrations, or marketing services. Any of these may be quoted separately in writing before work starts. The performance guarantee in Section 4 does not apply to one-time website packages.",
         },
       ],
     },

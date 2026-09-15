@@ -257,6 +257,29 @@ export async function getLatestSubscriptionForClient(client: Client): Promise<Cl
   return (byCustomer.data as ClientSubscription | null) ?? null;
 }
 
+/** Subscription states that count as "the care plan is set up". */
+export const CARE_OK_STATUSES = ["trialing", "active", "past_due"] as const;
+
+/**
+ * The client's monthly care plan (kind = care), newest first. Linked by
+ * client_id, which the webhook always sets from the session metadata.
+ */
+export async function getCareSubscriptionForClient(clientId: string): Promise<ClientSubscription | null> {
+  const { data } = await db()
+    .from("subscriptions")
+    .select("id,created_at,email,tier,status,current_period_end,amount_total,currency,stripe_customer_id,stripe_subscription_id")
+    .eq("client_id", clientId)
+    .eq("kind", "care")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as ClientSubscription | null) ?? null;
+}
+
+export function careIsSetUp(sub: Pick<ClientSubscription, "status"> | null): boolean {
+  return Boolean(sub?.status && (CARE_OK_STATUSES as readonly string[]).includes(sub.status));
+}
+
 // ---------------------------------------------------------------------------
 // Members
 // ---------------------------------------------------------------------------

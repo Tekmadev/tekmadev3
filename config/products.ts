@@ -1,8 +1,14 @@
 /**
- * One-time products (fixed scope, paid once at checkout), as opposed to the
- * subscription tiers in config/pricing.ts. Like tiers, this file holds
- * METADATA only: the live price lives in the `products` table and is edited
- * from the admin dashboard, which also keeps Stripe in sync.
+ * Fixed-scope products (a one-time fee at checkout, plus an optional required
+ * monthly care plan), as opposed to the subscription tiers in
+ * config/pricing.ts. Like tiers, this file holds METADATA only: the live
+ * prices live in the `products` table and are edited from the admin
+ * dashboard, which also keeps Stripe in sync.
+ *
+ * The one-time fee and the care plan are two separate checkouts on purpose.
+ * Afterpay and Affirm cannot pay for subscriptions, and Klarna in Canada only
+ * offers pay in 4 on one-time payments, so putting the monthly line in the
+ * first checkout would remove pay-in-4 from the offer.
  *
  * A product id doubles as a `clients.plan_id`, so onboarding templates,
  * the portal, and the admin all treat "webline" the same way they treat
@@ -41,6 +47,29 @@ export type ProductMeta = {
     /** Shown under the pay button on the Stripe page. */
     submitMessage: string;
   };
+  /**
+   * The required monthly plan that comes with the product. Its amount and
+   * start delay live in the DB (`monthly_amount`, `monthly_trial_days`).
+   */
+  care?: {
+    name: string;
+    /** Shown on the Stripe page and in the Stripe customer portal. */
+    description: string;
+    statementDescriptor: string;
+    /** What the plan covers, in the order the sales page lists it. */
+    includes: readonly string[];
+    /** Cents. Seeds `monthly_amount`; after that the DB is the source of truth. */
+    defaultMonthlyAmount: number;
+    defaultTrialDays: number;
+    /** Onboarding task completed when the plan is set up. */
+    taskKey: string;
+    /**
+     * Appended to the one-time checkout's submit message, so the recurring
+     * charge is disclosed on the payment page itself. {monthly} and {days}
+     * are filled from the DB.
+     */
+    checkoutNote: string;
+  };
 };
 
 export const productMeta: ProductMeta[] = [
@@ -64,6 +93,24 @@ export const productMeta: ProductMeta[] = [
       cancelPath: "/webline?checkout=cancelled",
       submitMessage:
         "Your build starts the moment payment clears. Your client portal invite lands in your inbox within minutes.",
+    },
+    care: {
+      name: "Webline Care",
+      description:
+        "Hosting and maintenance for your Webline site: fast hosting with SSL, security updates, uptime monitoring, backups, and small content edits. Cancel anytime.",
+      statementDescriptor: "TEKMADEV CARE",
+      includes: [
+        "Fast, secure hosting with SSL",
+        "Security and software updates",
+        "Uptime monitoring and backups",
+        "Small text and image edits, on request",
+        "SEO, GEO, and AEO foundation kept current",
+      ],
+      defaultMonthlyAmount: 7700,
+      defaultTrialDays: 30,
+      taskKey: "webline.welcome.care_plan",
+      checkoutNote:
+        "Includes Webline Care, hosting and maintenance at {monthly}/month starting {days} days from today. You add a card for it in your portal; nothing more is charged today. Cancel anytime.",
     },
   },
 ];

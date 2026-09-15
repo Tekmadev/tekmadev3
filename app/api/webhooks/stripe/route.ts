@@ -2,7 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import Stripe from "stripe";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { provisionClient } from "@/lib/client-provisioning";
-import { getClientByStripeCustomer, logActivity, updateClient } from "@/lib/clients-data";
+import { createNotification, getClientById, getClientByStripeCustomer, logActivity, updateClient } from "@/lib/clients-data";
+import { completeTaskByKey, getActiveOnboarding } from "@/lib/onboarding-data";
+import { getProductMeta } from "@/config/products";
 import {
   getOrderByPaymentIntent,
   getOrderBySession,
@@ -88,6 +90,101 @@ async function handleOrderSession(stripe: Stripe, s: Stripe.Checkout.Session, st
   }
 }
 
+/** Trial end or period end, whichever the subscription is in, as ISO. */
+function periodEndOf(sub: Stripe.Subscription): string | null {
+  // current_period_end moved to the subscription item in recent API versions.
+  const end = sub.status === "trialing" && sub.trial_end ? sub.trial_end : (sub.items?.data?.[0]?.current_period_end ?? null);
+  return end ? new Date(end * 1000).toISOString() : null;
+}
+
+/** Columns that mark a subscription as a product care plan, read off its metadata. */
+function careColumns(meta: Stripe.Metadata | null): { kind: "plan" | "care"; product_id?: string | null; client_id?: string } {
+  if (meta?.kind !== "care") return { kind: "plan" };
+  return {
+    kind: "care",
+    product_id: getProductMeta(meta.product) ? meta.product : null,
+    ...(meta.client_id ? { client_id: meta.client_id } : {}),
+  };
+}
+
+/**
+ * Care plan started (Checkout in `subscription` mode, metadata.kind = care):
+ * the client added a card for the monthly plan attached to their one-time
+ * product. Records the subscription against the account, ticks the onboarding
+ * step, and never provisions a new client (the account already exists).
+ */
+async function handleCareSession(stripe: Stripe, s: Stripe.Checkout.Session) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return;
+  const clientId = s.metadata?.client_id || s.client_reference_id || null;
+  const meta = getProductMeta(s.metadata?.product);
+  const subId = idOf(s.subscription);
+  const customerId = idOf(s.customer);
+
+  let sub: Stripe.Subscription | null = null;
+  if (subId) {
+    try {
+      sub = await stripe.subscriptions.retrieve(subId);
+    } catch (err) {
+      console.error("[stripe webhook] care subscription lookup failed", err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  await supabase.from("subscriptions").upsert(
+    {
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subId,
+      stripe_checkout_session_id: s.id,
+      email: s.customer_details?.email ?? s.customer_email ?? null,
+      tier: null,
+      kind: "care",
+      product_id: meta?.id ?? null,
+      client_id: clientId,
+      status: sub?.status ?? "active",
+      current_period_end: sub ? periodEndOf(sub) : null,
+      amount_total: sub?.items?.data?.[0]?.price?.unit_amount ?? s.amount_total ?? null,
+      currency: s.currency ?? null,
+      raw: (sub ?? s) as unknown as Record<string, unknown>,
+    },
+    { onConflict: "stripe_subscription_id" },
+  );
+
+  if (!clientId) return;
+  const client = await getClientById(clientId);
+  if (!client) return;
+  if (!client.stripe_customer_id && customerId) {
+    await updateClient(client.id, { stripe_customer_id: customerId }, "stripe");
+  }
+
+  const onboarding = await getActiveOnboarding(client.id);
+  if (onboarding && meta?.care) await completeTaskByKey(onboarding.id, meta.care.taskKey, "stripe");
+
+  const planName = meta?.care?.name ?? "Monthly plan";
+  const firstCharge = sub?.status === "trialing" && sub.trial_end ? new Date(sub.trial_end * 1000) : null;
+  const firstChargeText = firstCharge
+    ? firstCharge.toLocaleDateString("en-CA", { month: "long", day: "numeric", year: "numeric", timeZone: "America/Toronto" })
+    : null;
+
+  await logActivity({
+    client_id: client.id,
+    actor_type: "system",
+    event: "care.started",
+    entity_type: "subscription",
+    summary: firstChargeText ? `${planName} set up. First charge ${firstChargeText}.` : `${planName} set up.`,
+    data: { stripe_subscription_id: subId, status: sub?.status ?? null },
+    visibility: "client",
+  });
+  await createNotification({
+    client_id: client.id,
+    template_key: "care_started",
+    subject: `${planName} is set up`,
+    body: firstChargeText
+      ? `Thanks. Nothing was charged today. Your first monthly charge is on ${firstChargeText}, and you can cancel anytime from Billing.`
+      : "Thanks. Your plan is active, and you can cancel anytime from Billing.",
+    action_url: "/billing",
+  });
+}
+
 /** Refunds (full or partial) and disputes on one-time orders. */
 async function handleChargeEvent(event: Stripe.Event) {
   const obj = event.data.object as Stripe.Charge | Stripe.Dispute;
@@ -169,6 +266,11 @@ export async function POST(req: NextRequest) {
     if (event.type === "checkout.session.completed") {
       const s = event.data.object as Stripe.Checkout.Session;
 
+      if (s.mode === "subscription" && s.metadata?.kind === "care") {
+        await handleCareSession(stripe, s);
+        return NextResponse.json({ received: true });
+      }
+
       if (s.mode === "payment") {
         // Card and BNPL payments confirm synchronously; a still-processing
         // method leaves the order pending until async_payment_succeeded.
@@ -234,15 +336,15 @@ export async function POST(req: NextRequest) {
     ) {
       const sub = event.data.object as Stripe.Subscription;
       const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
-      // current_period_end moved to the subscription item in recent API versions.
-      const periodEnd = sub.items?.data?.[0]?.current_period_end ?? null;
+      const care = careColumns(sub.metadata);
       await supabase.from("subscriptions").upsert(
         {
           stripe_customer_id: customerId,
           stripe_subscription_id: sub.id,
-          tier: sub.metadata?.tier ?? null,
+          tier: care.kind === "care" ? null : (sub.metadata?.tier ?? null),
+          ...care,
           status: sub.status,
-          current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+          current_period_end: periodEndOf(sub),
           ...utmFrom(sub.metadata),
           raw: sub as unknown as Record<string, unknown>,
         },
@@ -252,18 +354,23 @@ export async function POST(req: NextRequest) {
       // Keep the client account in step with billing. A fully cancelled
       // subscription churns the account; everything else is just recorded.
       try {
-        const client = await getClientByStripeCustomer(customerId);
+        const client =
+          (care.kind === "care" && care.client_id ? await getClientById(care.client_id) : null) ??
+          (await getClientByStripeCustomer(customerId));
         if (client) {
+          // Cancelling the care plan ends hosting for that site, so the account
+          // churns the same way a cancelled growth plan does.
           if (event.type === "customer.subscription.deleted" && client.status !== "churned") {
             await updateClient(client.id, { status: "churned", churned_at: new Date().toISOString() }, "stripe");
           }
+          const label = care.kind === "care" ? (getProductMeta(care.product_id)?.care?.name ?? "Care plan") : "Subscription";
           await logActivity({
             client_id: client.id,
             actor_type: "system",
             event: `billing.${event.type.replace("customer.subscription.", "subscription_")}`,
             entity_type: "subscription",
-            summary: `Subscription ${sub.status}`,
-            data: { stripe_subscription_id: sub.id, status: sub.status },
+            summary: `${label} ${sub.status}`,
+            data: { stripe_subscription_id: sub.id, status: sub.status, kind: care.kind },
           });
         }
       } catch (err) {

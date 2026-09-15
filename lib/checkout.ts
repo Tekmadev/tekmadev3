@@ -3,6 +3,7 @@ import { getTierMeta } from "@/config/pricing";
 import { getProductMeta } from "@/config/products";
 import { getPlan } from "@/lib/pricing-data";
 import { getProduct } from "@/lib/products-data";
+import { formatMoney } from "@/lib/money";
 
 /**
  * Builds Stripe Checkout Session parameters for either a subscription tier
@@ -144,6 +145,15 @@ async function prepareProduct(input: CheckoutInput): Promise<PreparedCheckout> {
 
   const metadata = withAttribution({ product: meta.id }, input.attribution);
 
+  // The recurring plan is disclosed on the payment page itself, before they pay.
+  const careNote =
+    meta.care && row.monthly_amount != null
+      ? " " +
+        meta.care.checkoutNote
+          .replace("{monthly}", formatMoney(row.monthly_amount, row.currency))
+          .replace("{days}", String(row.monthly_trial_days))
+      : "";
+
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: "payment",
     line_items: [{ price: row.stripe_price_id, quantity: 1 }],
@@ -153,7 +163,7 @@ async function prepareProduct(input: CheckoutInput): Promise<PreparedCheckout> {
       invoice_data: { description: `${meta.name}: ${meta.tagline}`, metadata },
     },
     ...common(input, metadata),
-    custom_text: { submit: { message: meta.checkout.submitMessage } },
+    custom_text: { submit: { message: meta.checkout.submitMessage + careNote } },
     submit_type: "pay",
     allow_promotion_codes: true,
     success_url: input.urls?.success ?? `${input.origin}${meta.checkout.successPath}`,
@@ -167,4 +177,88 @@ async function prepareProduct(input: CheckoutInput): Promise<PreparedCheckout> {
 export async function prepareCheckout(stripe: Stripe, input: CheckoutInput): Promise<PreparedCheckout> {
   if (input.product) return prepareProduct(input);
   return prepareSubscription(stripe, input);
+}
+
+// ---------------------------------------------------------------------------
+// Care plans (Webline Care): the required monthly plan, started from the portal
+// ---------------------------------------------------------------------------
+
+const DAY_MS = 86_400_000;
+// Stripe rejects a trial_end less than 48 hours away. A small margin keeps a
+// session created right at the edge from failing.
+const MIN_TRIAL_MS = 48 * 3_600_000 + 10 * 60_000;
+
+/**
+ * When the first monthly charge should land: `trialDays` after the original
+ * purchase, never earlier.
+ *
+ * - More than 48 hours away: that exact moment.
+ * - Inside 48 hours: 48 hours from now, the soonest Stripe allows. The buyer is
+ *   charged a day or two late at most, never early.
+ * - Already passed (the card is added late): no trial, charged today.
+ */
+export function careFirstChargeAt(purchasedAt: Date, trialDays: number, now = new Date()): Date | null {
+  const target = purchasedAt.getTime() + trialDays * DAY_MS;
+  const delta = target - now.getTime();
+  if (delta <= 0) return null;
+  if (delta < MIN_TRIAL_MS) return new Date(now.getTime() + MIN_TRIAL_MS);
+  return new Date(target);
+}
+
+export type CarePlanInput = {
+  productId: string;
+  client: { id: string; business_name: string; stripe_customer_id: string | null };
+  /** The one-time order the plan belongs to; its payment date starts the clock. */
+  order: { id: string; paid_at: string | null; created_at: string } | null;
+  /** Used only when the client has no Stripe customer yet. */
+  email: string;
+  urls: { success: string; cancel: string };
+};
+
+/**
+ * A Checkout Session in subscription mode for the monthly care plan. The
+ * buyer adds a payment method; nothing is due today unless the start date has
+ * already passed. Reuses the Stripe customer from the one-time purchase so
+ * receipts, the customer portal, and the plan all sit under one customer.
+ */
+export async function prepareCarePlan(input: CarePlanInput): Promise<PreparedCheckout> {
+  const meta = getProductMeta(input.productId);
+  if (!meta?.care) return { ok: false, error: "This product has no monthly plan.", status: 400 };
+  const row = await getProduct(meta.id);
+  if (!row?.stripe_monthly_price_id || row.monthly_amount == null) {
+    return { ok: false, error: NOT_CONFIGURED, status: 503 };
+  }
+
+  const purchasedAt = new Date(input.order?.paid_at ?? input.order?.created_at ?? Date.now());
+  const firstCharge = careFirstChargeAt(purchasedAt, row.monthly_trial_days);
+  const monthly = formatMoney(row.monthly_amount, row.currency);
+  const when = firstCharge
+    ? `Nothing is charged today. Your first ${monthly} charge is on ${firstCharge.toLocaleDateString("en-CA", { month: "long", day: "numeric", year: "numeric", timeZone: "America/Toronto" })}, then monthly.`
+    : `Your first ${monthly} charge is today, then monthly.`;
+
+  const metadata: Record<string, string> = {
+    kind: "care",
+    product: meta.id,
+    client_id: input.client.id,
+    ...(input.order ? { order_id: input.order.id } : {}),
+  };
+
+  const params: Stripe.Checkout.SessionCreateParams = {
+    mode: "subscription",
+    line_items: [{ price: row.stripe_monthly_price_id, quantity: 1 }],
+    ...(input.client.stripe_customer_id ? { customer: input.client.stripe_customer_id } : { customer_email: input.email }),
+    client_reference_id: input.client.id,
+    payment_method_collection: "always",
+    metadata,
+    subscription_data: {
+      metadata,
+      description: `${meta.care.name} for ${input.client.business_name}`.slice(0, 500),
+      ...(firstCharge ? { trial_end: Math.floor(firstCharge.getTime() / 1000) } : {}),
+    },
+    custom_text: { submit: { message: `${when} Cancel anytime from your portal.` } },
+    success_url: input.urls.success,
+    cancel_url: input.urls.cancel,
+  };
+
+  return { ok: true, params };
 }

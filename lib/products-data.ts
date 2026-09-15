@@ -10,6 +10,12 @@ export type ProductRow = {
   compare_at_amount: number | null; // cents; optional "typical price" anchor
   stripe_product_id: string | null;
   stripe_price_id: string | null;
+  /** Cents per month for the required care plan; null when the product has none. */
+  monthly_amount: number | null;
+  /** Days after purchase before the first monthly charge. */
+  monthly_trial_days: number;
+  stripe_monthly_product_id: string | null;
+  stripe_monthly_price_id: string | null;
   active: boolean;
   sort_order: number;
   created_at: string;
@@ -25,6 +31,13 @@ export type DisplayProduct = Omit<ProductMeta, "currency"> & {
   installment: number;
   /** True when a Stripe price exists, i.e. the buy button can work. */
   purchasable: boolean;
+  /** The required monthly plan, or null when the product has none. */
+  monthly: {
+    amount: number;
+    trialDays: number;
+    /** True when a recurring Stripe price exists, i.e. the plan can be started. */
+    ready: boolean;
+  } | null;
 };
 
 export async function getProduct(id: string): Promise<ProductRow | null> {
@@ -51,6 +64,9 @@ export async function getDisplayProduct(id: string): Promise<DisplayProduct | nu
   if (!meta) return null;
   const row = await getProduct(id);
   const amount = row?.amount ?? meta.defaultAmount;
+  // Without a row (DB unreachable) fall back to the config defaults so the page
+  // still states the monthly plan truthfully; with a row, null means no plan.
+  const monthlyAmount = row ? row.monthly_amount : (meta.care?.defaultMonthlyAmount ?? null);
   return {
     ...meta,
     currency: (row?.currency || meta.currency).toUpperCase(),
@@ -58,6 +74,14 @@ export async function getDisplayProduct(id: string): Promise<DisplayProduct | nu
     compareAtAmount: row?.compare_at_amount ?? null,
     installment: installmentAmount(amount),
     purchasable: Boolean(row?.active && row?.stripe_price_id),
+    monthly:
+      meta.care && monthlyAmount != null
+        ? {
+            amount: monthlyAmount,
+            trialDays: row?.monthly_trial_days ?? meta.care.defaultTrialDays,
+            ready: Boolean(row?.stripe_monthly_price_id),
+          }
+        : null,
   };
 }
 

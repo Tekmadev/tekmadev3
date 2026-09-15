@@ -9,7 +9,7 @@ import { deleteTemplateAction, saveTemplateAction } from "../actions";
 export const dynamic = "force-dynamic";
 
 const OWNERS = ["client", "tekmadev"];
-const KINDS = ["form", "upload", "access_grant", "approval", "esign", "call", "internal", "checklist"];
+const KINDS = ["form", "upload", "access_grant", "approval", "esign", "call", "internal", "checklist", "billing"];
 
 export default async function TemplatesPage({ searchParams }: { searchParams: Promise<{ saved?: string; deleted?: string; e?: string }> }) {
   await requireOwner();

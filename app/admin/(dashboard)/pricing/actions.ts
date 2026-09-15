@@ -9,7 +9,7 @@ import { syncPlanToStripe } from "@/lib/plan-sync";
 import { getProductMeta } from "@/config/products";
 import { business } from "@/config/site";
 import { getProduct } from "@/lib/products-data";
-import { syncProductToStripe } from "@/lib/product-sync";
+import { syncCarePlanToStripe, syncProductToStripe } from "@/lib/product-sync";
 
 /**
  * Updates a plan's price from the dashboard: writes the new amounts to the DB
@@ -84,9 +84,11 @@ export async function updatePlanAction(formData: FormData) {
 }
 
 /**
- * Updates a one-time product (Webline): writes the amount to the DB (the sales
- * page and llms.txt re-render) and creates the new Stripe price, archiving the
- * old one. The Stripe product itself is created on first save.
+ * Updates a product (Webline): the one-time amount and, when the product has a
+ * care plan, the monthly amount and how many days after purchase it starts.
+ * Writes to the DB (the sales page, home page, and llms.txt re-render) and
+ * creates new Stripe prices for whichever amount changed, archiving the old
+ * ones. Stripe products are created on first save.
  */
 export async function updateProductAction(formData: FormData) {
   await requireOwner();
@@ -97,12 +99,21 @@ export async function updateProductAction(formData: FormData) {
   const compareRaw = String(formData.get("compare_at") || "").trim();
   const compareDollars = compareRaw ? Number(compareRaw) : null;
   const active = formData.get("active") === "on";
+  const monthlyDollars = Number(formData.get("monthly"));
+  const trialDays = Number(formData.get("trial_days"));
+  const hasCare = Boolean(meta?.care);
 
   if (
     !meta ||
     !Number.isFinite(amountDollars) ||
     amountDollars < 0 ||
-    (compareDollars !== null && (!Number.isFinite(compareDollars) || compareDollars < 0))
+    (compareDollars !== null && (!Number.isFinite(compareDollars) || compareDollars < 0)) ||
+    (hasCare &&
+      (!Number.isFinite(monthlyDollars) ||
+        monthlyDollars <= 0 ||
+        !Number.isInteger(trialDays) ||
+        trialDays < 1 ||
+        trialDays > 365))
   ) {
     redirect("/admin/pricing?e=input");
   }
@@ -120,6 +131,12 @@ export async function updateProductAction(formData: FormData) {
     active,
   };
 
+  const monthlyCents = hasCare ? Math.round(monthlyDollars * 100) : null;
+  if (hasCare) {
+    update.monthly_amount = monthlyCents;
+    update.monthly_trial_days = trialDays;
+  }
+
   const secret = process.env.STRIPE_SECRET_KEY;
   if (secret && (row.amount !== amountCents || !row.stripe_price_id)) {
     try {
@@ -135,6 +152,24 @@ export async function updateProductAction(formData: FormData) {
       update.stripe_price_id = synced.priceId;
     } catch (err) {
       console.error("[pricing] Stripe product sync failed", err instanceof Error ? err.message : String(err));
+      redirect("/admin/pricing?e=stripe");
+    }
+  }
+
+  // The start delay is read at checkout time, so only a new amount needs a new price.
+  if (secret && meta.care && monthlyCents !== null && (row.monthly_amount !== monthlyCents || !row.stripe_monthly_price_id)) {
+    try {
+      const synced = await syncCarePlanToStripe({
+        secret,
+        meta,
+        currency: row.currency || "cad",
+        monthlyCents,
+        existing: { productId: row.stripe_monthly_product_id, priceId: row.stripe_monthly_price_id },
+      });
+      update.stripe_monthly_product_id = synced.productId;
+      update.stripe_monthly_price_id = synced.priceId;
+    } catch (err) {
+      console.error("[pricing] Stripe care plan sync failed", err instanceof Error ? err.message : String(err));
       redirect("/admin/pricing?e=stripe");
     }
   }

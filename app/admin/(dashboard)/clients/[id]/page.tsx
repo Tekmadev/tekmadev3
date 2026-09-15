@@ -21,6 +21,7 @@ import { offerName } from "@/config/products";
 import { getLatestOrderForClient, paymentMethodLabel } from "@/lib/orders-data";
 import { portalUrl } from "@/lib/portal-host";
 import { PageHeader, Panel, Notice, StatCard, fmtMoney } from "@/components/admin/ui";
+import { getProductMeta } from "@/config/products";
 import { Badge, btnSecondary, fmtBytes, fmtDate, fmtDateTime, humanize, type Tone } from "@/components/portal/ui";
 import { SubmitButton } from "@/components/portal/SubmitButton";
 import { AccountForm } from "@/components/admin/clients/AccountForm";
@@ -111,6 +112,21 @@ export default async function ClientDetailPage({
       {sp.invited === "1" && <Notice kind="ok">Invite sent.</Notice>}
       {sp.e === "invite" && <Notice kind="err">Invite email failed. Check the Supabase auth email settings.</Notice>}
       {sp.e === "email" && <Notice kind="err">Enter a valid email.</Notice>}
+      {sp.e === "care" && (
+        <Notice kind="err">
+          <span className="block">
+            Not switched on: this client has not set up {getProductMeta(client.plan_id)?.care?.name ?? "their care plan"} yet. It is
+            the first step in their portal checklist. Go live only once it shows as set up, or override for a comped or invoiced site.
+          </span>
+          <form action={goLiveAction} className="mt-3">
+            <input type="hidden" name="client_id" value={client.id} />
+            <input type="hidden" name="override" value="1" />
+            <SubmitButton variant="secondary" pendingLabel="Switching on">
+              Go live without a care plan
+            </SubmitButton>
+          </form>
+        </Notice>
+      )}
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard label="Stage" value={stage ? stageLabel(stage) : client.status === "live" ? "Live" : "-"} sub={onboarding?.target_live_date ? `target ${fmtDate(onboarding.target_live_date)}` : undefined} />

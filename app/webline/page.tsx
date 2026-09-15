@@ -6,8 +6,8 @@ import { JsonLd } from "@/components/JsonLd";
 import { WeblineHero } from "@/components/webline/Hero";
 import { CheckoutNotice } from "@/components/webline/CheckoutNotice";
 import { StickyBar } from "@/components/webline/StickyBar";
-import { Bnpl, Bonuses, Compare, Faq, FinalCta, Fit, Guarantee, Problem, Process, Proof, Stack } from "@/components/webline/Sections";
-import { webline, WEBLINE_ID } from "@/config/webline";
+import { Bnpl, Bonuses, Care, Compare, Faq, FinalCta, Fit, Guarantee, Problem, Process, Proof, Stack } from "@/components/webline/Sections";
+import { fillWebline, webline, WEBLINE_ID, type WeblineMoney } from "@/config/webline";
 import { business } from "@/config/site";
 import { getDisplayProduct } from "@/lib/products-data";
 import { formatMoney } from "@/lib/money";
@@ -57,10 +57,12 @@ export default async function WeblinePage() {
   const product = await getDisplayProduct(WEBLINE_ID);
   if (!product) notFound();
 
-  const money = {
+  const money: WeblineMoney = {
     price: formatMoney(product.amount, product.currency),
     installment: formatMoney(product.installment, product.currency, { cents: true }),
     currency: product.currency,
+    monthly: product.monthly ? formatMoney(product.monthly.amount, product.currency) : null,
+    trialDays: product.monthly?.trialDays ?? 30,
   };
   const buy = { productId: product.id, purchasable: product.purchasable };
 
@@ -76,9 +78,10 @@ export default async function WeblinePage() {
           currency: product.currency,
           image: `${business.url}${PATH}/opengraph-image`,
           features: webline.stack.items.map((i) => i.title),
+          monthly: product.monthly ? { amountCents: product.monthly.amount, name: product.care?.name ?? "Monthly plan" } : null,
         })}
       />
-      <JsonLd data={faqPageJsonLd([...webline.faqs])} />
+      <JsonLd data={faqPageJsonLd(webline.faqs.map((f) => ({ q: fillWebline(f.q, money), a: fillWebline(f.a, money) })))} />
       <JsonLd
         data={crumbsJsonLd([
           { name: "Home", url: business.url },
@@ -87,23 +90,24 @@ export default async function WeblinePage() {
       />
 
       <Nav />
-      <WeblineHero productId={product.id} purchasable={product.purchasable} price={money.price} installment={money.installment} />
+      <WeblineHero productId={product.id} purchasable={product.purchasable} money={money} />
       <CheckoutNotice productId={product.id} />
       <Problem />
       <Stack money={money} buy={buy} />
       <Bonuses />
       <Process />
+      <Care money={money} />
       <Proof />
       <Compare money={money} />
       <Guarantee />
       <Bnpl money={money} buy={buy} />
       <Fit />
-      <Faq />
+      <Faq money={money} />
       <FinalCta money={money} buy={buy} />
       <Footer />
       {/* Room for the sticky buy bar on phones and tablets. */}
       <div aria-hidden className="h-20 lg:hidden" />
-      <StickyBar productId={product.id} purchasable={product.purchasable} price={money.price} installment={money.installment} />
+      <StickyBar productId={product.id} purchasable={product.purchasable} price={money.price} installment={money.installment} monthly={money.monthly} />
     </main>
   );
 }

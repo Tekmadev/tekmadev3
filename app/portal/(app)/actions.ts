@@ -6,7 +6,9 @@ import Stripe from "stripe";
 import { getPortalSession, hasRole, setActiveClientCookie, type PortalSession } from "@/lib/portal-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
+  careIsSetUp,
   db,
+  getCareSubscriptionForClient,
   getMemberById,
   logActivity,
   markNotificationsRead,
@@ -38,8 +40,9 @@ import {
 } from "@/lib/onboarding-data";
 import { INTAKE_FIELDS, INTAKE_SCHEMA_VERSION, intakeCompletion, parseIntakeForm } from "@/lib/intake-schema";
 import { inviteMember, sendPortalInvite } from "@/lib/client-provisioning";
-import { NOT_CONFIGURED, prepareCheckout } from "@/lib/checkout";
-import { isProductPlan } from "@/config/products";
+import { NOT_CONFIGURED, prepareCarePlan, prepareCheckout } from "@/lib/checkout";
+import { getLatestOrderForClient } from "@/lib/orders-data";
+import { getProductMeta, isProductPlan } from "@/config/products";
 import { business } from "@/config/site";
 import { portalUrl } from "@/lib/portal-host";
 import type { ActionResult } from "@/components/portal/PortalForm";
@@ -594,5 +597,60 @@ export async function startCheckoutAction(formData: FormData): Promise<ActionRes
   } catch (err) {
     console.error("[portal checkout]", err instanceof Error ? err.message : String(err));
     return { ok: false, message: "Couldn't start checkout. Please try again or book a call." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Care plan (Webline Care): add a card, first charge after the start delay
+// ---------------------------------------------------------------------------
+
+/**
+ * Opens a Stripe Checkout for the monthly care plan tied to this account and
+ * its one-time order. Guarded so a double click or a stale tab can't create a
+ * second plan: an account whose plan is already running gets the billing
+ * portal instead.
+ */
+export async function startCarePlanAction(): Promise<ActionResult> {
+  const sess = await session("admin");
+  if (isResult(sess)) return sess;
+  const product = getProductMeta(sess.client.plan_id);
+  if (!product?.care) return { ok: false, message: "This account has no monthly plan to set up." };
+
+  const existing = await getCareSubscriptionForClient(sess.client.id);
+  if (careIsSetUp(existing)) {
+    return { ok: false, message: `Your ${product.care.name} plan is already set up. Use Manage billing to change your card.` };
+  }
+
+  const secret = process.env.STRIPE_SECRET_KEY;
+  if (!secret) return { ok: false, message: NOT_CONFIGURED };
+
+  const order = await getLatestOrderForClient(sess.client);
+  const prepared = await prepareCarePlan({
+    productId: product.id,
+    client: sess.client,
+    order,
+    email: sess.email,
+    urls: { success: portalUrl("/billing?care=success"), cancel: portalUrl("/billing?care=cancelled") },
+  });
+  if (!prepared.ok) return { ok: false, message: prepared.error };
+
+  const stripe = new Stripe(secret);
+  try {
+    const checkout = await stripe.checkout.sessions.create(prepared.params);
+    if (!checkout.url) return { ok: false, message: NOT_CONFIGURED };
+    await logActivity({
+      client_id: sess.client.id,
+      actor_type: "client",
+      actor_email: sess.email,
+      event: "care.checkout_started",
+      entity_type: "client",
+      entity_id: sess.client.id,
+      summary: `${who(sess)} opened ${product.care.name} setup`,
+      data: { stripe_checkout_session_id: checkout.id, order_id: order?.id ?? null },
+    });
+    return { ok: true, redirect: checkout.url };
+  } catch (err) {
+    console.error("[portal care plan]", err instanceof Error ? err.message : String(err));
+    return { ok: false, message: "Couldn't open the secure card page. Please try again or email us." };
   }
 }

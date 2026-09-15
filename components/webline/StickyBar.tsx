@@ -14,11 +14,13 @@ export function StickyBar({
   purchasable,
   price,
   installment,
+  monthly,
 }: {
   productId: string;
   purchasable: boolean;
   price: string;
   installment: string;
+  monthly: string | null;
 }) {
   const [shown, setShown] = useState(false);
 
@@ -43,7 +45,9 @@ export function StickyBar({
           <p className="truncate text-sm font-semibold text-ink">
             {webline.sticky.label} · {price}
           </p>
-          <p className="truncate text-xs text-ink-3">or 4 × {installment}, 0% interest</p>
+          <p className="truncate text-xs text-ink-3">
+            or 4 × {installment}, 0% interest{monthly ? `, then ${monthly}/mo care` : ""}
+          </p>
         </div>
         <CheckoutButton productId={productId} purchasable={purchasable} size="sm" location="sticky" className="shrink-0">
           {webline.sticky.cta}

@@ -12,6 +12,7 @@ export default async function Image() {
   const product = await getDisplayProduct(WEBLINE_ID);
   const price = product ? formatMoney(product.amount, product.currency) : "";
   const installment = product ? formatMoney(product.installment, product.currency, { cents: true }) : "";
+  const monthly = product?.monthly ? formatMoney(product.monthly.amount, product.currency) : "";
 
   return new ImageResponse(
     (
@@ -64,7 +65,7 @@ export default async function Image() {
             <span style={{ color: theme.goldDeep }}>Live in 14 days.</span>
           </div>
           <div style={{ display: "flex", fontSize: 26, color: theme.ink3, lineHeight: 1.3, maxWidth: 900 }}>
-            {`SEO, GEO, and AEO built in. ${price ? `${price} once, or 4 × ${installment} with Afterpay or Klarna.` : "One flat price. Pay in 4 with Afterpay or Klarna."}`}
+            {`SEO, GEO, and AEO built in. ${price ? `${price} to build, or 4 × ${installment} with Afterpay or Klarna.${monthly ? ` Hosting and care ${monthly}/mo.` : ""}` : "Pay in 4 with Afterpay or Klarna."}`}
           </div>
         </div>
 

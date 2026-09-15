@@ -142,8 +142,11 @@ export const offerJsonLd = {
 };
 
 /**
- * Product + Offer schema for a one-time package (Webline). The price is
- * passed in from the products table so the markup never drifts from checkout.
+ * Product + Offer schema for a fixed-scope package (Webline). The Offer price
+ * is the one-time build fee; a required monthly plan, when there is one, is a
+ * second UnitPriceSpecification billed per month (unitCode MON), so the markup
+ * states the full cost. Prices come from the products table so the markup never
+ * drifts from checkout.
  */
 export function productJsonLd(p: {
   id: string;
@@ -154,6 +157,7 @@ export function productJsonLd(p: {
   currency: string;
   image?: string;
   features?: string[];
+  monthly?: { amountCents: number; name: string } | null;
 }) {
   return {
     "@context": "https://schema.org",
@@ -175,13 +179,28 @@ export function productJsonLd(p: {
       url: `${SITE_URL}${p.path}`,
       price: (p.priceCents / 100).toFixed(2),
       priceCurrency: p.currency.toUpperCase(),
-      priceSpecification: {
-        "@type": "UnitPriceSpecification",
-        price: (p.priceCents / 100).toFixed(2),
-        priceCurrency: p.currency.toUpperCase(),
-        billingIncrement: 1,
-        unitText: "one-time",
-      },
+      priceSpecification: [
+        {
+          "@type": "UnitPriceSpecification",
+          name: "Build fee",
+          price: (p.priceCents / 100).toFixed(2),
+          priceCurrency: p.currency.toUpperCase(),
+          billingIncrement: 1,
+          unitText: "one-time",
+        },
+        ...(p.monthly
+          ? [
+              {
+                "@type": "UnitPriceSpecification",
+                name: p.monthly.name,
+                price: (p.monthly.amountCents / 100).toFixed(2),
+                priceCurrency: p.currency.toUpperCase(),
+                referenceQuantity: { "@type": "QuantitativeValue", value: 1, unitCode: "MON" },
+                unitText: "per month",
+              },
+            ]
+          : []),
+      ],
       availability: "https://schema.org/InStock",
       itemCondition: "https://schema.org/NewCondition",
       eligibleRegion: areaServedSchema,

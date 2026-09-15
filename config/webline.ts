@@ -1,7 +1,9 @@
 /**
- * Copy for the Webline sales page (/webline). The price itself is never
- * written here: it comes from the `products` table (edited in the admin) and
- * the page formats it. Everything that IS a fact about the offer (scope,
+ * Copy for the Webline sales page (/webline). Prices are never written here:
+ * they come from the `products` table (edited in the admin). Strings use
+ * {price} (the one-time build fee), {installment} (one of four pay-in-4
+ * payments), {monthly} (Webline Care per month), and {days} (days after
+ * purchase before the first monthly charge); `fillWebline` fills them in. Everything that IS a fact about the offer (scope,
  * delivery, guarantee) is written once here and read by the page, the JSON-LD,
  * the OG image, and llms.txt.
  *
@@ -15,18 +17,18 @@ export const webline = {
   meta: {
     title: "Webline: a startup website that gets found, live in 14 days",
     description:
-      "Custom-designed startup website with SEO, GEO, and AEO built in. Up to 5 pages, copy written for you, live on your domain in 14 days. One payment, or pay in 4 with Afterpay or Klarna.",
+      "Custom-designed startup website with SEO, GEO, and AEO built in. Up to 5 pages, copy written for you, live on your domain in 14 days. Pay in 4 with Afterpay or Klarna, and we host and maintain it after launch.",
   },
 
   hero: {
     eyebrow: "Webline · for startups",
     lines: ["A startup website", "that gets found."],
     accent: "Live in 14 days.",
-    sub: "Modern design that does not look like a template. SEO, GEO, and AEO built in from day one, so Google ranks you and ChatGPT cites you. One flat payment. No retainer. No surprise invoices.",
+    sub: "Modern design that does not look like a template. SEO, GEO, and AEO built in from day one, so Google ranks you and ChatGPT cites you. Then we keep it fast, secure, and up to date, so it never becomes the site nobody touches. No contract. Cancel anytime.",
     cta: "Get Webline",
     secondary: "See what's included",
-    /** Shown under the buttons. {price} and {installment} are filled by the page. */
-    priceLine: "{price} once. Or 4 interest-free payments of {installment} with Afterpay or Klarna.",
+    /** Shown under the buttons. */
+    priceLine: "{price} to build, or 4 interest-free payments of {installment} with Afterpay or Klarna. Then {monthly}/month hosting and care, starting {days} days after you buy.",
     stats: [
       { value: "14 days", label: "From payment to live" },
       { value: "5 pages", label: "Designed and written for you" },
@@ -95,13 +97,27 @@ export const webline = {
       },
       {
         title: "Launched on your domain",
-        body: "DNS, SSL, hosting setup, redirects from your old site if you have one. Live, secure, and yours.",
+        body: "DNS, SSL, redirects from your old site if you have one. Live, secure, and yours.",
         worth: 300,
       },
     ],
     worthLabel: "Bought separately",
     totalLabel: "Total if you bought it piece by piece",
     priceLabel: "Webline, all of it",
+    /** Under the price in the stack card. */
+    priceNote: "to build. Or 4 × {installment} with Afterpay or Klarna.",
+    careNote: "Then {monthly}/month hosting and care from day {days}. Cancel anytime.",
+  },
+
+  care: {
+    eyebrow: "After launch",
+    headline: "Most websites start dying the day they launch. Yours gets looked after.",
+    body: "Software goes out of date. A security patch gets missed. A contact form quietly stops sending, and nobody notices for three months while leads hit a dead end. That is what happens to a website with no one looking after it. Webline Care is the fix: we host it, keep it secure and backed up, watch it around the clock, and make your small edits when you ask.",
+    anchorLabel: "Typical agency care plan",
+    anchorPrice: "$150 to $300/mo",
+    priceLabel: "Webline Care",
+    priceNote: "per month, starting {days} days after you buy. The build month is on us.",
+    points: ["No contract. Cancel anytime from your portal.", "Cancel and we move the site to hosting in your name. Nothing is held hostage."],
   },
 
   bonuses: {
@@ -130,7 +146,7 @@ export const webline = {
       {
         day: "Day 0",
         title: "Pay and brief",
-        body: "Checkout takes two minutes. Your portal invite lands in your inbox. You fill in a 15-minute form about your business and upload your logo.",
+        body: "Checkout takes two minutes. Your portal invite lands in your inbox. You set up hosting and care (nothing is charged that day), fill in a 15-minute form about your business, and upload your logo.",
       },
       {
         day: "Day 1 to 4",
@@ -161,12 +177,13 @@ export const webline = {
     headline: "Do the math.",
     columns: ["Template builder", "Freelancer", "Agency", "Webline"],
     rows: [
-      { label: "Price", values: ["$16/mo forever", "$1,500 to $3,000", "$8,000+", "{price}, once"] },
+      { label: "Price", values: ["$16/mo forever", "$1,500 to $3,000", "$8,000+", "{price} + {monthly}/mo"] },
       { label: "Time to live", values: ["Your weekends", "4 to 8 weeks", "8 to 16 weeks", "14 days"] },
       { label: "Custom design", values: [false, "Sometimes", true, true] },
       { label: "Copy written for you", values: [false, "Extra", true, true] },
       { label: "SEO foundation", values: [false, "Extra", true, true] },
       { label: "AI search (GEO, AEO)", values: [false, false, "Rarely", true] },
+      { label: "Hosting and upkeep", values: ["You, on weekends", "Extra, if they reply", "$150+/mo retainer", "Done for you"] },
       { label: "You own everything", values: ["Locked to platform", "Usually", true, true] },
       { label: "Pay in 4, 0% interest", values: [false, false, false, true] },
     ],
@@ -187,9 +204,9 @@ export const webline = {
   bnpl: {
     eyebrow: "Pay in 4",
     headline: "Get your website today. Pay for it over six weeks.",
-    body: "Pick Afterpay or Klarna at checkout and your total splits into four interest-free payments, one every two weeks. The decision is instant. The build starts the same day.",
+    body: "Pick Afterpay or Klarna at checkout and your build fee splits into four interest-free payments, one every two weeks. The decision is instant. The build starts the same day.",
     steps: ["Pick Afterpay or Klarna on the Stripe checkout page", "Pay the first instalment today", "Three more every two weeks, 0% interest"],
-    fine: "Offered through Stripe. Subject to approval by Afterpay or Klarna. Affirm monthly plans are also available at checkout. Your agreement is with the provider you choose.",
+    fine: "Offered through Stripe. Subject to approval by Afterpay or Klarna. Affirm monthly plans are also available at checkout. Your agreement is with the provider you choose. Pay in 4 covers the one-time build fee; Webline Care is billed monthly to your card.",
   },
 
   fit: {
@@ -217,11 +234,11 @@ export const webline = {
   faqs: [
     {
       q: "What exactly is included in Webline?",
-      a: "A custom-designed website of up to 5 pages with the copy written for you, the SEO foundation (metadata, schema markup, sitemap, Search Console), the GEO and AEO layer for AI search (llms.txt, FAQ markup, entity-rich copy), lead capture (contact form, click-to-call, booking link, analytics), launch on your domain with SSL, a walkthrough video, and 30 days of post-launch fixes.",
+      a: "A custom-designed website of up to 5 pages with the copy written for you, the SEO foundation (metadata, schema markup, sitemap, Search Console), the GEO and AEO layer for AI search (llms.txt, FAQ markup, entity-rich copy), lead capture (contact form, click-to-call, booking link, analytics), launch on your domain with SSL, a walkthrough video, and 30 days of post-launch fixes. After launch, Webline Care hosts and maintains it for {monthly} a month.",
     },
     {
       q: "How does pay in 4 with Afterpay or Klarna work?",
-      a: "On the checkout page you choose Afterpay or Klarna instead of a card. The total is split into four equal, interest-free payments: the first today, then one every two weeks. Approval is instant and subject to the provider. Affirm monthly financing is also offered at checkout.",
+      a: "On the checkout page you choose Afterpay or Klarna instead of a card. The {price} build fee is split into four equal, interest-free payments: the first today, then one every two weeks. Approval is instant and subject to the provider. Affirm monthly financing is also offered at checkout. Webline Care is separate and billed monthly to your card.",
     },
     {
       q: "What do SEO, GEO, and AEO mean?",
@@ -237,11 +254,11 @@ export const webline = {
     },
     {
       q: "Do I own the website?",
-      a: "Completely. The design, the copy, the code, and the accounts. Domain and hosting stay in your name. If you ever leave us, everything stays with you.",
+      a: "Completely. The design, the copy, and the code are yours, and your domain stays in your name. We host the site for you on Webline Care. If you ever cancel, we move it to a hosting account in your name, so nothing is ever held hostage.",
     },
     {
-      q: "What does hosting cost after launch?",
-      a: "We launch on Vercel, whose free or hobby tier covers most startup sites. Your domain renewal is paid to your registrar as usual. There is no monthly fee to us unless you choose to add one of our growth plans later.",
+      q: "What is the {monthly} a month for, and can I cancel?",
+      a: "Webline Care: fast, secure hosting with SSL, security and software updates, uptime monitoring, backups, small text and image edits when you ask, and your SEO, GEO, and AEO foundation kept current. It starts {days} days after you buy, so the build month costs nothing extra. It is required while we host your site, there is no contract, and you can cancel anytime from your portal. If you cancel, we hand the site over to hosting in your name.",
     },
     {
       q: "What if I need more pages, a blog, or a booking system later?",
@@ -249,7 +266,7 @@ export const webline = {
     },
     {
       q: "What is the refund policy?",
-      a: "You approve the homepage design concept by day 5. If you do not love it after one free revision round, you get a full refund. Once you approve the concept and we build the rest, the fee is non-refundable, because the work is done and it is yours.",
+      a: "You approve the homepage design concept by day 5. If you do not love it after one free revision round, you get a full refund and Webline Care is cancelled before it ever charges. Once you approve the concept and we build the rest, the build fee is non-refundable, because the work is done and it is yours. Webline Care can be cancelled anytime; a month that has already started is not refunded.",
     },
     {
       q: "Can I pay in US dollars?",
@@ -260,7 +277,7 @@ export const webline = {
   finalCta: {
     eyebrow: "Last step",
     headline: "Your startup, found.",
-    body: "Two minutes at checkout. Fifteen minutes on the intake form. Fourteen days later, a website that ranks, gets cited, and captures leads. For less than one month of most retainers.",
+    body: "Two minutes at checkout. Fifteen minutes on the intake form. Fourteen days later, a website that ranks, gets cited, and captures leads, with a team keeping it that way for {monthly} a month.",
     cta: "Get Webline",
     reassurance: ["Live in 14 days", "Love the design or full refund", "Pay in 4, 0% interest"],
   },
@@ -276,7 +293,7 @@ export const webline = {
     eyebrow: "New · Webline",
     headline: "An agency charges $8,000 for this.",
     accent: "You can start for {installment}.",
-    sub: "Webline is a custom startup website with SEO, GEO, and AEO built in, live on your domain in 14 days. Pick Afterpay or Klarna at checkout and the whole thing splits into four interest-free payments. You pay one today. We start building today.",
+    sub: "Webline is a custom startup website with SEO, GEO, and AEO built in, live on your domain in 14 days. Pick Afterpay or Klarna at checkout and the build fee splits into four interest-free payments. You pay one today. We start building today.",
     points: [
       {
         title: "Custom design, not a theme",
@@ -302,7 +319,8 @@ export const webline = {
       installHead: "4 interest-free payments of",
       schedule: ["Today", "Week 2", "Week 4", "Week 6"],
       installNote: "Afterpay or Klarna, decided at checkout in about a minute. 0% interest.",
-      onceLabel: "Or pay once and be done",
+      onceLabel: "Or pay the build fee at once",
+      careLine: "Then {monthly}/month hosting and care, starting {days} days after you buy. Cancel anytime.",
       cta: "See everything you get",
       fine: "Card, Afterpay, Klarna, or Affirm. You choose on the checkout page.",
       badges: ["14 days to live", "Love it or full refund", "You own all of it"],
@@ -316,3 +334,21 @@ export const webline = {
 } as const;
 
 export type WeblineCompareValue = string | boolean;
+
+/** Formatted prices a page passes around; see the placeholders at the top of this file. */
+export type WeblineMoney = {
+  price: string;
+  installment: string;
+  currency: string;
+  /** Webline Care per month, or null when no plan is configured. */
+  monthly: string | null;
+  trialDays: number;
+};
+
+export function fillWebline(text: string, m: WeblineMoney): string {
+  return text
+    .replaceAll("{price}", m.price)
+    .replaceAll("{installment}", m.installment)
+    .replaceAll("{monthly}", m.monthly ?? "a monthly fee")
+    .replaceAll("{days}", String(m.trialDays));
+}

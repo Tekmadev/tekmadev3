@@ -45,7 +45,7 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Pick your plan"
-        subtitle="Pay and your onboarding starts the same minute. Growth plans: cancel any month. Webline: one payment, or 4 with Afterpay or Klarna."
+        subtitle="Pay and your onboarding starts the same minute. Growth plans: cancel any month. Webline: a build fee you can pay in 4 with Afterpay or Klarna, then monthly hosting and care."
       />
 
       {params.checkout === "cancelled" && <Notice kind="info">Checkout cancelled. No charge was made.</Notice>}
@@ -124,7 +124,7 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
       </div>
 
       {product && (
-        <Panel title={`${product.name}: just the website`} action={<Badge tone="neutral">One-time</Badge>}>
+        <Panel title={`${product.name}: just the website`} action={<Badge tone="neutral">Build + care</Badge>}>
           <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-start">
             <div>
               <p className="text-sm text-ink-3">{product.tagline}</p>
@@ -149,7 +149,13 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
             </div>
             <div className="rounded-2xl border border-line-strong bg-bg p-5 lg:w-72">
               <p className="font-display text-3xl font-bold text-ink">{formatMoney(product.amount, product.currency)}</p>
-              <p className="mt-1 text-xs text-ink-4">once. Or 4 × {formatMoney(product.installment, product.currency, { cents: true })} with Afterpay or Klarna, 0% interest.</p>
+              <p className="mt-1 text-xs text-ink-4">to build. Or 4 × {formatMoney(product.installment, product.currency, { cents: true })} with Afterpay or Klarna, 0% interest.</p>
+              {product.monthly && (
+                <p className="mt-1 text-xs text-ink-4">
+                  Then {formatMoney(product.monthly.amount, product.currency)}/month hosting and care, starting {product.monthly.trialDays} days after you buy.
+                  Cancel anytime.
+                </p>
+              )}
               <div className="mt-4">
                 {canBuy ? (
                   product.purchasable ? (

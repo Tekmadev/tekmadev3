@@ -1,7 +1,7 @@
 import { ArrowRight, Check, ShieldCheck } from "lucide-react";
 import { Section, Eyebrow } from "@/components/Section";
 import { Reveal } from "@/components/webline/Reveal";
-import { webline, WEBLINE_ID } from "@/config/webline";
+import { fillWebline, webline, WEBLINE_ID, type WeblineMoney } from "@/config/webline";
 import { getDisplayProduct } from "@/lib/products-data";
 import { formatMoney } from "@/lib/money";
 
@@ -21,6 +21,14 @@ export async function Webline() {
     webline.stack.items.reduce((sum, item) => sum + item.worth, 0) * 100,
     product.currency,
   );
+
+  const money: WeblineMoney = {
+    price,
+    installment,
+    currency: product.currency,
+    monthly: product.monthly ? formatMoney(product.monthly.amount, product.currency) : null,
+    trialDays: product.monthly?.trialDays ?? 30,
+  };
 
   const h = webline.home;
   const c = h.card;
@@ -106,6 +114,7 @@ export async function Webline() {
                   <p className="text-sm text-ink-3">{c.onceLabel}</p>
                   <p className="display-l number-tabular text-3xl text-ink">{price}</p>
                 </div>
+                {money.monthly && <p className="mt-3 text-sm leading-relaxed text-ink-3">{fillWebline(c.careLine, money)}</p>}
 
                 <a
                   href="/webline"

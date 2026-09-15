@@ -2,8 +2,11 @@
 
 import { redirect } from "next/navigation";
 import { requireAdmin, requireOwner } from "@/lib/admin";
+import { getProductMeta } from "@/config/products";
 import {
+  careIsSetUp,
   createNotification,
+  getCareSubscriptionForClient,
   getClientById,
   getMemberById,
   logActivity,
@@ -82,7 +85,7 @@ const GUARANTEE: GuaranteeStatus[] = ["not_started", "running", "met", "extended
 const STAGES: OnboardingStage[] = ["welcome", "intake", "kickoff", "build", "review", "go_live", "optimizing", "complete"];
 const TASK_STATUSES: TaskStatus[] = ["todo", "in_progress", "waiting_on_client", "done", "skipped", "blocked"];
 const TASK_STAGES: TaskStage[] = ["welcome", "intake", "kickoff", "build", "review", "go_live", "optimizing"];
-const TASK_KINDS: TaskKind[] = ["form", "upload", "access_grant", "approval", "esign", "call", "internal", "checklist"];
+const TASK_KINDS: TaskKind[] = ["form", "upload", "access_grant", "approval", "esign", "call", "internal", "checklist", "billing"];
 const APPROVAL_KINDS: ApprovalKind[] = ["website", "receptionist_script", "ad_creative", "landing_page", "follow_up_sequence", "social_content", "other"];
 const CALL_STATUSES: BookedCall["status"][] = ["booked", "confirmed", "showed", "no_show", "cancelled", "rescheduled"];
 const CALL_SOURCES: BookedCall["source"][] = ["receptionist", "web_form", "calendar", "missed_call_textback", "ads", "chat", "manual", "import", "other"];
@@ -167,6 +170,26 @@ export async function goLiveAction(formData: FormData) {
   const client = await getClientById(id);
   if (!client) redirect("/admin/clients");
   const now = new Date().toISOString();
+
+  // A product with a required care plan (Webline) does not go live until the
+  // client has set it up: once the site is public there is no leverage left to
+  // collect the card. An explicit override exists for comped or invoiced sites
+  // and is written to the activity log.
+  const product = getProductMeta(client.plan_id);
+  const override = formData.get("override") === "1";
+  if (product?.care && !override) {
+    const care = await getCareSubscriptionForClient(id);
+    if (!careIsSetUp(care)) redirect(`${back(id)}?e=care`);
+  }
+  if (product?.care && override) {
+    await logActivity({
+      client_id: id,
+      actor_type: "admin",
+      actor_email: ctx.email,
+      event: "care.go_live_override",
+      summary: `Went live without ${product.care.name} (override)`,
+    });
+  }
 
   await updateClient(
     id,

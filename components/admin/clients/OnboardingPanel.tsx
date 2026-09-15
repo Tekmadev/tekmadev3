@@ -12,7 +12,7 @@ import {
 } from "@/app/admin/(dashboard)/clients/actions";
 
 const TASK_STATUSES = ["todo", "in_progress", "waiting_on_client", "done", "skipped", "blocked"];
-const KINDS = ["checklist", "call", "internal", "form", "upload", "access_grant", "approval", "esign"];
+const KINDS = ["checklist", "call", "internal", "form", "upload", "access_grant", "approval", "esign", "billing"];
 
 function dtLocal(v: string | null): string {
   if (!v) return "";

@@ -12,7 +12,8 @@ import type { AgreementKind } from "@/config/agreements";
 export type OnboardingStage = "welcome" | "intake" | "kickoff" | "build" | "review" | "go_live" | "optimizing" | "complete";
 export type TaskStage = Exclude<OnboardingStage, "complete">;
 export type TaskOwner = "client" | "tekmadev";
-export type TaskKind = "form" | "upload" | "access_grant" | "approval" | "esign" | "call" | "internal" | "checklist";
+/** `billing`: the client starts a paid plan (e.g. Webline Care) from the Billing page; completed by the Stripe webhook. */
+export type TaskKind = "form" | "upload" | "access_grant" | "approval" | "esign" | "call" | "internal" | "checklist" | "billing";
 export type TaskStatus = "todo" | "in_progress" | "waiting_on_client" | "done" | "skipped" | "blocked";
 
 export const STAGES: { key: OnboardingStage; label: string; short: string; blurb: string; days: string }[] = [

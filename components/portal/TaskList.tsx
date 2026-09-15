@@ -21,6 +21,8 @@ export function taskHref(t: OnboardingTask): string | null {
       return "/approvals";
     case "esign":
       return "/agreements";
+    case "billing":
+      return "/billing";
     default:
       return null;
   }
@@ -77,7 +79,7 @@ export function TaskItem({
             )}
             {href && (
               <Link href={href} className={btnSecondary}>
-                {task.kind === "esign" ? "Review and accept" : task.kind === "approval" ? "Review" : "Open"}
+                {task.kind === "esign" ? "Review and accept" : task.kind === "approval" ? "Review" : task.kind === "billing" ? "Set it up" : "Open"}
                 <LinkPending idle={<ArrowRight className="h-3.5 w-3.5" />} />
               </Link>
             )}

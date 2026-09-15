@@ -45,10 +45,11 @@ export default async function PricingAdmin({
       </div>
 
       <div className="mt-4 flex flex-col gap-2">
-        <h2 className="font-display text-lg font-bold text-ink">One-time products</h2>
+        <h2 className="font-display text-lg font-bold text-ink">Products</h2>
         <p className="text-sm text-ink-3">
-          Paid once at checkout. Buyers can split the amount with Afterpay, Klarna, or Affirm; those show up automatically
-          on the Stripe page. Saving a new amount creates a new Stripe price and archives the old one.
+          A one-time fee at checkout, where buyers can split it with Afterpay, Klarna, or Affirm, plus the monthly care
+          plan they add in their portal afterwards (a card on file, first charge after the delay you set). Saving a new
+          amount creates a new Stripe price and archives the old one. Existing care plans keep their current price.
         </p>
       </div>
 
@@ -65,7 +66,8 @@ export default async function PricingAdmin({
 function ProductForm({ product }: { product: ProductRow }) {
   const meta = getProductMeta(product.id);
   const currency = (product.currency || "cad").toUpperCase();
-  const synced = Boolean(product.stripe_price_id);
+  const care = meta?.care;
+  const synced = Boolean(product.stripe_price_id) && (!care || Boolean(product.stripe_monthly_price_id));
 
   return (
     <Panel
@@ -81,7 +83,7 @@ function ProductForm({ product }: { product: ProductRow }) {
         <input type="hidden" name="product" value={product.id} />
         <div className="grid grid-cols-2 gap-4">
           <label className="flex flex-col gap-1.5 text-sm text-ink-2">
-            Price, one-time ({currency})
+            One-time fee ({currency})
             <input
               name="amount"
               type="number"
@@ -104,6 +106,39 @@ function ProductForm({ product }: { product: ProductRow }) {
             />
           </label>
         </div>
+        {care && (
+          <div className="mt-5 border-t border-line pt-5">
+            <p className="text-sm font-medium text-ink">{care.name}</p>
+            <p className="mt-1 text-xs text-ink-4">Required with every {product.name}. Cancel anytime.</p>
+            <div className="mt-3 grid grid-cols-2 gap-4">
+              <label className="flex flex-col gap-1.5 text-sm text-ink-2">
+                Monthly ({currency})
+                <input
+                  name="monthly"
+                  type="number"
+                  min="1"
+                  step="1"
+                  required
+                  defaultValue={product.monthly_amount != null ? product.monthly_amount / 100 : care.defaultMonthlyAmount / 100}
+                  className="rounded-xl border border-line-strong bg-bg px-3 py-2.5 text-ink outline-none focus:border-gold"
+                />
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm text-ink-2">
+                First charge after (days)
+                <input
+                  name="trial_days"
+                  type="number"
+                  min="1"
+                  max="365"
+                  step="1"
+                  required
+                  defaultValue={product.monthly_trial_days ?? care.defaultTrialDays}
+                  className="rounded-xl border border-line-strong bg-bg px-3 py-2.5 text-ink outline-none focus:border-gold"
+                />
+              </label>
+            </div>
+          </div>
+        )}
         <label className="mt-4 flex min-h-11 items-center gap-2 text-sm text-ink-2">
           <input type="checkbox" name="active" defaultChecked={product.active} className="h-4 w-4 accent-[var(--color-gold)]" />
           Purchasable (uncheck to pause sales; the page stays up with a Book a call button)

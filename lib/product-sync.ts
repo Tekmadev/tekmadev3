@@ -48,3 +48,52 @@ export async function syncProductToStripe(opts: {
 
   return { productId, priceId: price.id };
 }
+
+/**
+ * Pushes a product's monthly care plan to Stripe. Its own Stripe product (not
+ * the one-time product) so receipts, the customer portal, and statements say
+ * "Webline Care", and so a coupon can target the plan without touching the
+ * one-time fee. Same immutable-price rule: create a new recurring price,
+ * archive the old one. Existing subscribers keep the price they signed up at.
+ */
+export async function syncCarePlanToStripe(opts: {
+  secret: string;
+  meta: ProductMeta;
+  currency: string;
+  monthlyCents: number;
+  existing: { productId?: string | null; priceId?: string | null };
+}): Promise<{ productId: string; priceId: string }> {
+  const care = opts.meta.care;
+  if (!care) throw new Error(`${opts.meta.id} has no care plan`);
+  const stripe = new Stripe(opts.secret);
+  const currency = opts.currency.toLowerCase();
+
+  let productId = opts.existing.productId || null;
+  if (!productId) {
+    const product = await stripe.products.create({
+      name: care.name,
+      description: care.description,
+      statement_descriptor: care.statementDescriptor.slice(0, 22),
+      metadata: { product_id: opts.meta.id, kind: "care" },
+    });
+    productId = product.id;
+  }
+
+  const price = await stripe.prices.create({
+    product: productId,
+    currency,
+    unit_amount: opts.monthlyCents,
+    recurring: { interval: "month" },
+    metadata: { product_id: opts.meta.id, kind: "care" },
+  });
+
+  if (opts.existing.priceId && opts.existing.priceId !== price.id) {
+    try {
+      await stripe.prices.update(opts.existing.priceId, { active: false });
+    } catch {
+      /* already archived or missing */
+    }
+  }
+
+  return { productId, priceId: price.id };
+}

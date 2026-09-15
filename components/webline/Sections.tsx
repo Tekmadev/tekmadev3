@@ -3,12 +3,13 @@ import { Section, Eyebrow } from "@/components/Section";
 import { Reveal } from "@/components/webline/Reveal";
 import { CheckoutButton } from "@/components/webline/CheckoutButton";
 import { CanadianBadge } from "@/components/CanadianBadge";
-import { webline, type WeblineCompareValue } from "@/config/webline";
+import { fillWebline, webline, type WeblineCompareValue, type WeblineMoney } from "@/config/webline";
+import { getProductMeta } from "@/config/products";
 import { business, proofWins, aggregateStats } from "@/config/site";
 import { formatMoney } from "@/lib/money";
 import { cn } from "@/lib/cn";
 
-type Money = { price: string; installment: string; currency: string };
+type Money = WeblineMoney;
 type Buy = { productId: string; purchasable: boolean };
 
 /* ------------------------------------------------------------------------ */
@@ -69,7 +70,8 @@ export function Stack({ money, buy }: { money: Money; buy: Buy }) {
             <div className="my-6 h-px w-full bg-line" />
             <p className="text-sm text-ink-3">{s.priceLabel}</p>
             <p className="display-xl mt-1 text-6xl text-ink">{money.price}</p>
-            <p className="mt-2 text-sm text-ink-3">once. Or 4 × {money.installment} with Afterpay or Klarna.</p>
+            <p className="mt-2 text-sm text-ink-3">{fillWebline(s.priceNote, money)}</p>
+            {money.monthly && <p className="mt-1 text-sm text-ink-3">{fillWebline(s.careNote, money)}</p>}
             <div className="mt-6">
               <CheckoutButton productId={buy.productId} purchasable={buy.purchasable} className="w-full" location="stack">
                 Get Webline for {money.price}
@@ -153,6 +155,57 @@ export function Process() {
           </Reveal>
         ))}
       </ol>
+    </Section>
+  );
+}
+
+/* ------------------------------------------------------------------------ */
+/* Care: hosting and maintenance after launch                              */
+/* ------------------------------------------------------------------------ */
+
+export function Care({ money }: { money: Money }) {
+  const c = webline.care;
+  const includes = getProductMeta("webline")?.care?.includes ?? [];
+  if (!money.monthly) return null;
+  return (
+    <Section id="care" className="py-24 sm:py-32">
+      <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
+        <Reveal className="lg:col-span-7">
+          <Eyebrow>{c.eyebrow}</Eyebrow>
+          <h2 className="display-xl mt-6 text-balance text-4xl sm:text-5xl">{c.headline}</h2>
+          <p className="mt-6 max-w-xl text-lg leading-snug text-ink-2">{c.body}</p>
+          <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {includes.map((item) => (
+              <li key={item} className="flex items-start gap-3 text-base text-ink-2">
+                <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gold/15">
+                  <Check className="h-3 w-3 text-gold-deep" />
+                </span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+        <Reveal delay={0.1} className="lg:col-span-5">
+          <div className="rounded-3xl border border-line-strong bg-surface p-8 sm:p-10">
+            <div className="flex items-baseline justify-between gap-4">
+              <p className="text-sm text-ink-3">{c.anchorLabel}</p>
+              <p className="display-m text-lg text-ink-4 line-through decoration-signal/60 decoration-2">{c.anchorPrice}</p>
+            </div>
+            <div className="my-6 h-px w-full bg-line" />
+            <p className="eyebrow">{c.priceLabel}</p>
+            <p className="display-xl number-tabular mt-2 text-6xl text-ink">{money.monthly}</p>
+            <p className="mt-2 text-sm text-ink-3">{fillWebline(c.priceNote, money)}</p>
+            <ul className="mt-8 flex flex-col gap-3">
+              {c.points.map((pt) => (
+                <li key={pt} className="flex items-start gap-3 text-sm text-ink-2">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-gold-deep" />
+                  <span>{pt}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Reveal>
+      </div>
     </Section>
   );
 }
@@ -262,7 +315,7 @@ export function Compare({ money }: { money: Money }) {
                 </th>
                 {row.values.map((v, i) => (
                   <td key={i} className={cn("px-4 py-3.5 text-center", i === last && "bg-gold/[0.08]")}>
-                    <Cell value={typeof v === "string" ? v.replace("{price}", money.price) : v} highlight={i === last} />
+                    <Cell value={typeof v === "string" ? fillWebline(v, money) : v} highlight={i === last} />
                   </td>
                 ))}
               </tr>
@@ -337,7 +390,7 @@ export function Bnpl({ money, buy }: { money: Money; buy: Buy }) {
           <div className="rounded-3xl border border-line-strong bg-surface p-8 sm:p-10">
             <p className="text-sm text-ink-3">Today</p>
             <p className="display-xl mt-1 text-6xl text-ink">{money.installment}</p>
-            <p className="mt-2 text-sm text-ink-3">then 3 more of {money.installment}, every two weeks. {money.price} total, 0% interest.</p>
+            <p className="mt-2 text-sm text-ink-3">then 3 more of {money.installment}, every two weeks. {money.price} build fee, 0% interest.</p>
             <ol className="mt-8 flex flex-col gap-3">
               {b.steps.map((st, i) => (
                 <li key={st} className="flex items-start gap-3 text-base text-ink-2">
@@ -407,7 +460,7 @@ export function Fit() {
 /* FAQ                                                                      */
 /* ------------------------------------------------------------------------ */
 
-export function Faq() {
+export function Faq({ money }: { money: Money }) {
   return (
     <Section id="faq" className="border-t border-line bg-bg-2 py-24 sm:py-32">
       <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-20">
@@ -424,8 +477,8 @@ export function Faq() {
           {webline.faqs.map((f, i) => (
             <Reveal key={f.q} delay={Math.min(i * 0.03, 0.2)}>
               <li className="grid grid-cols-1 gap-3 border-t border-line py-7 last:border-b sm:grid-cols-[1fr_2fr] sm:gap-10">
-                <h3 className="text-base font-semibold text-ink sm:text-lg">{f.q}</h3>
-                <p className="text-base leading-relaxed text-ink-2">{f.a}</p>
+                <h3 className="text-base font-semibold text-ink sm:text-lg">{fillWebline(f.q, money)}</h3>
+                <p className="text-base leading-relaxed text-ink-2">{fillWebline(f.a, money)}</p>
               </li>
             </Reveal>
           ))}
@@ -459,13 +512,16 @@ export function FinalCta({ money, buy }: { money: Money; buy: Buy }) {
             <h2 className="display-xl mt-6 text-balance text-5xl sm:text-6xl lg:text-7xl">
               {f.headline.split(", ")[0]}, <span className="gold-gradient-text">{f.headline.split(", ").slice(1).join(", ")}</span>
             </h2>
-            <p className="mx-auto mt-7 max-w-2xl text-balance text-lg leading-snug text-ink-2">{f.body}</p>
+            <p className="mx-auto mt-7 max-w-2xl text-balance text-lg leading-snug text-ink-2">{fillWebline(f.body, money)}</p>
           </Reveal>
           <Reveal delay={0.1} className="mt-10 flex flex-col items-center gap-4">
             <CheckoutButton productId={buy.productId} purchasable={buy.purchasable} size="lg" location="final">
               {f.cta} for {money.price}
             </CheckoutButton>
-            <p className="text-sm text-ink-3">or 4 × {money.installment} with Afterpay or Klarna</p>
+            <p className="text-sm text-ink-3">
+              or 4 × {money.installment} with Afterpay or Klarna
+              {money.monthly ? `, then ${money.monthly}/month hosting and care` : ""}
+            </p>
           </Reveal>
           <Reveal delay={0.15}>
             <ul className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-ink-2">
