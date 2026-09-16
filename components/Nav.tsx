@@ -6,6 +6,9 @@ import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "motion/
 import { Menu, X, Phone, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { business, navLinks, productNav, type NavProduct } from "@/config/site";
+
+/** Products we are announcing. Unannounced ones are flagged hidden in config. */
+const visibleProducts: NavProduct[] = productNav.items.filter((p) => !p.hidden);
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Nav() {
@@ -280,7 +283,7 @@ function ProductMenu() {
             <div className="overflow-hidden rounded-2xl border border-line-strong bg-bg/95 p-2 shadow-[0_24px_60px_-24px_rgba(13,12,10,0.35)] backdrop-blur-xl">
               <p className="px-3 pb-1 pt-2 text-xs leading-snug text-ink-4">{productNav.blurb}</p>
               <div className="mt-1 flex flex-col">
-                {productNav.items.map((item) => (
+                {visibleProducts.map((item) => (
                   <ProductRow key={item.name} item={item} onNavigate={() => setOpen(false)} />
                 ))}
               </div>
@@ -303,7 +306,7 @@ function MobileProducts({ onNavigate }: { onNavigate: () => void }) {
     >
       <p className="eyebrow">{productNav.label}</p>
       <div className="mt-4 flex flex-col divide-y divide-line overflow-hidden rounded-2xl border border-line-strong bg-surface">
-        {productNav.items.map((item) => {
+        {visibleProducts.map((item) => {
           const soon = !item.href;
           const body = (
             <>

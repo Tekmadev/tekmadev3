@@ -1,16 +1,14 @@
 import Stripe from "stripe";
+import type { CouponScope } from "@/lib/coupon-scopes";
 
 /**
  * Creates a discount in Stripe as a Coupon (the discount rule) + a Promotion
  * Code (the customer-facing code typed at checkout). Checkout already passes
  * `allow_promotion_codes: true`, so any code created here is usable immediately.
  *
- * Scoping leans on the fact that setup and monthly live under SEPARATE Stripe
- * products (see lib/plan-sync.ts): a coupon's `applies_to.products` restricts
- * the discount to just the monthly products, just the setup products, or
- * (omitted) the whole order.
+ * The scope decides which Stripe products the discount is limited to; the
+ * caller resolves that list (see lib/coupon-scopes.ts for the scope shapes).
  */
-export type CouponScope = "monthly" | "setup" | "order";
 export type CouponDuration = "once" | "repeating" | "forever";
 export type DiscountType = "percent" | "fixed";
 
@@ -27,8 +25,8 @@ export async function createCouponInStripe(opts: {
   durationInMonths?: number; // when duration = "repeating"
   maxRedemptions?: number | null;
   redeemBy?: number | null; // unix seconds
-  monthlyProductIds: string[];
-  setupProductIds: string[];
+  /** Stripe products the discount is limited to. Empty = the whole order. */
+  productIds: string[];
 }): Promise<{ couponId: string; promotionCodeId: string }> {
   const stripe = new Stripe(opts.secret);
 
@@ -47,13 +45,8 @@ export async function createCouponInStripe(opts: {
   if (opts.redeemBy) couponParams.redeem_by = opts.redeemBy;
 
   // Restrict which products the discount applies to. "order" => whole cart.
-  const products =
-    opts.scope === "monthly"
-      ? opts.monthlyProductIds
-      : opts.scope === "setup"
-        ? opts.setupProductIds
-        : [];
-  if (products.length > 0) couponParams.applies_to = { products };
+  if (opts.productIds.length > 0) couponParams.applies_to = { products: opts.productIds };
+  couponParams.metadata = { scope: opts.scope };
 
   const coupon = await stripe.coupons.create(couponParams);
 

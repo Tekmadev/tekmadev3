@@ -3,32 +3,35 @@
 import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { createCouponAction } from "@/app/admin/(dashboard)/coupons/actions";
+import { isOneTimeScope, scopeOptions, type CouponScope } from "@/lib/coupon-scopes";
 
 const inputClass =
   "rounded-xl border border-line-strong bg-bg px-3 py-2.5 text-ink outline-none focus:border-gold";
 const labelClass = "flex flex-col gap-1.5 text-sm text-ink-2";
 
 type DiscountType = "percent" | "fixed";
-type Scope = "monthly" | "setup" | "order";
 type Duration = "once" | "repeating" | "forever";
+
+const SCOPES = scopeOptions();
 
 export function CouponForm({ currency }: { currency: string }) {
   const [discountType, setDiscountType] = useState<DiscountType>("percent");
-  const [scope, setScope] = useState<Scope>("monthly");
+  const [scope, setScope] = useState<CouponScope>("monthly");
   const [duration, setDuration] = useState<Duration>("once");
 
-  const durationApplies = scope !== "setup"; // setup bills once, so no duration choice
+  // A one-time charge bills once, so there is nothing to repeat.
+  const durationApplies = !isOneTimeScope(scope);
+  const scopeHelp = SCOPES.find((o) => o.value === scope)?.help ?? "";
 
-  const durationHelp =
-    scope === "setup"
-      ? "Applies to the one-time setup charge."
-      : scope === "order"
-        ? "Duration controls the monthly part; the setup fee is discounted once."
-        : duration === "once"
-          ? "Discount applies to the first month only."
-          : duration === "forever"
-            ? "Discount applies to every monthly invoice, for as long as they stay subscribed."
-            : "Discount applies for the chosen number of months.";
+  const durationHelp = !durationApplies
+    ? "Applies to that single charge."
+    : scope === "order"
+      ? "Duration controls any monthly part; one-time charges are discounted once."
+      : duration === "once"
+        ? "Discount applies to the first month only."
+        : duration === "forever"
+          ? "Discount applies to every monthly invoice, for as long as they stay subscribed."
+          : "Discount applies for the chosen number of months.";
 
   return (
     <form action={createCouponAction} className="flex flex-col gap-5">
@@ -100,13 +103,16 @@ export function CouponForm({ currency }: { currency: string }) {
           <select
             name="scope"
             value={scope}
-            onChange={(e) => setScope(e.target.value as Scope)}
+            onChange={(e) => setScope(e.target.value as CouponScope)}
             className={inputClass}
           >
-            <option value="monthly">Monthly subscription</option>
-            <option value="setup">Setup fee only</option>
-            <option value="order">Whole order (monthly + setup)</option>
+            {SCOPES.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
           </select>
+          <span className={cn("text-xs", scope === "order" ? "text-signal" : "text-ink-4")}>{scopeHelp}</span>
         </label>
 
         {durationApplies && (

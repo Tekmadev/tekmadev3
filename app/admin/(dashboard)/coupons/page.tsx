@@ -1,6 +1,7 @@
 import { requireOwner } from "@/lib/admin";
 import { getCouponsView, type CouponRow } from "@/lib/coupon-data";
 import { getAllPlans } from "@/lib/pricing-data";
+import { isOneTimeScope, scopeLabel } from "@/lib/coupon-scopes";
 import { PageHeader, Panel, Notice, DataTable, Badge, fmtMoney, fmtDate } from "@/components/admin/ui";
 import { CouponForm } from "@/components/admin/CouponForm";
 import { DealLink } from "@/components/admin/DealLink";
@@ -31,12 +32,8 @@ function discountLabel(c: CouponRow): string {
   return `${fmtMoney(c.amount_off, c.currency)} off`;
 }
 
-function scopeLabel(c: CouponRow): string {
-  return c.applies_to === "monthly" ? "Monthly" : c.applies_to === "setup" ? "Setup fee" : "Whole order";
-}
-
 function durationLabel(c: CouponRow): string {
-  if (c.applies_to === "setup") return "Setup charge";
+  if (isOneTimeScope(c.applies_to)) return "One charge";
   if (c.duration === "forever") return "Forever";
   if (c.duration === "repeating") return `${c.duration_in_months} months`;
   return "First month";
@@ -71,7 +68,7 @@ export default async function CouponsAdmin({
       {c.code}
     </span>,
     discountLabel(c),
-    scopeLabel(c),
+    scopeLabel(c.applies_to),
     durationLabel(c),
     <span key="red">
       {c.times_redeemed}
@@ -117,10 +114,13 @@ export default async function CouponsAdmin({
 
       <p className="text-sm text-ink-3">
         Codes are entered in the &ldquo;Add promotion code&rdquo; field on the Stripe checkout page (already
-        enabled). Scope a code to the <strong className="text-ink-2">monthly</strong> subscription, the{" "}
-        <strong className="text-ink-2">setup fee</strong> only, or the whole order, because setup and monthly
-        are billed as separate Stripe products. Stripe only allows one code per checkout, so codes can&rsquo;t
-        be stacked.
+        enabled). Every charge sits under its own Stripe product, so a code can be tied to one thing:{" "}
+        <strong className="text-ink-2">Webline&rsquo;s build fee</strong>, <strong className="text-ink-2">Webline Care</strong>,
+        the growth <strong className="text-ink-2">monthly</strong>, or the growth{" "}
+        <strong className="text-ink-2">setup fee</strong>. Stripe refuses a code on any checkout it was not
+        scoped to, so a Webline code cannot be used on a growth plan or the other way round. Only{" "}
+        <strong className="text-ink-2">Anything (every offer)</strong> is unrestricted. One code per checkout:
+        they can&rsquo;t be stacked.
       </p>
       <p className="-mt-4 text-sm text-ink-3">
         Need to combine <strong className="text-ink-2">free setup + a monthly discount</strong>? Use a{" "}

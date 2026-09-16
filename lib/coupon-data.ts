@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import type { CouponScope, CouponDuration, DiscountType } from "@/lib/coupon-sync";
+import type { CouponDuration, DiscountType } from "@/lib/coupon-sync";
+import type { CouponScope } from "@/lib/coupon-scopes";
 
 /** A coupon row mirrored from Stripe into the `coupons` table. */
 export type CouponRow = {

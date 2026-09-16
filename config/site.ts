@@ -382,6 +382,11 @@ export const trustSignals: TrustSignal[] = [
  * Add the href (and a blurb) the day it ships and it becomes a live link with
  * no other change.
  *
+ * `hidden` keeps an item in this list but out of the menu, for products we are
+ * not announcing yet. Callline and GASline are hidden until they are ready to
+ * be talked about: drop the flag to bring one back as coming soon, or give it
+ * an href to make it live.
+ *
  * Note on the Growth System: it points at the public offer section, never at
  * /start. Prices stay private and quoted on a qualification call, so /start
  * is noindex and must not be linked from anywhere public.
@@ -390,6 +395,8 @@ export type NavProduct = {
   name: string;
   /** Omit for coming soon. */
   href?: string;
+  /** Not rendered at all. For products that are not announced yet. */
+  hidden?: boolean;
   /** One line, benefit first. Optional while a product is unannounced. */
   blurb?: string;
   badge?: string;
@@ -412,11 +419,11 @@ export const productNav: { label: string; blurb: string; items: NavProduct[] } =
         name: "Webline",
         href: "/webline",
         blurb:
-          "A startup website that ranks on Google and gets cited by AI. Live in 14 days, one payment.",
+          "A startup website that ranks on Google and gets cited by AI. Live in 14 days, pay in 4 if you want.",
         badge: "New",
       },
-      { name: "Callline", badge: "Coming soon" },
-      { name: "GASline", badge: "Coming soon" },
+      { name: "Callline", badge: "Coming soon", hidden: true },
+      { name: "GASline", badge: "Coming soon", hidden: true },
     ],
   };
 

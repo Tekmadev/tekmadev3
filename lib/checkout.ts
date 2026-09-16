@@ -255,6 +255,8 @@ export async function prepareCarePlan(input: CarePlanInput): Promise<PreparedChe
       description: `${meta.care.name} for ${input.client.business_name}`.slice(0, 500),
       ...(firstCharge ? { trial_end: Math.floor(firstCharge.getTime() / 1000) } : {}),
     },
+    // So a code scoped to the care plan (care:<product>) can be redeemed here.
+    allow_promotion_codes: true,
     custom_text: { submit: { message: `${when} Cancel anytime from your portal.` } },
     success_url: input.urls.success,
     cancel_url: input.urls.cancel,
