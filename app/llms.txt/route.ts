@@ -83,6 +83,11 @@ ${proofWins
   )
   .join("\n")}
 
+## Free tools
+
+- Revenue Leak Calculator: a free calculator at ${business.url}/tools/revenue-leak-calculator. A service business enters its monthly leads, average job value, close rate, first-reply speed, unanswered calls per week and follow-up depth, and sees an estimate of the monthly and annual revenue lost to slow replies, missed calls and follow-up that stops early. The headline number is shown without an email; the line-by-line breakdown is emailed in exchange for one. Assumptions are published on the page.
+- All free tools: ${business.url}/tools
+
 ## What we are not
 
 - Not a generic marketing agency

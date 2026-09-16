@@ -430,6 +430,7 @@ export const productNav: { label: string; blurb: string; items: NavProduct[] } =
 export const navLinks = [
   { href: "/#system", label: "The System" },
   { href: "/#proof", label: "Proof" },
+  { href: "/tools", label: "Free tools" },
   { href: "/guides", label: "Guides" },
   { href: "/#faq", label: "FAQ" },
 ];
@@ -442,6 +443,7 @@ export const footerColumns = [
       { label: "Proof", href: "/#proof" },
       { label: "Pricing", href: "/#pricing" },
       { label: "Webline for startups", href: "/webline" },
+      { label: "Free tools", href: "/tools" },
       { label: "Guides", href: "/guides" },
       { label: "FAQ", href: "/#faq" },
     ],

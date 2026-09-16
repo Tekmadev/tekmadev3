@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { business } from "@/config/site";
 import { guideSlugs } from "@/lib/content";
 import { getPublishedPostSlugs } from "@/lib/blog-data";
+import { publishedLeadMagnets } from "@/config/lead-magnets";
 
 const SITE_URL = business.url;
 
@@ -24,6 +25,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.9,
     },
+    {
+      url: `${SITE_URL}/tools`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    ...publishedLeadMagnets().map((m) => ({
+      url: `${SITE_URL}/tools/${m.slug}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })),
     {
       url: `${SITE_URL}/guides`,
       lastModified: now,
