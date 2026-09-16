@@ -24,7 +24,7 @@ export default async function AgreementsPage() {
         subtitle={
           isProductPlan(client.plan_id)
             ? "What we build, what you get, and when it goes live. In writing."
-            : "What we deliver, what counts as a booked call, and when your guarantee starts. In writing."
+            : "What we deliver, what counts as a booked appointment, and when your guarantee starts. In writing."
         }
       />
 

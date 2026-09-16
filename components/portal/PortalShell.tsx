@@ -30,7 +30,7 @@ import type { ActionResult } from "@/components/portal/PortalForm";
 import { LinkPending } from "@/components/portal/LinkPending";
 
 /**
- * Which sections this client has. Booked calls only make sense on growth
+ * Which sections this client has. Booked appointments only make sense on growth
  * plans; a lead (signed up, not paid) sees the short menu plus Plans.
  */
 export type PortalNavFeatures = { bookedCalls?: boolean; lead?: boolean };
@@ -53,7 +53,7 @@ const NAV: NavItem[] = [
   { href: "/assets", label: "Files", icon: FolderUp },
   { href: "/approvals", label: "Approvals", icon: BadgeCheck, countKey: "approvals" },
   { href: "/agreements", label: "Agreements", icon: FileSignature, countKey: "agreements" },
-  { href: "/calls", label: "Booked calls", icon: PhoneCall },
+  { href: "/calls", label: "Booked appointments", icon: PhoneCall },
   { href: "/billing", label: "Billing", icon: CreditCard },
   { href: "/team", label: "Team", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },

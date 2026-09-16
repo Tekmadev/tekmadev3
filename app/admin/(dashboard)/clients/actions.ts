@@ -222,7 +222,7 @@ export async function goLiveAction(formData: FormData) {
     subject: "You are live",
     body: client.guarantee_eligible
       ? `Everything is switched on. Your ${client.guarantee_window_days}-day guarantee window starts today.`
-      : "Everything is switched on. Booked calls will start showing on your dashboard.",
+      : "Everything is switched on. Booked appointments will start showing on your dashboard.",
     action_url: "/calls",
   });
   redirect(`${back(id)}?live=1`);
@@ -476,7 +476,7 @@ async function refreshGuaranteeStatus(clientId: string, by: string) {
   if (g.counted >= g.target) {
     await updateClient(clientId, { guarantee_status: "met", guarantee_met_at: new Date().toISOString() }, by);
     await logActivity({ client_id: clientId, actor_type: "system", event: "guarantee.met", summary: `Guarantee met: ${g.counted} booked calls`, visibility: "client" });
-    await createNotification({ client_id: clientId, template_key: "guarantee_met", subject: "Guarantee hit", body: `${g.counted} qualified booked calls. Now we keep going.`, action_url: "/calls" });
+    await createNotification({ client_id: clientId, template_key: "guarantee_met", subject: "Guarantee hit", body: `${g.counted} qualified appointments. Now we keep going.`, action_url: "/calls" });
   }
 }
 

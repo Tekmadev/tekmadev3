@@ -43,7 +43,7 @@ export default async function PortalLogin({ searchParams }: { searchParams: Prom
   return (
     <>
       <h1 className="font-display text-2xl font-bold text-ink">Sign in</h1>
-      <p className="mt-2 text-sm text-ink-3">Your onboarding, approvals, booked calls, and billing in one place.</p>
+      <p className="mt-2 text-sm text-ink-3">Your onboarding, approvals, booked appointments, and billing in one place.</p>
 
       {e && ERRORS[e] && (
         <div className="mt-6">

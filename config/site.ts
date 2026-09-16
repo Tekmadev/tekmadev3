@@ -60,7 +60,7 @@ export const business = {
   domain: "tekmadev.com",
   url: _siteUrl,
   description:
-    "Done-for-you AI and automation growth system for B2B service businesses. We install the system that fills your calendar with qualified booked calls. Our guarantee: 30 qualified booked calls in your first 60 days, or we keep working free until you hit it.",
+    "Done-for-you AI and automation growth system for B2B service businesses. We install the system that fills your calendar with qualified, ready-to-buy appointments. Our guarantee: 30 qualified appointments in your first 60 days, or we keep working free until you hit it.",
   foundingYear: 2019,
   email: _email,
   legalEmail: _legalEmail,
@@ -111,9 +111,9 @@ export const canadian = {
 };
 
 export const brand = {
-  slogan: "30 Booked Calls In 60 Days. Or You Don't Pay.",
+  slogan: "30 Booked Appointments In 60 Days. Or You Don't Pay.",
   subhead:
-    "Done-for-you AI + automation growth system. We fill your calendar with qualified B2B calls. Or you don't pay.",
+    "Done-for-you AI + automation growth system. We fill your calendar with qualified appointments. Or you don't pay.",
   audience: "B2B service businesses doing $5K to $50K/mo in revenue",
   keywords: [
     "B2B lead generation",
@@ -148,7 +148,7 @@ export const brand = {
     "CRM automation",
   ],
   promises: [
-    "30 qualified booked calls in your first 60 days.",
+    "30 qualified appointments in your first 60 days.",
     "If we miss it, we work for free until you hit it.",
     "If the system stops booking, we stop billing.",
     "Cancel any month. No long-term contract.",
@@ -222,7 +222,7 @@ export const heroStats = [
 ];
 
 export const aggregateStats = [
-  { label: "Avg lift in booked calls", value: "3.2×" },
+  { label: "Avg lift in booked appointments", value: "3.2×" },
   { label: "Avg time to live", value: "13 days" },
   { label: "Avg lead response time", value: "11s" },
   { label: "Clients running 12+ months", value: "94%" },
@@ -314,7 +314,7 @@ export const systemSteps: SystemStep[] = [
     n: "04",
     label: "Scale",
     title: "We tune. Your calendar fills.",
-    body: "Daily monitoring. Weekly optimization. Goal: 30 qualified booked calls a month on autopilot.",
+    body: "Daily monitoring. Weekly optimization. Goal: 30 qualified appointments a month on autopilot.",
     spec: "Day 15+",
   },
 ];
@@ -338,12 +338,12 @@ export type FAQ = { q: string; a: string };
 
 export const faqs: FAQ[] = [
   {
-    q: "What does “30 booked calls in 60 days or you don’t pay” actually mean?",
-    a: "Exactly what it says. We build and install the system, then go to work filling your calendar. If you don’t have 30 qualified booked calls on your calendar within 60 days of go-live, we keep working for free and pause your monthly billing until you do. You keep everything we’ve built either way. “Qualified” is defined together upfront.",
+    q: "What does “30 booked appointments in 60 days or you don’t pay” actually mean?",
+    a: "Exactly what it says. We build and install the system, then go to work filling your calendar. If you don’t have 30 qualified appointments on your calendar within 60 days of go-live, we keep working for free and pause your monthly billing until you do. A sales call, a quote, a site visit, a consult: if it is a real prospect who booked through the system we built, it counts. You keep everything we’ve built either way. “Qualified” is defined together upfront.",
   },
   {
     q: "How is this different from an agency?",
-    a: "An agency sells you ads, content, and reports. A freelancer sells you hours. We sell you booked calls. Different unit of value, different incentive. We only make money when your calendar fills.",
+    a: "An agency sells you ads, content, and reports. A freelancer sells you hours. We sell you booked appointments. Different unit of value, different incentive. We only make money when your calendar fills.",
   },
   {
     q: "What if I don’t have enough leads coming in yet?",
@@ -355,7 +355,7 @@ export const faqs: FAQ[] = [
   },
   {
     q: "Who runs the system after install?",
-    a: "We do. This is done-for-you, not done-with-you. We monitor the dashboard daily, tune scripts weekly, report monthly. You show up to the booked calls.",
+    a: "We do. This is done-for-you, not done-with-you. We monitor the dashboard daily, tune scripts weekly, report monthly. You show up to the appointments.",
   },
   {
     q: "What’s the tech stack, and do I own it?",
@@ -370,7 +370,7 @@ export type TrustSignal = {
 
 export const trustSignals: TrustSignal[] = [
   { iconName: "Clock", text: "45 minutes · zero pressure" },
-  { iconName: "ShieldCheck", text: "No retainer until calls book" },
+  { iconName: "ShieldCheck", text: "No retainer until appointments book" },
   { iconName: "Zap", text: "System live in 14 days if you move forward" },
 ];
 
@@ -412,7 +412,7 @@ export const productNav: { label: string; blurb: string; items: NavProduct[] } =
         name: "Growth System",
         href: "/#pricing",
         blurb:
-          "The full engine. Every call answered, every lead chased, 30 booked calls in 60 days or you don't pay.",
+          "The full engine. Every call answered, every lead chased, 30 booked appointments in 60 days or you don't pay.",
         badge: "Flagship",
       },
       {
@@ -468,7 +468,7 @@ export const footerColumns = [
 
 export const footerCopy = {
   tagline:
-    "We install the system that fills your calendar. 30 qualified booked calls in 60 days, or we work free until you hit it.",
+    "We install the system that fills your calendar. 30 qualified appointments in 60 days, or we work free until you hit it.",
   signoff: "Built · Installed · Running",
 };
 
@@ -476,7 +476,7 @@ export const newsletterCopy = {
   eyebrow: "The Growth Memo",
   title: "The plays that fill calendars, in your inbox.",
   blurb:
-    "One or two emails a month on AI, automation, and the exact system we use to book 30 qualified calls in 60 days. No fluff. Unsubscribe anytime.",
+    "One or two emails a month on AI, automation, and the exact system we use to book 30 qualified appointments in 60 days. No fluff. Unsubscribe anytime.",
   cta: "Subscribe",
   placeholder: "you@company.com",
   disclaimer:

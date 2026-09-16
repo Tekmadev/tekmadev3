@@ -23,12 +23,12 @@ export default async function CallsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Booked calls"
+        title="Booked appointments"
         subtitle="Every call the system books for you, and whether it counts. Spam, duplicates, out-of-area and wrong-service never count against you."
       />
 
       <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatCard label="Counted" value={g.eligible ? `${g.counted} / ${g.target}` : g.counted} sub={g.eligible ? "toward your guarantee" : "qualified calls"} />
+        <StatCard label="Counted" value={g.eligible ? `${g.counted} / ${g.target}` : g.counted} sub={g.eligible ? "toward your guarantee" : "qualified appointments"} />
         <StatCard label="Days left" value={g.eligible && g.startedAt ? g.daysLeft : "-"} sub={g.startedAt ? `of ${g.windowDays}` : "clock starts at go-live"} />
         <StatCard label="This month" value={thisMonth} sub="qualified" />
         <StatCard label="All time" value={calls.filter((c) => c.qualified).length} sub="qualified" />
@@ -48,7 +48,7 @@ export default async function CallsPage() {
 
       <Panel title="All calls">
         {calls.length === 0 ? (
-          <EmptyState title="No booked calls yet" body="They start landing here the day your system goes live." />
+          <EmptyState title="No booked appointments yet" body="They start landing here the day your system goes live." />
         ) : (
           <>
             {/* Mobile: cards */}

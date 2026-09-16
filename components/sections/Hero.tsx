@@ -57,7 +57,7 @@ export function Hero() {
           </motion.div>
 
           <h1 className="display-xxl mt-6 text-balance text-[12.5vw] sm:text-7xl md:text-[6.5rem] lg:text-[8.5rem] xl:text-[10rem]">
-            <Line delay={0.05}>30 booked calls.</Line>
+            <Line delay={0.05}>30 appointments.</Line>
             <Line delay={0.18}>60 days.</Line>
             <Line delay={0.32} accent>
               Or you don&apos;t pay.
@@ -72,9 +72,10 @@ export function Hero() {
             transition={{ duration: 0.7, delay: 0.55 }}
             className="mt-10 max-w-2xl text-balance text-lg leading-snug text-ink-2 sm:text-xl"
           >
-            We install the AI and automation system that fills your calendar with qualified B2B
-            calls. We build it, we run it, and guarantee it: 30 qualified calls in 60 days, or we
-            work free until you hit it.
+            We install the AI and automation system that answers every lead in seconds and puts
+            it on your calendar. Sales calls, quotes, service visits, whatever you book. We build
+            it, we run it, and we guarantee it: 30 qualified appointments in 60 days, or we work
+            free until you hit it.
           </motion.p>
 
           <motion.div

@@ -83,7 +83,7 @@ export default async function PlansPage({ searchParams }: { searchParams: Promis
               {tier.guarantee && (
                 <div className="mt-4 flex items-start gap-2 rounded-xl border border-gold/30 bg-gold/[0.06] px-3 py-2.5 text-xs text-ink-2">
                   <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold-deep" />
-                  <span>30 booked calls in 60 days, or we work free and pause your billing until you hit it.</span>
+                  <span>30 booked appointments in 60 days, or we work free and pause your billing until you hit it.</span>
                 </div>
               )}
               <ul className="mt-5 flex flex-col gap-2.5">

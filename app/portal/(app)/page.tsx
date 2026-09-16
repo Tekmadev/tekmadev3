@@ -110,7 +110,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
           {guarantee.eligible ? (
             <Panel
               title="Your guarantee"
-              description={`${guarantee.target} booked calls in ${guarantee.windowDays} days, or we work free until you hit it.`}
+              description={`${guarantee.target} booked appointments in ${guarantee.windowDays} days, or we work free until you hit it.`}
               action={
                 <Link href="/calls" className="inline-flex items-center gap-1.5 text-sm text-ink-3 hover:text-ink">
                   See every call
@@ -150,7 +150,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
             <Panel title={product ? `Your ${product.name}` : "Your plan"}>
               <p className="text-sm text-ink-3">
                 {product
-                  ? `${product.name} is a one-time build: ${product.tagline} When you are ready for booked calls on autopilot, the Convert and Grow systems plug straight into this site. No rebuild.`
+                  ? `${product.name} is a one-time build: ${product.tagline} When you are ready for booked appointments on autopilot, the Convert and Grow systems plug straight into this site. No rebuild.`
                   : `${tier?.name ?? "Convert"} captures and converts every lead that reaches you. The booked-call guarantee and done-for-you ads are part of Grow. Ask your strategist about upgrading when you are ready for more volume.`}
               </p>
             </Panel>

@@ -34,8 +34,8 @@ export const AGREEMENTS: Record<"service_agreement" | "webline_agreement", Agree
     url: `${business.url}/terms`,
     summary: [
       "We build and run your growth system as described in your plan. You keep ownership of every account we get access to.",
-      "A booked call counts when a prospect who wants a service you offer, inside your service area, with real contact details, schedules through the system we built. Spam, duplicates, out-of-area and wrong-service bookings never count.",
-      "On plans with the guarantee, the 60-day clock starts the day we go live, not the day you paid. If we miss 30 booked calls, we keep working at no monthly charge until you hit it.",
+      "A booked appointment counts when a prospect who wants a service you offer, inside your service area, with real contact details, schedules through the system we built. It does not matter what the appointment is: a sales call, a quote, a consult, a site visit or a service booking all count the same. Spam, duplicates, out-of-area and wrong-service bookings never count.",
+      "On plans with the guarantee, the 60-day clock starts the day we go live, not the day you paid. If we miss 30 booked appointments, we keep working at no monthly charge until you hit it.",
       "Your monthly starts about 30 days after setup. Cancel any month. No long-term contract.",
       "We never store your passwords. Access is granted through partner or manager invitations you control and can revoke.",
     ],

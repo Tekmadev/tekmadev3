@@ -17,7 +17,7 @@ export default async function IntakePage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Your business"
-        subtitle="Everything we need to build your website, train your receptionist, and define a qualified booked call. Save a draft anytime."
+        subtitle="Everything we need to build your website, train your receptionist, and define a qualified booked appointment. Save a draft anytime."
       >
         {intake?.status === "submitted" && <Badge tone="gold">Submitted {fmtDateTime(intake.submitted_at)}</Badge>}
         {intake?.status === "reviewed" && <Badge tone="ok">Reviewed by Tekmadev</Badge>}

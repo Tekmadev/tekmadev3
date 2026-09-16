@@ -70,7 +70,18 @@ export default async function Image() {
               color: theme.ink,
             }}
           >
-            30 Booked Calls In 60 Days.
+            30 Appointments.
+          </div>
+          <div
+            style={{
+              fontSize: 96,
+              fontWeight: 800,
+              letterSpacing: -3,
+              lineHeight: 1.02,
+              color: theme.ink,
+            }}
+          >
+            60 Days.
           </div>
           <div
             style={{

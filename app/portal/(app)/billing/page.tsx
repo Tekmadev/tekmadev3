@@ -157,7 +157,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                 {status ? <Badge tone={SUB_TONE[status] ?? "neutral"}>{humanize(status)}</Badge> : <span className="text-ink-4">No subscription on file</span>}
               </Row>
               <Row label={status === "trialing" ? "First monthly charge" : "Next renewal"}>{sub?.current_period_end ? fmtDate(sub.current_period_end) : "-"}</Row>
-              <Row label="Guarantee">{client.guarantee_eligible ? `${client.guarantee_target} booked calls in ${client.guarantee_window_days} days` : "Not included on this plan"}</Row>
+              <Row label="Guarantee">{client.guarantee_eligible ? `${client.guarantee_target} booked appointments in ${client.guarantee_window_days} days` : "Not included on this plan"}</Row>
             </dl>
             {status === "trialing" && (
               <p className="mt-4 text-xs text-ink-4">
@@ -187,7 +187,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           )}
           <p className="mt-4 text-sm text-ink-3">
             {product
-              ? "Want booked calls on autopilot next? The Convert and Grow systems plug straight into your Webline site. Ask us anytime."
+              ? "Want booked appointments on autopilot next? The Convert and Grow systems plug straight into your Webline site. Ask us anytime."
               : "Cancel any month. No long-term contract. If the system stops booking, we stop billing."}
           </p>
         </Panel>
