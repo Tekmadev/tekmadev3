@@ -435,6 +435,16 @@ export const navLinks = [
   { href: "/#faq", label: "FAQ" },
 ];
 
+/**
+ * The client login entry in the nav. It sits apart from the page links because
+ * it leaves the marketing site for the portal subdomain; the URL is computed
+ * per environment by portalOrigin() so local dev lands on account.localhost.
+ */
+export const portalNav = {
+  label: "Client login",
+  hint: "Your onboarding, approvals, bookings and billing",
+};
+
 export const footerColumns = [
   {
     label: "Tekmadev",

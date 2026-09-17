@@ -3,12 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "motion/react";
-import { Menu, X, Phone, ChevronDown } from "lucide-react";
+import { Menu, X, Phone, ChevronDown, UserRound } from "lucide-react";
 import { cn } from "@/lib/cn";
-import { business, navLinks, productNav, type NavProduct } from "@/config/site";
+import { business, navLinks, portalNav, productNav, type NavProduct } from "@/config/site";
+import { portalOrigin } from "@/lib/portal-host";
 
 /** Products we are announcing. Unannounced ones are flagged hidden in config. */
 const visibleProducts: NavProduct[] = productNav.items.filter((p) => !p.hidden);
+
+/** The portal root: a signed-in client lands on their dashboard, anyone else on sign-in. */
+const portalHref = portalOrigin();
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 export function Nav() {
@@ -46,38 +50,54 @@ export function Nav() {
           >
             <Brand />
 
-            <nav className="hidden items-center gap-1 md:flex">
+            {/* Desktop from lg. Below that the pill is narrower than its links, so tablets get the menu. */}
+            <nav className="hidden items-center gap-1 lg:flex">
               <ProductMenu />
               {navLinks.map((l) => (
                 <a
                   key={l.href}
                   href={l.href}
-                  className="rounded-full px-3.5 py-2 text-sm text-ink-3 transition-colors duration-200 hover:bg-ink/[0.04] hover:text-ink"
+                  className="whitespace-nowrap rounded-full px-3.5 py-2 text-sm text-ink-3 transition-colors duration-200 hover:bg-ink/[0.04] hover:text-ink"
                 >
                   {l.label}
                 </a>
               ))}
             </nav>
 
-            <div className="hidden items-center gap-2 md:flex">
+            {/*
+              The pill is 1054px wide at most, and the links plus the CTA
+              already use 830 of it. What is left goes to the client login
+              label from xl, with the phone as an icon (the number is in the
+              hero, the footer and the menu). At lg only the icons fit.
+            */}
+            <div className="hidden items-center gap-2 lg:flex">
               <ThemeToggle />
               <a
                 href={`tel:${business.phone.tel}`}
+                title={`Call ${business.phone.display}`}
                 aria-label={`Call ${business.phone.display}`}
-                className="group inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm text-ink-3 transition-colors hover:text-ink"
+                className="hidden h-9 w-9 items-center justify-center rounded-full text-ink-3 transition-colors hover:bg-ink/[0.04] hover:text-ink xl:inline-flex"
               >
                 <Phone className="h-3.5 w-3.5 text-gold" />
-                <span className="hidden lg:inline">{business.phone.display}</span>
+              </a>
+              <a
+                href={portalHref}
+                title={portalNav.hint}
+                aria-label={portalNav.label}
+                className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-line-strong px-3.5 py-2 text-sm text-ink-2 transition-colors duration-200 hover:border-ink/30 hover:bg-ink/[0.04] hover:text-ink"
+              >
+                <UserRound className="h-3.5 w-3.5 text-gold" />
+                <span className="hidden xl:inline">{portalNav.label}</span>
               </a>
               <a
                 href="/#book"
-                className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-sm font-medium text-bg transition-all duration-300 hover:bg-ink-2"
+                className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-ink px-4 py-2.5 text-sm font-medium text-bg transition-all duration-300 hover:bg-ink-2"
               >
                 Book a call
               </a>
             </div>
 
-            <div className="flex items-center gap-2 md:hidden">
+            <div className="flex items-center gap-2 lg:hidden">
               <ThemeToggle />
               <button
                 onClick={() => setOpen(true)}
@@ -97,7 +117,7 @@ export function Nav() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[60] overflow-y-auto bg-bg md:hidden"
+            className="fixed inset-0 z-[60] overflow-y-auto bg-bg lg:hidden"
           >
             <div className="flex min-h-full flex-col px-6 pt-6">
               <div className="flex items-center justify-between">
@@ -133,6 +153,19 @@ export function Nav() {
               </nav>
 
               <div className="mt-auto mb-12 flex flex-col gap-3 pt-10">
+                <a
+                  href={portalHref}
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 rounded-2xl border border-line-strong bg-surface px-5 py-4"
+                >
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold/15">
+                    <UserRound className="h-5 w-5 text-gold-deep" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-base font-semibold text-ink">{portalNav.label}</span>
+                    <span className="block text-sm leading-snug text-ink-3">{portalNav.hint}</span>
+                  </span>
+                </a>
                 <a
                   href={`tel:${business.phone.tel}`}
                   className="inline-flex items-center justify-center gap-2 rounded-full border border-line-strong px-6 py-4 text-base text-ink"
@@ -263,7 +296,7 @@ function ProductMenu() {
         aria-haspopup="true"
         onClick={toggle}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm transition-colors duration-200 hover:bg-ink/[0.04] hover:text-ink",
+          "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-2 text-sm transition-colors duration-200 hover:bg-ink/[0.04] hover:text-ink",
           open ? "text-ink" : "text-ink-3",
         )}
       >
