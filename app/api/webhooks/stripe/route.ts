@@ -97,6 +97,16 @@ function periodEndOf(sub: Stripe.Subscription): string | null {
   return end ? new Date(end * 1000).toISOString() : null;
 }
 
+/** Stripe's unix seconds as an ISO string for a timestamptz column. */
+function isoOf(seconds: number | null | undefined): string | null {
+  return seconds ? new Date(seconds * 1000).toISOString() : null;
+}
+
+/** "September 17, 2026" in Toronto time, for log lines and client copy. */
+function longDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-CA", { month: "long", day: "numeric", year: "numeric", timeZone: "America/Toronto" });
+}
+
 /** Columns that mark a subscription as a product care plan, read off its metadata. */
 function careColumns(meta: Stripe.Metadata | null): { kind: "plan" | "care"; product_id?: string | null; client_id?: string } {
   if (meta?.kind !== "care") return { kind: "plan" };
@@ -337,6 +347,12 @@ export async function POST(req: NextRequest) {
       const sub = event.data.object as Stripe.Subscription;
       const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
       const care = careColumns(sub.metadata);
+      // The portal cancels at period end, so the plan stays active until the
+      // paid period runs out. Record that as its own state instead of leaving
+      // it buried in `raw`. Newer API versions express the same thing as a
+      // `cancel_at` date, so treat either as "scheduled to end".
+      const scheduled = sub.status !== "canceled" && (sub.cancel_at_period_end || Boolean(sub.cancel_at));
+      const endsAt = scheduled ? (isoOf(sub.cancel_at) ?? periodEndOf(sub)) : null;
       await supabase.from("subscriptions").upsert(
         {
           stripe_customer_id: customerId,
@@ -345,6 +361,13 @@ export async function POST(req: NextRequest) {
           ...care,
           status: sub.status,
           current_period_end: periodEndOf(sub),
+          cancel_at_period_end: sub.cancel_at_period_end,
+          cancel_at: isoOf(sub.cancel_at),
+          canceled_at: isoOf(sub.canceled_at),
+          ended_at: isoOf(sub.ended_at),
+          cancellation_reason: sub.cancellation_details?.reason ?? null,
+          cancellation_feedback: sub.cancellation_details?.feedback ?? null,
+          cancellation_comment: sub.cancellation_details?.comment ?? null,
           ...utmFrom(sub.metadata),
           raw: sub as unknown as Record<string, unknown>,
         },
@@ -364,14 +387,54 @@ export async function POST(req: NextRequest) {
             await updateClient(client.id, { status: "churned", churned_at: new Date().toISOString() }, "stripe");
           }
           const label = care.kind === "care" ? (getProductMeta(care.product_id)?.care?.name ?? "Care plan") : "Subscription";
+
+          // A cancellation from the portal arrives as an update with
+          // cancel_at_period_end flipped on; renewing before the period ends
+          // flips it back. Both get a plain line in the log and a word to the
+          // client, instead of "Subscription active" twice.
+          const prev = (event.data.previous_attributes ?? {}) as Partial<Stripe.Subscription>;
+          const wasScheduled =
+            typeof prev.cancel_at_period_end === "boolean"
+              ? prev.cancel_at_period_end || Boolean(sub.cancel_at && !("cancel_at" in prev))
+              : "cancel_at" in prev
+                ? Boolean(prev.cancel_at)
+                : undefined;
+          const flipped = event.type === "customer.subscription.updated" && wasScheduled !== undefined && wasScheduled !== scheduled;
+          const endsText = endsAt ? longDate(endsAt) : null;
+          const summary =
+            event.type === "customer.subscription.deleted"
+              ? `${label} cancelled`
+              : flipped && scheduled
+                ? `${label} set to cancel${endsText ? ` on ${endsText}` : ""}`
+                : flipped
+                  ? `${label} renewed, cancellation undone`
+                  : `${label} ${sub.status}`;
           await logActivity({
             client_id: client.id,
             actor_type: "system",
             event: `billing.${event.type.replace("customer.subscription.", "subscription_")}`,
             entity_type: "subscription",
-            summary: `${label} ${sub.status}`,
-            data: { stripe_subscription_id: sub.id, status: sub.status, kind: care.kind },
+            summary,
+            data: {
+              stripe_subscription_id: sub.id,
+              status: sub.status,
+              kind: care.kind,
+              cancel_at_period_end: sub.cancel_at_period_end,
+              ends_at: endsAt,
+              feedback: sub.cancellation_details?.feedback ?? null,
+            },
           });
+          if (flipped) {
+            await createNotification({
+              client_id: client.id,
+              template_key: scheduled ? "subscription_cancel_scheduled" : "subscription_renewed",
+              subject: scheduled ? `${label} cancels${endsText ? ` on ${endsText}` : ""}` : `${label} renewed`,
+              body: scheduled
+                ? `Nothing more will be charged. ${label} runs until ${endsText ?? "the end of the period you have paid for"}, and you can renew it from Billing before then if you change your mind.`
+                : `${label} will renew as normal. Thanks for staying.`,
+              action_url: "/billing",
+            });
+          }
         }
       } catch (err) {
         console.error("[stripe webhook] client sync failed", err instanceof Error ? err.message : String(err));

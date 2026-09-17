@@ -368,7 +368,7 @@ export const termsOfService: LegalDoc = {
           items: [
             "'Growth System' means the productized, done-for-you AI and automation system operated by Tekmadev that answers calls, replies to leads, runs follow-up sequences, and books appointments on behalf of the Client.",
             "'Order Form' means the written or electronic acceptance of a Tekmadev proposal that describes the scope, timeline, and any specific deliverables and fees for an engagement.",
-            "'Qualified Booked Call' means an appointment scheduled on the Client's calendar that meets the qualification criteria mutually defined in the Order Form (industry fit, decision-maker, minimum budget, and verified intent). Disputed calls are resolved under Section 5.",
+            "'Qualified Booking' means an appointment scheduled on the Client's calendar through the Growth System, whether a sales call, a quote, a consultation, a site visit or a service booking, that meets the qualification criteria mutually defined in the Order Form (industry fit, decision-maker, minimum budget, and verified intent). Disputed bookings are resolved under Section 4.",
             "'Client Data' means data, content, recordings, contact information, and other materials provided by the Client or generated through the Growth System operating on behalf of the Client.",
             "'Tekmadev IP' means Tekmadev's proprietary methodologies, software, configurations, prompts, scripts, templates, dashboards, and the Growth System itself, including all enhancements made over time.",
           ],
@@ -418,7 +418,7 @@ export const termsOfService: LegalDoc = {
       blocks: [
         {
           type: "p",
-          text: "Tekmadev offers a performance guarantee: if we do not deliver the number of Qualified Booked Calls set out in the Order Form (target floor: 30) within 60 days of go-live, the Client will not be invoiced for additional Qualified Booked Call fees until we reach that number, and we will continue to operate the system at no additional charge until we do.",
+          text: "Tekmadev offers a performance guarantee: if we do not deliver the number of Qualified Bookings set out in the Order Form (target floor: 30) within 60 days of go-live, the Client will not be invoiced for additional Qualified Booking fees until we reach that number, and we will continue to operate the system at no additional charge until we do.",
         },
         {
           type: "p",
@@ -436,7 +436,7 @@ export const termsOfService: LegalDoc = {
         },
         {
           type: "p",
-          text: "Disputes about whether a call is a 'Qualified Booked Call' will be resolved in good faith. If a dispute cannot be resolved within 10 business days, the parties will follow the dispute resolution procedure in Section 19.",
+          text: "Disputes about whether a booking is a 'Qualified Booking' will be resolved in good faith. If a dispute cannot be resolved within 10 business days, the parties will follow the dispute resolution procedure in Section 19.",
         },
       ],
     },
@@ -452,7 +452,7 @@ export const termsOfService: LegalDoc = {
           type: "ul",
           items: [
             "A one-time setup fee and a recurring monthly fee, as set out in the Order Form. The setup fee covers the design, build, and installation of the growth system and the assets delivered to the Client, which the Client retains, and is non-refundable.",
-            "A performance guarantee: if the system does not produce 30 Qualified Booked Calls within 60 days of go-live, Tekmadev will not invoice further fees for that period and will continue to operate the system at no additional charge until the target is reached, as set out in Section 4 and the Order Form.",
+            "A performance guarantee: if the system does not produce 30 Qualified Bookings within 60 days of go-live, Tekmadev will not invoice further fees for that period and will continue to operate the system at no additional charge until the target is reached, as set out in Section 4 and the Order Form.",
             "Fees are quoted in Canadian dollars (CAD) unless otherwise stated and are exclusive of applicable taxes (HST, GST, QST), which will be added where applicable.",
             "Website packages (Section 5A) have a build fee paid in full at checkout and, where stated, a required monthly hosting and care plan billed to the Client's card. Where a buy-now-pay-later option (such as Afterpay, Klarna, or Affirm) is offered at checkout, the instalment agreement covers the build fee only, is between the Client and that provider, and is subject to the provider's terms and approval; Tekmadev receives the full build fee at checkout.",
           ],

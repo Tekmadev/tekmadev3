@@ -2,7 +2,7 @@ import { ExternalLink } from "lucide-react";
 import { getTierMeta } from "@/config/pricing";
 import { getProductMeta } from "@/config/products";
 import { requireClient } from "@/lib/portal-auth";
-import { careIsSetUp, getCareSubscriptionForClient, getLatestSubscriptionForClient } from "@/lib/clients-data";
+import { careIsSetUp, getCareSubscriptionForClient, getLatestSubscriptionForClient, subscriptionEndsAt } from "@/lib/clients-data";
 import { getLatestOrderForClient, paymentMethodLabel } from "@/lib/orders-data";
 import { getPlan } from "@/lib/pricing-data";
 import { getDisplayProduct } from "@/lib/products-data";
@@ -55,6 +55,9 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const status = sub?.status ?? null;
   const careReady = careIsSetUp(care);
   const monthly = display?.monthly ?? null;
+  // Cancelled from the Stripe portal but still inside the paid period.
+  const careEnds = subscriptionEndsAt(care);
+  const planEnds = subscriptionEndsAt(sub);
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,7 +85,15 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         <Panel
           title={product.care.name}
           action={
-            care ? <Badge tone={SUB_TONE[care.status ?? ""] ?? "neutral"}>{care.status === "trialing" ? "Set up" : humanize(care.status)}</Badge> : <Badge tone="warn">Needs setup</Badge>
+            care ? (
+              careEnds ? (
+                <Badge tone="warn">Ending</Badge>
+              ) : (
+                <Badge tone={SUB_TONE[care.status ?? ""] ?? "neutral"}>{care.status === "trialing" ? "Set up" : humanize(care.status)}</Badge>
+              )
+            ) : (
+              <Badge tone="warn">Needs setup</Badge>
+            )
           }
         >
           <div className="grid gap-6 sm:grid-cols-2">
@@ -99,12 +110,18 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
             </div>
             <dl className="divide-y divide-line">
               <Row label="Monthly">{formatMoney(monthly.amount, display?.currency ?? "CAD")} / month</Row>
-              <Row label={care?.status === "trialing" || !careReady ? "First charge" : "Next renewal"}>
-                {care?.current_period_end
-                  ? fmtDate(care.current_period_end)
-                  : `${monthly.trialDays} days after your purchase`}
+              <Row label={careEnds ? "Ends" : care?.status === "trialing" || !careReady ? "First charge" : "Next renewal"}>
+                {careEnds
+                  ? fmtDate(careEnds)
+                  : care?.current_period_end
+                    ? fmtDate(care.current_period_end)
+                    : `${monthly.trialDays} days after your purchase`}
               </Row>
-              <Row label="Cancel">Anytime, from Manage billing</Row>
+              <Row label="Cancel">
+                {careEnds
+                  ? `Done. Nothing more is charged, and hosting runs until ${fmtDate(careEnds)}. Renew from Manage billing before then to keep your site up.`
+                  : "Anytime, from Manage billing"}
+              </Row>
             </dl>
           </div>
 
@@ -154,14 +171,28 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
               <Row label="Plan">{tier?.name ?? humanize(client.plan_id) ?? "Custom"}</Row>
               <Row label="Monthly">{plan ? `${money(plan.monthly_amount, plan.currency)} / month` : "Custom"}</Row>
               <Row label="Status">
-                {status ? <Badge tone={SUB_TONE[status] ?? "neutral"}>{humanize(status)}</Badge> : <span className="text-ink-4">No subscription on file</span>}
+                {planEnds ? (
+                  <Badge tone="warn">Ending</Badge>
+                ) : status ? (
+                  <Badge tone={SUB_TONE[status] ?? "neutral"}>{humanize(status)}</Badge>
+                ) : (
+                  <span className="text-ink-4">No subscription on file</span>
+                )}
               </Row>
-              <Row label={status === "trialing" ? "First monthly charge" : "Next renewal"}>{sub?.current_period_end ? fmtDate(sub.current_period_end) : "-"}</Row>
+              <Row label={planEnds ? "Ends" : status === "trialing" ? "First monthly charge" : "Next renewal"}>
+                {planEnds ? fmtDate(planEnds) : sub?.current_period_end ? fmtDate(sub.current_period_end) : "-"}
+              </Row>
               <Row label="Guarantee">{client.guarantee_eligible ? `${client.guarantee_target} booked appointments in ${client.guarantee_window_days} days` : "Not included on this plan"}</Row>
             </dl>
-            {status === "trialing" && (
+            {status === "trialing" && !planEnds && (
               <p className="mt-4 text-xs text-ink-4">
                 Your monthly starts about 30 days after setup, so the build happens on a month you are not paying for.
+              </p>
+            )}
+            {planEnds && (
+              <p className="mt-4 text-xs text-ink-4">
+                Your plan is cancelled and runs until {fmtDate(planEnds)}. Nothing more is charged. Changed your mind? Renew from
+                Manage billing before then.
               </p>
             )}
           </Panel>
@@ -172,7 +203,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           description={
             product && !careReady
               ? "Download your receipt and invoice, or update your billing details. Handled securely by Stripe."
-              : "Update your card, cancel, change billing email, view and download invoices. Handled securely by Stripe."
+              : "Update your card, cancel or renew, change billing email, view and download invoices. Handled securely by Stripe."
           }
         >
           {canManage ? (

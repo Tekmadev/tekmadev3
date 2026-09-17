@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, FileText, Rocket } from "lucide-react";
 import { requireAdmin } from "@/lib/admin";
-import { CLIENT_STATUS_LABEL, getClientById, getLatestSubscriptionForClient, listActivity, listMembers } from "@/lib/clients-data";
+import { CLIENT_STATUS_LABEL, getClientById, getLatestSubscriptionForClient, listActivity, listMembers, subscriptionEndsAt } from "@/lib/clients-data";
 import {
   derivedStage,
   getActiveOnboarding,
@@ -80,6 +80,7 @@ export default async function ClientDetailPage({
   const assetsWithUrls = await Promise.all(assets.map(async (a) => ({ ...a, url: await signedAssetUrl(a.storage_path, 60 * 30) })));
 
   const progress = taskProgress(tasks);
+  const planEnds = subscriptionEndsAt(subscription);
   const stage = onboarding ? derivedStage(onboarding, tasks) : null;
   const planName = offerName(client.plan_id);
 
@@ -134,10 +135,10 @@ export default async function ClientDetailPage({
         <StatCard label="Booked calls" value={calls.filter((c) => c.qualified).length} sub={client.guarantee_eligible ? `target ${client.guarantee_target}` : "no guarantee"} />
         <StatCard
           label="Billing"
-          value={subscription ? humanize(subscription.status) : order ? humanize(order.status) : "-"}
+          value={subscription ? (planEnds ? "Ending" : humanize(subscription.status)) : order ? humanize(order.status) : "-"}
           sub={
             subscription
-              ? `${fmtMoney(subscription.amount_total, subscription.currency)} · ${subscription.current_period_end ? fmtDate(subscription.current_period_end) : ""}`
+              ? `${fmtMoney(subscription.amount_total, subscription.currency)} · ${planEnds ? `ends ${fmtDate(planEnds)}` : subscription.current_period_end ? fmtDate(subscription.current_period_end) : ""}`
               : order
                 ? `${fmtMoney(order.amount_total, order.currency)} one-time · ${paymentMethodLabel(order.payment_method_type)}`
                 : "no billing record"

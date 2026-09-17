@@ -232,11 +232,18 @@ export type ClientSubscription = {
   currency: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
+  /** True while the plan is scheduled to end when the paid period does. */
+  cancel_at_period_end: boolean;
+  cancel_at: string | null;
+  canceled_at: string | null;
 };
+
+const SUBSCRIPTION_COLS =
+  "id,created_at,email,tier,status,current_period_end,amount_total,currency,stripe_customer_id,stripe_subscription_id,cancel_at_period_end,cancel_at,canceled_at";
 
 /** Most recent Stripe subscription for a client (by link, then by customer id). */
 export async function getLatestSubscriptionForClient(client: Client): Promise<ClientSubscription | null> {
-  const cols = "id,created_at,email,tier,status,current_period_end,amount_total,currency,stripe_customer_id,stripe_subscription_id";
+  const cols = SUBSCRIPTION_COLS;
   const supabase = db();
   const byLink = await supabase
     .from("subscriptions")
@@ -267,7 +274,7 @@ export const CARE_OK_STATUSES = ["trialing", "active", "past_due"] as const;
 export async function getCareSubscriptionForClient(clientId: string): Promise<ClientSubscription | null> {
   const { data } = await db()
     .from("subscriptions")
-    .select("id,created_at,email,tier,status,current_period_end,amount_total,currency,stripe_customer_id,stripe_subscription_id")
+    .select(SUBSCRIPTION_COLS)
     .eq("client_id", clientId)
     .eq("kind", "care")
     .order("created_at", { ascending: false })
@@ -278,6 +285,18 @@ export async function getCareSubscriptionForClient(clientId: string): Promise<Cl
 
 export function careIsSetUp(sub: Pick<ClientSubscription, "status"> | null): boolean {
   return Boolean(sub?.status && (CARE_OK_STATUSES as readonly string[]).includes(sub.status));
+}
+
+/**
+ * The date a plan ends, when it has been cancelled but is still running out
+ * the paid period. Null for a plan that will renew or has already stopped.
+ */
+export function subscriptionEndsAt(
+  sub: Pick<ClientSubscription, "status" | "cancel_at_period_end" | "cancel_at" | "current_period_end"> | null,
+): string | null {
+  if (!sub || sub.status === "canceled") return null;
+  if (sub.cancel_at) return sub.cancel_at;
+  return sub.cancel_at_period_end ? sub.current_period_end : null;
 }
 
 // ---------------------------------------------------------------------------
