@@ -57,7 +57,7 @@ export function Hero() {
           </motion.div>
 
           <h1 className="display-xxl mt-6 text-balance text-[12.5vw] sm:text-7xl md:text-[6.5rem] lg:text-[8.5rem] xl:text-[10rem]">
-            <Line delay={0.05}>30 appointments.</Line>
+            <Line delay={0.05}>30 bookings.</Line>
             <Line delay={0.18}>60 days.</Line>
             <Line delay={0.32} accent>
               Or you don&apos;t pay.
@@ -74,7 +74,7 @@ export function Hero() {
           >
             We install the AI and automation system that answers every lead in seconds and puts
             it on your calendar. Sales calls, quotes, service visits, whatever you book. We build
-            it, we run it, and we guarantee it: 30 qualified appointments in 60 days, or we work
+            it, we run it, and we guarantee it: 30 qualified bookings in 60 days, or we work
             free until you hit it.
           </motion.p>
 
