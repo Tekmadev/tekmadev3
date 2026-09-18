@@ -304,6 +304,8 @@ export function caseStudyJsonLd(study: CaseStudy, path: string) {
         addressRegion: study.about.region,
         addressCountry: study.about.country,
       },
+      // A business of ours is said to be ours, so no engine has to infer it.
+      ...(study.about.ownedByUs ? { parentOrganization: { "@id": `${SITE_URL}#organization` } } : {}),
     },
     mentions: { "@id": `${SITE_URL}#service` },
     author: { "@id": `${SITE_URL}#founder` },

@@ -8,9 +8,10 @@
  * is a config entry; the page, the hub, the home page feature, the sitemap,
  * llms.txt and the share image all pick it up.
  *
- * Every figure in a study is either something we can show (the client's live
- * site, a cited survey) or something the owner told us, attributed as such.
- * No projected numbers, ever.
+ * Every figure in a study is either something we can show (the live site, a
+ * cited survey) or something the operator told us, attributed as such. No
+ * projected numbers, ever. And when the business is ours, in whole or in part,
+ * the study says so in the first screen, not in a footnote.
  */
 
 export const CASE_STUDIES_PATH = "/case-studies";
@@ -38,6 +39,8 @@ export type CaseStudy = {
   h1: string;
   h1Accent: string;
   intro: string;
+  /** Shown under the byline. Required when the business is ours, even in part. */
+  disclosure?: string;
   facts: CaseStudyFact[];
   /** Answer-first: the whole study in one quotable paragraph. */
   summary: string;
@@ -54,8 +57,8 @@ export type CaseStudy = {
   card: { title: string; blurb: string; highlights: string[] };
   /** Share image: three short lines, the last one in gold. */
   og: { lines: [string, string, string]; footer: string };
-  /** The entity the article is about, for the Article schema. */
-  about: { types: string[]; name: string; url: string; locality: string; region: string; country: string };
+  /** The entity the article is about, for the Article schema. `ownedByUs` links it to our Organization. */
+  about: { types: string[]; name: string; url: string; locality: string; region: string; country: string; ownedByUs: boolean };
 };
 
 export const caseStudies: CaseStudy[] = [
@@ -76,24 +79,26 @@ export const caseStudies: CaseStudy[] = [
     h1: "Calls every day in Hamilton.",
     h1Accent: "Not a dollar on ads.",
     intro:
-      "Fixible fixes phones, tablets and consoles in Hamilton, Ontario. We built the website and did the search work behind it: SEO for Google, AEO so its answers get quoted, GEO so AI assistants can recommend it. Fixible has never run an ad. Every lead is organic, and the owner now hears the same thing from walk-ins: they found it on Google, or ChatGPT or Gemini told them to go there.",
+      "Fixible fixes phones, tablets and consoles in Hamilton, Ontario. It is our own shop: Tekmadev owns it, and its founder runs it day to day. We built the website and did the search work behind it: SEO for Google, AEO so its answers get quoted, GEO so AI assistants can recommend it. Fixible has never run an ad. Every lead is organic, and the founder now hears the same thing from walk-ins: they found it on Google, or ChatGPT or Gemini told them to go there.",
+    disclosure:
+      "Disclosure: Fixible is owned by Tekmadev and operates under Tekmadev Innovation Inc. It was founded by, and is run by, its own founder. We show it because it is the shop whose numbers we can vouch for.",
     facts: [
-      { label: "Client", value: "Fixible" },
+      { label: "Business", value: "Fixible" },
       { label: "Where", value: "Hamilton, Ontario" },
+      { label: "Relationship", value: "Tekmadev-owned, run by its founder" },
       { label: "Work", value: "Website, SEO, AEO, GEO" },
       { label: "Ad spend", value: "$0" },
-      { label: "Leads", value: "100% organic" },
       { label: "Live at", value: "fixible.ca", href: "https://fixible.ca" },
     ],
     summary:
-      "Fixible is an independent phone and device repair shop in Hamilton, Ontario. Tekmadev built its website and did the SEO, AEO and GEO work. With no advertising, Fixible gets repair calls every day, and customers report finding it through Google search and through recommendations from ChatGPT and Gemini.",
+      "Fixible is a phone and device repair shop in Hamilton, Ontario, owned by Tekmadev and run by its founder. Tekmadev built its website and did the SEO, AEO and GEO work. With no advertising, Fixible gets repair calls every day, and customers report finding it through Google search and through recommendations from ChatGPT and Gemini.",
     sections: [
       {
         heading: "What Fixible was up against",
         answer:
           "A new independent shop in a category owned by chains, franchise pages and directories, with customers who need an answer today and no budget for ads.",
         body: [
-          "Fixible opened in 2024 as an independent shop backed by more than a decade of repair experience, in a Hamilton market where the first page of Google belongs to national chains, franchise locations and directory listings. Someone with a cracked screen is not browsing. They search once, call the first place that looks real, and go.",
+          "Fixible opened in 2024, founded and run by its own operator with more than a decade of repair experience behind the counter, and owned by Tekmadev, in a Hamilton market where the first page of Google belongs to national chains, franchise locations and directory listings. Someone with a cracked screen is not browsing. They search once, call the first place that looks real, and go.",
           "There was no ad budget, and there was not going to be one. The site had to do the whole job: be found, answer the questions, and get the call.",
         ],
       },
@@ -117,7 +122,7 @@ export const caseStudies: CaseStudy[] = [
           "Calls every day, all of them organic, and a growing share of customers who say an AI assistant sent them.",
         body: [
           "Fixible has never run a paid ad. It gets repair calls in Hamilton every day, and the business is growing quickly on that alone.",
-          "The detail worth the whole case study came from the owner. He started asking customers how they found the shop. Google search, as expected. But a steady number said they had asked ChatGPT or Gemini for a phone repair place in Hamilton, and Fixible was the recommendation.",
+          "The detail worth the whole case study came from Fixible's founder, who runs the shop day to day. He started asking customers how they found the shop. Google search, as expected. But a steady number said they had asked ChatGPT or Gemini for a phone repair place in Hamilton, and Fixible was the recommendation.",
           "That is not a fluke of one shop. BrightLocal's Local Consumer Review Survey 2026 found that 45% of consumers now use AI tools to find local business recommendations, up from 6% a year earlier. The customers were already asking. Fixible was one of the few local shops the assistants could describe with confidence.",
         ],
       },
@@ -161,8 +166,8 @@ export const caseStudies: CaseStudy[] = [
         a: "Every market and category is different, and nobody can promise a ranking or a recommendation from a system they do not control. What we can promise is the work: a site built so that search engines and AI assistants have no reason to overlook you. Fixible shows what that looks like in a competitive local category with no ad budget.",
       },
       {
-        q: "What exactly did Tekmadev do for Fixible?",
-        a: "The website, the SEO, the AEO (answer engine optimization, so its FAQ answers can be quoted directly) and the GEO (generative engine optimization, so AI assistants can identify and recommend it). Fixible handles the repairs and the customers.",
+        q: "Is Fixible a Tekmadev client?",
+        a: "No, and we say so up front: Fixible is owned by Tekmadev and operates under Tekmadev Innovation Inc. It was founded by, and is run by, its own founder, who handles the repairs and the customers. Tekmadev built the website and did the SEO, the AEO (answer engine optimization, so its FAQ answers can be quoted directly) and the GEO (generative engine optimization, so AI assistants can identify and recommend it). We show our own shop because it is the one whose numbers we can vouch for completely.",
       },
     ],
     cta: {
@@ -174,7 +179,7 @@ export const caseStudies: CaseStudy[] = [
     card: {
       title: "Fixible: calls every day in Hamilton, zero ad spend.",
       blurb:
-        "A phone and device repair shop we built the website and search work for. No ads, all organic, and customers who say ChatGPT and Gemini sent them.",
+        "Our own repair shop, run by its founder. We built the website and the search work behind it. No ads, all organic, and customers who say ChatGPT and Gemini sent them.",
       highlights: ["$0 ad spend", "100% organic", "Google, ChatGPT and Gemini"],
     },
     og: {
@@ -188,6 +193,7 @@ export const caseStudies: CaseStudy[] = [
       locality: "Hamilton",
       region: "ON",
       country: "CA",
+      ownedByUs: true,
     },
   },
 ];

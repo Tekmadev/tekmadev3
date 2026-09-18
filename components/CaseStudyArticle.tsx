@@ -44,6 +44,7 @@ export function CaseStudyArticle({ study }: { study: CaseStudy }) {
         <p className="mt-6 text-sm text-ink-4">
           By {business.privacyOfficer.name}, Founder · {longDate(study.datePublished)}
         </p>
+        {study.disclosure && <p className="mt-3 text-sm leading-relaxed text-ink-4">{study.disclosure}</p>}
       </header>
 
       {/* The facts, scannable before the story */}
