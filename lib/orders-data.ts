@@ -39,6 +39,8 @@ export type OrderRow = {
   click_ids: Record<string, string> | null;
   paid_at: string | null;
   refunded_at: string | null;
+  /** Stripe's own flag. False is a sandbox purchase: never revenue. */
+  livemode: boolean;
   raw: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
@@ -95,6 +97,7 @@ export function orderFromSession(
     utm_content: utm.utm_content,
     click_ids: Object.keys(clickIds).length ? clickIds : null,
     paid_at: extra.status === "paid" ? new Date().toISOString() : null,
+    livemode: s.livemode,
     raw: s as unknown as Record<string, unknown>,
   };
 }
@@ -126,12 +129,19 @@ export async function updateOrder(id: string, patch: Partial<OrderRow>): Promise
   return data as OrderRow;
 }
 
-/** Most recent order for a client (by link, then by Stripe customer, then by email). */
+/**
+ * Most recent order for a client (by link, then by Stripe customer, then by
+ * email). Always within the client's own mode: the email fallback would
+ * otherwise hand a real client a sandbox order that used the same address,
+ * and its date starts the care plan's clock.
+ */
 export async function getLatestOrderForClient(client: Client): Promise<OrderRow | null> {
   const supabase = db();
+  const live = !client.is_test;
   const byLink = await supabase
     .from("orders")
     .select("*")
+    .eq("livemode", live)
     .eq("client_id", client.id)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -141,6 +151,7 @@ export async function getLatestOrderForClient(client: Client): Promise<OrderRow 
     const byCustomer = await supabase
       .from("orders")
       .select("*")
+      .eq("livemode", live)
       .eq("stripe_customer_id", client.stripe_customer_id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -150,6 +161,7 @@ export async function getLatestOrderForClient(client: Client): Promise<OrderRow 
   const byEmail = await supabase
     .from("orders")
     .select("*")
+    .eq("livemode", live)
     .ilike("email", client.primary_email)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -157,8 +169,9 @@ export async function getLatestOrderForClient(client: Client): Promise<OrderRow 
   return (byEmail.data as OrderRow | null) ?? null;
 }
 
+/** Real orders only. Sandbox purchases are listed on the admin Test mode page and nowhere else. */
 export async function listOrders(limit = 200): Promise<OrderRow[]> {
-  const { data } = await db().from("orders").select("*").order("created_at", { ascending: false }).limit(limit);
+  const { data } = await db().from("orders").select("*").eq("livemode", true).order("created_at", { ascending: false }).limit(limit);
   return (data ?? []) as OrderRow[];
 }
 

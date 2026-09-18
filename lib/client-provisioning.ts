@@ -60,6 +60,8 @@ export type ProvisionInput = {
   actor_email?: string | null;
   /** Skip the email (admin creating a record for an offline client). */
   send_invite?: boolean;
+  /** True when this came from a Stripe sandbox purchase. Defaults to a real one. */
+  is_test?: boolean;
 };
 
 export type ProvisionResult = {
@@ -104,18 +106,33 @@ export async function provisionClient(input: ProvisionInput): Promise<ProvisionR
 
   // 1. Find or create the client. A self-serve lead who pays is found by the
   //    id the portal put on the checkout, then by Stripe customer, then email.
+  //    Every match must be in the same mode as the purchase. A sandbox
+  //    purchase that landed on a real client would hang a sandbox order and a
+  //    sandbox Stripe customer on them, and their billing would break the next
+  //    time live Stripe was asked about an id it has never heard of.
+  const isTest = input.is_test ?? false;
+  const sameMode = (c: Client | null) => (c && Boolean(c.is_test) === isTest ? c : null);
+
   let client: Client | null = null;
   if (input.client_id) {
     const known = await getClientById(input.client_id);
-    if (known && !known.deleted_at) client = known;
+    if (known && !known.deleted_at) {
+      if (!sameMode(known)) {
+        throw new Error(
+          `Mode mismatch: a ${isTest ? "test" : "live"} purchase named ${known.is_test ? "test" : "live"} client ${known.id}. Nothing was changed.`,
+        );
+      }
+      client = known;
+    }
   }
-  if (!client && input.stripe_customer_id) client = await getClientByStripeCustomer(input.stripe_customer_id);
-  if (!client) client = await getClientByEmail(email);
+  if (!client && input.stripe_customer_id) client = sameMode(await getClientByStripeCustomer(input.stripe_customer_id));
+  if (!client) client = await getClientByEmail(email, isTest);
 
   let createdClient = false;
   if (!client) {
     client = await createClient({
       business_name: input.business_name || email.split("@")[1] || "New client",
+      is_test: isTest,
       primary_email: email,
       primary_phone: input.phone ?? null,
       plan_id: input.plan_id,

@@ -68,6 +68,24 @@ export async function requireAdmin(): Promise<AdminContext> {
   return { user, email: (user.email || "").toLowerCase(), name, role };
 }
 
+/**
+ * The signed-in admin, or null. For API routes and checks that must not
+ * redirect. Same two conditions as requireAdmin: a valid session AND an email
+ * that resolves to a role.
+ */
+export async function getAdminContext(): Promise<AdminContext | null> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return null;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const role = await resolveRole(user.email);
+  if (!role) return null;
+  const name = (typeof user.user_metadata?.name === "string" && user.user_metadata.name) || null;
+  return { user, email: (user.email || "").toLowerCase(), name, role };
+}
+
 /** Like requireAdmin, but only owners pass. Managers bounce back to the overview. */
 export async function requireOwner(): Promise<AdminContext> {
   const ctx = await requireAdmin();

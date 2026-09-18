@@ -33,7 +33,7 @@ import { LinkPending } from "@/components/portal/LinkPending";
  * Which sections this client has. Booked appointments only make sense on growth
  * plans; a lead (signed up, not paid) sees the short menu plus Plans.
  */
-export type PortalNavFeatures = { bookedCalls?: boolean; lead?: boolean };
+export type PortalNavFeatures = { bookedCalls?: boolean; lead?: boolean; /** Created by a Stripe sandbox purchase. */ testAccount?: boolean };
 
 export type PortalNavCounts = {
   onboarding?: number;
@@ -233,7 +233,9 @@ export function PortalShell({
             <Image src="/images/logo/TMD2_logo.svg" alt="" width={32} height={32} className="h-8 w-8" />
             <div className="leading-tight">
               <span className="block font-display text-base font-bold text-ink">{business.name}</span>
-              <span className="block text-[10px] font-medium uppercase tracking-wide text-gold-deep">Client portal</span>
+              <span className="block text-[10px] font-medium uppercase tracking-wide text-gold-deep">
+                Client portal{features.testAccount ? " · test account" : ""}
+              </span>
             </div>
           </Link>
           <button onClick={() => setOpen(false)} aria-label="Close menu" className="p-2 text-ink-3 lg:hidden">

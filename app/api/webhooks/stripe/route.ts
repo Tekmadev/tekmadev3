@@ -6,6 +6,7 @@ import { createNotification, getClientById, getClientByStripeCustomer, logActivi
 import { completeTaskByKey, getActiveOnboarding } from "@/lib/onboarding-data";
 import { getProductMeta } from "@/config/products";
 import { reportPurchase } from "@/lib/meta-conversions";
+import { stripeFor, webhookSecret, type StripeMode } from "@/lib/stripe-mode";
 import {
   getOrderByPaymentIntent,
   getOrderBySession,
@@ -84,6 +85,7 @@ async function handleOrderSession(stripe: Stripe, s: Stripe.Checkout.Session, st
         order_id: order.id,
         actor_type: "system",
         actor_email: null,
+        is_test: !s.livemode,
       });
     } catch (err) {
       console.error("[stripe webhook] client provisioning failed", err instanceof Error ? err.message : String(err));
@@ -99,6 +101,9 @@ async function handleOrderSession(stripe: Stripe, s: Stripe.Checkout.Session, st
  * Never throws and never blocks the order handling that follows.
  */
 async function reportPurchaseToMeta(s: Stripe.Checkout.Session): Promise<void> {
+  // A sandbox purchase is not a conversion. Telling Meta about one would train
+  // the ads on money that never moved.
+  if (!s.livemode) return;
   if (s.payment_status !== "paid" || !s.metadata?.mctx) return;
   try {
     await reportPurchase({
@@ -179,6 +184,7 @@ async function handleCareSession(stripe: Stripe, s: Stripe.Checkout.Session) {
       current_period_end: sub ? periodEndOf(sub) : null,
       amount_total: sub?.items?.data?.[0]?.price?.unit_amount ?? s.amount_total ?? null,
       currency: s.currency ?? null,
+      livemode: s.livemode,
       raw: (sub ?? s) as unknown as Record<string, unknown>,
     },
     { onConflict: "stripe_subscription_id" },
@@ -187,6 +193,10 @@ async function handleCareSession(stripe: Stripe, s: Stripe.Checkout.Session) {
   if (!clientId) return;
   const client = await getClientById(clientId);
   if (!client) return;
+  if (Boolean(client.is_test) === s.livemode) {
+    console.error(`[stripe webhook] care session ${s.id} is ${s.livemode ? "live" : "test"} but client ${client.id} is not. Skipped.`);
+    return;
+  }
   if (!client.stripe_customer_id && customerId) {
     await updateClient(client.id, { stripe_customer_id: customerId }, "stripe");
   }
@@ -267,29 +277,52 @@ async function handleChargeEvent(event: Stripe.Event) {
  * (200) once the signature is valid so Stripe stops retrying; data problems
  * are logged.
  */
-export async function POST(req: NextRequest) {
-  const secret = process.env.STRIPE_SECRET_KEY;
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!secret || !webhookSecret) {
-    return NextResponse.json({ error: "Stripe webhook not configured." }, { status: 503 });
+/**
+ * Live events and sandbox events arrive at this one URL, signed with different
+ * secrets. Whichever secret verifies the signature decides the mode, and the
+ * Stripe client for the rest of the request is that mode's and no other.
+ *
+ * Then Stripe's own `livemode` flag has to agree with the secret that
+ * verified it. It always should. If it ever does not, the event is refused:
+ * a sandbox event must never be handled as a real sale.
+ */
+function verifyEvent(body: string, sig: string): { event: Stripe.Event; mode: StripeMode; stripe: Stripe } | "unconfigured" | null {
+  let configured = false;
+  let lastError = "";
+  for (const mode of ["live", "test"] as const) {
+    const signingSecret = webhookSecret(mode);
+    const stripe = stripeFor(mode);
+    if (!signingSecret || !stripe) continue;
+    configured = true;
+    try {
+      const event = stripe.webhooks.constructEvent(body, sig, signingSecret);
+      if (event.livemode !== (mode === "live")) {
+        console.error(
+          `[stripe webhook] REFUSED ${event.id}: verified with the ${mode} secret but livemode is ${event.livemode}.`,
+        );
+        return null;
+      }
+      return { event, mode, stripe };
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+    }
   }
+  if (!configured) return "unconfigured";
+  console.error("[stripe webhook] signature verification failed", lastError);
+  return null;
+}
 
+export async function POST(req: NextRequest) {
   const sig = req.headers.get("stripe-signature");
   if (!sig) return NextResponse.json({ error: "Missing signature." }, { status: 400 });
 
   const body = await req.text();
-  const stripe = new Stripe(secret);
-
-  let event: Stripe.Event;
-  try {
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-  } catch (err) {
-    console.error(
-      "[stripe webhook] signature verification failed",
-      err instanceof Error ? err.message : String(err),
-    );
-    return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
+  const verified = verifyEvent(body, sig);
+  if (verified === "unconfigured") {
+    return NextResponse.json({ error: "Stripe webhook not configured." }, { status: 503 });
   }
+  if (!verified) return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
+  const { event, stripe } = verified;
 
   const supabase = getSupabaseAdmin();
   if (!supabase) {
@@ -328,6 +361,7 @@ export async function POST(req: NextRequest) {
             status: "active",
             amount_total: s.amount_total ?? null,
             currency: s.currency ?? null,
+            livemode: s.livemode,
             ...utmFrom(s.metadata),
             raw: s as unknown as Record<string, unknown>,
           },
@@ -354,6 +388,7 @@ export async function POST(req: NextRequest) {
             subscription_id: (subRow as { id: string } | null)?.id ?? null,
             actor_type: "system",
             actor_email: null,
+            is_test: !s.livemode,
           });
         } catch (err) {
           console.error("[stripe webhook] client provisioning failed", err instanceof Error ? err.message : String(err));
@@ -395,6 +430,7 @@ export async function POST(req: NextRequest) {
           cancellation_reason: sub.cancellation_details?.reason ?? null,
           cancellation_feedback: sub.cancellation_details?.feedback ?? null,
           cancellation_comment: sub.cancellation_details?.comment ?? null,
+          livemode: sub.livemode,
           ...utmFrom(sub.metadata),
           raw: sub as unknown as Record<string, unknown>,
         },
@@ -407,7 +443,8 @@ export async function POST(req: NextRequest) {
         const client =
           (care.kind === "care" && care.client_id ? await getClientById(care.client_id) : null) ??
           (await getClientByStripeCustomer(customerId));
-        if (client) {
+        // Same mode only: a sandbox subscription must never churn a real client.
+        if (client && Boolean(client.is_test) !== sub.livemode) {
           // Cancelling the care plan ends hosting for that site, so the account
           // churns the same way a cancelled growth plan does.
           if (event.type === "customer.subscription.deleted" && client.status !== "churned") {

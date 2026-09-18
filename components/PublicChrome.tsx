@@ -5,6 +5,7 @@ import { AttributionTracker } from "@/components/AttributionTracker";
 import { PageviewTracker } from "@/components/PageviewTracker";
 import { ConsentBanner } from "@/components/ConsentBanner";
 import { MetaPixel } from "@/components/MetaPixel";
+import { TestModeBar } from "@/components/TestModeBar";
 
 /**
  * Marketing-site chrome.
@@ -25,6 +26,7 @@ export function PublicChrome() {
       <PageviewTracker />
       <MetaPixel />
       <ConsentBanner />
+      <TestModeBar />
     </>
   );
 }

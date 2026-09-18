@@ -127,7 +127,10 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                   <Link href={`/admin/clients/${c.id}`} className="block">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-ink">{c.business_name}</p>
+                        <p className="truncate text-sm font-medium text-ink">
+                          {c.business_name}
+                          {c.is_test && <span className="ml-2 rounded-full bg-signal/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-signal">Test</span>}
+                        </p>
                         <p className="truncate text-xs text-ink-4">
                           {offerName(c.plan_id) ?? c.plan_id ?? "No plan"} · {c.primary_email}
                         </p>
@@ -173,6 +176,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
                         <Link href={`/admin/clients/${c.id}`} className="font-medium text-ink hover:text-gold">
                           {c.business_name}
                         </Link>
+                        {c.is_test && <span className="ml-2 rounded-full bg-signal/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-signal">Test</span>}
                         <p className="text-xs text-ink-4">{c.primary_email}</p>
                       </td>
                       <td className="py-2.5 pr-4 text-ink-2">{offerName(c.plan_id) ?? c.plan_id ?? "-"}</td>

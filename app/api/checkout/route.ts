@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import Stripe from "stripe";
 import { business } from "@/config/site";
 import { getProductMeta } from "@/config/products";
 import { NOT_CONFIGURED, prepareCheckout } from "@/lib/checkout";
+import { stripeFor } from "@/lib/stripe-mode";
+import { checkoutMode } from "@/lib/test-mode";
 
 // Stripe's SDK needs the Node.js runtime (not Edge).
 export const runtime = "nodejs";
@@ -22,8 +23,10 @@ type Body = {
  * configured yet.
  */
 export async function POST(req: NextRequest) {
-  const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret) {
+  // Live, unless a signed-in admin has switched test mode on in this browser.
+  const mode = await checkoutMode();
+  const stripe = stripeFor(mode);
+  if (!stripe) {
     return NextResponse.json({ error: NOT_CONFIGURED }, { status: 503 });
   }
 
@@ -38,7 +41,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown product." }, { status: 400 });
   }
 
-  const stripe = new Stripe(secret);
   const origin = req.headers.get("origin") || business.url;
 
   const prepared = await prepareCheckout(stripe, {
@@ -47,6 +49,7 @@ export async function POST(req: NextRequest) {
     attribution: body.attribution,
     deal: String(body.deal ?? ""),
     origin,
+    mode,
   });
   if (!prepared.ok) {
     return NextResponse.json({ error: prepared.error }, { status: prepared.status });

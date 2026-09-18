@@ -69,7 +69,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     await Promise.all([
       supabase.from("leads").select("*", { count: "exact", head: true }),
       supabase.from("leads").select("*", { count: "exact", head: true }).eq("status", "booked"),
-      supabase.from("subscriptions").select("*", { count: "exact", head: true }).eq("status", "active"),
+      supabase.from("subscriptions").select("*", { count: "exact", head: true }).eq("status", "active").eq("livemode", true),
       supabase.from("events").select("*", { count: "exact", head: true }).gte("created_at", since30),
       supabase
         .from("leads")
@@ -79,6 +79,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       supabase
         .from("subscriptions")
         .select("created_at,email,tier,status,amount_total,currency,utm_source")
+        .eq("livemode", true)
         .order("created_at", { ascending: false })
         .limit(25),
       supabase
@@ -154,6 +155,7 @@ export async function getSubscriptions(limit = 200): Promise<Row[]> {
   const { data } = await supabase
     .from("subscriptions")
     .select("created_at,email,tier,status,amount_total,currency,stripe_customer_id,utm_source,utm_campaign")
+    .eq("livemode", true)
     .order("created_at", { ascending: false })
     .limit(limit);
   return (data ?? []) as Row[];

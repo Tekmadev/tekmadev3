@@ -19,8 +19,7 @@ import {
   Settings,
   LogOut,
   Menu,
-  X,
-} from "lucide-react";
+  X, FlaskConical } from "lucide-react";
 import { signOutAction } from "@/app/admin/actions";
 
 type Role = "owner" | "manager";
@@ -39,6 +38,7 @@ const NAV: NavItem[] = [
   { href: "/admin/pricing", label: "Pricing", icon: Tag, ownerOnly: true },
   { href: "/admin/coupons", label: "Coupons", icon: BadgePercent, ownerOnly: true },
   { href: "/admin/links", label: "Links", icon: Link2, ownerOnly: true },
+  { href: "/admin/test-mode", label: "Test mode", icon: FlaskConical, ownerOnly: true },
   { href: "/admin/team", label: "Team", icon: Shield, ownerOnly: true },
   { href: "/admin/profile", label: "Profile", icon: Settings },
 ];

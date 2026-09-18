@@ -16,6 +16,11 @@ export type ProductRow = {
   monthly_trial_days: number;
   stripe_monthly_product_id: string | null;
   stripe_monthly_price_id: string | null;
+  /** The same four ids in the Stripe sandbox. See lib/stripe-mode.ts. */
+  stripe_test_product_id: string | null;
+  stripe_test_price_id: string | null;
+  stripe_test_monthly_product_id: string | null;
+  stripe_test_monthly_price_id: string | null;
   active: boolean;
   sort_order: number;
   created_at: string;

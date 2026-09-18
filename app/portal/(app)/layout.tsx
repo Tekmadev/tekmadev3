@@ -35,7 +35,7 @@ export default async function PortalAppLayout({ children }: { children: React.Re
       memberName={member.name}
       email={session.email}
       counts={counts}
-      features={{ bookedCalls: !isProductPlan(client.plan_id), lead: client.status === "lead" }}
+      features={{ bookedCalls: !isProductPlan(client.plan_id), lead: client.status === "lead", testAccount: client.is_test }}
       signOutAction={portalSignOutAction}
       switchClientAction={switchClientAction}
     >

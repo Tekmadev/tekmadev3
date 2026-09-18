@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import Stripe from "stripe";
+import { modeOfClient, stripeFor } from "@/lib/stripe-mode";
 import { getPortalSession, hasRole, setActiveClientCookie, type PortalSession } from "@/lib/portal-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -529,12 +529,13 @@ export async function markNotificationsReadAction(): Promise<ActionResult> {
 export async function billingPortalAction(): Promise<ActionResult> {
   const sess = await session("admin");
   if (isResult(sess)) return sess;
-  const secret = process.env.STRIPE_SECRET_KEY;
+  // A test client's Stripe customer only exists in the sandbox, and a real
+  // client's only in live. The key always follows the client.
+  const stripe = stripeFor(modeOfClient(sess.client));
   const customer = sess.client.stripe_customer_id;
   const unavailable: ActionResult = { ok: false, message: "Billing management is not available for this account yet. Email us and we will sort it out." };
-  if (!secret || !customer) return unavailable;
+  if (!stripe || !customer) return unavailable;
 
-  const stripe = new Stripe(secret);
   try {
     const portalSession = await stripe.billingPortal.sessions.create({
       customer,
@@ -562,10 +563,10 @@ export async function startCheckoutAction(formData: FormData): Promise<ActionRes
   if (sess.client.status !== "lead") return { ok: false, message: "This account already has a plan. Email us to change it." };
 
   const offer = s(formData.get("offer"), 40);
-  const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret || !offer) return { ok: false, message: NOT_CONFIGURED };
+  const mode = modeOfClient(sess.client);
+  const stripe = stripeFor(mode);
+  if (!stripe || !offer) return { ok: false, message: NOT_CONFIGURED };
 
-  const stripe = new Stripe(secret);
   const product = isProductPlan(offer);
   const attribution = sess.client.metadata?.attribution;
   const prepared = await prepareCheckout(stripe, {
@@ -573,6 +574,7 @@ export async function startCheckoutAction(formData: FormData): Promise<ActionRes
     product: product ? offer : undefined,
     attribution: attribution && typeof attribution === "object" ? (attribution as Record<string, unknown>) : undefined,
     origin: business.url,
+    mode,
     urls: { success: portalUrl("/?checkout=success"), cancel: portalUrl("/plans?checkout=cancelled") },
     customerEmail: sess.email,
     clientReferenceId: sess.client.id,
@@ -621,8 +623,9 @@ export async function startCarePlanAction(): Promise<ActionResult> {
     return { ok: false, message: `Your ${product.care.name} plan is already set up. Use Manage billing to change your card.` };
   }
 
-  const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret) return { ok: false, message: NOT_CONFIGURED };
+  const mode = modeOfClient(sess.client);
+  const stripe = stripeFor(mode);
+  if (!stripe) return { ok: false, message: NOT_CONFIGURED };
 
   const order = await getLatestOrderForClient(sess.client);
   const prepared = await prepareCarePlan({
@@ -631,10 +634,10 @@ export async function startCarePlanAction(): Promise<ActionResult> {
     order,
     email: sess.email,
     urls: { success: portalUrl("/billing?care=success"), cancel: portalUrl("/billing?care=cancelled") },
+    mode,
   });
   if (!prepared.ok) return { ok: false, message: prepared.error };
 
-  const stripe = new Stripe(secret);
   try {
     const checkout = await stripe.checkout.sessions.create(prepared.params);
     if (!checkout.url) return { ok: false, message: NOT_CONFIGURED };

@@ -18,6 +18,8 @@ export type GuaranteeCountRule = "booked" | "showed";
 
 export type Client = {
   id: string;
+  /** Created by a Stripe sandbox purchase. Its Stripe ids only exist in the sandbox. */
+  is_test: boolean;
   slug: string;
   business_name: string;
   legal_name: string | null;
@@ -162,11 +164,18 @@ export async function getClientByStripeCustomer(stripeCustomerId: string): Promi
   return (data as Client | null) ?? null;
 }
 
-export async function getClientByEmail(email: string): Promise<Client | null> {
-  const { data } = await db()
+/**
+ * `isTest` narrows the match to live or to test clients. Provisioning always
+ * passes it, so a sandbox purchase can never land on a real client that
+ * happens to share the email, or the other way round.
+ */
+export async function getClientByEmail(email: string, isTest?: boolean): Promise<Client | null> {
+  let q = db()
     .from("clients")
     .select("*")
-    .ilike("primary_email", email.trim().toLowerCase())
+    .ilike("primary_email", email.trim().toLowerCase());
+  if (isTest !== undefined) q = q.eq("is_test", isTest);
+  const { data } = await q
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(1)

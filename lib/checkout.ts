@@ -4,6 +4,7 @@ import { getProductMeta } from "@/config/products";
 import { getPlan } from "@/lib/pricing-data";
 import { getProduct } from "@/lib/products-data";
 import { formatMoney } from "@/lib/money";
+import { productIds, type StripeMode } from "@/lib/stripe-mode";
 
 /**
  * Builds Stripe Checkout Session parameters for either a subscription tier
@@ -15,6 +16,9 @@ import { formatMoney } from "@/lib/money";
 
 export const NOT_CONFIGURED =
   "Online checkout isn't available yet. Please book a call and we'll get you set up.";
+
+const TEST_NOT_SET_UP =
+  "Test mode is on, but the test catalog is not set up yet. Open Admin, Test mode, and run Set up test catalog.";
 
 export type CheckoutInput = {
   tier?: string;
@@ -31,6 +35,8 @@ export type CheckoutInput = {
   customerEmail?: string | null;
   clientReferenceId?: string | null;
   businessName?: string | null;
+  /** Live unless a signed-in admin switched test mode on. See lib/test-mode.ts. */
+  mode?: StripeMode;
 };
 
 export type PreparedCheckout =
@@ -141,7 +147,11 @@ async function prepareProduct(input: CheckoutInput): Promise<PreparedCheckout> {
   const meta = getProductMeta(input.product);
   if (!meta) return { ok: false, error: "Unknown product.", status: 400 };
   const row = await getProduct(meta.id);
-  if (!row?.active || !row.stripe_price_id) return { ok: false, error: NOT_CONFIGURED, status: 503 };
+  const mode = input.mode ?? "live";
+  const priceId = row ? productIds(row, mode).priceId : null;
+  if (!row?.active || !priceId) {
+    return { ok: false, error: mode === "test" ? TEST_NOT_SET_UP : NOT_CONFIGURED, status: 503 };
+  }
 
   const metadata = withAttribution({ product: meta.id }, input.attribution);
 
@@ -156,7 +166,7 @@ async function prepareProduct(input: CheckoutInput): Promise<PreparedCheckout> {
 
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: "payment",
-    line_items: [{ price: row.stripe_price_id, quantity: 1 }],
+    line_items: [{ price: priceId, quantity: 1 }],
     customer_creation: "always",
     invoice_creation: {
       enabled: true,
@@ -176,6 +186,11 @@ async function prepareProduct(input: CheckoutInput): Promise<PreparedCheckout> {
 
 export async function prepareCheckout(stripe: Stripe, input: CheckoutInput): Promise<PreparedCheckout> {
   if (input.product) return prepareProduct(input);
+  // The growth plans have no sandbox catalog. Refuse rather than let a test
+  // checkout reach for live price ids with a sandbox key.
+  if ((input.mode ?? "live") === "test") {
+    return { ok: false, error: "Test mode covers Webline only. Switch test mode off to check out a plan.", status: 400 };
+  }
   return prepareSubscription(stripe, input);
 }
 
@@ -213,6 +228,8 @@ export type CarePlanInput = {
   /** Used only when the client has no Stripe customer yet. */
   email: string;
   urls: { success: string; cancel: string };
+  /** The mode of the client this plan is for. A test client can only use sandbox prices. */
+  mode?: StripeMode;
 };
 
 /**
@@ -225,8 +242,10 @@ export async function prepareCarePlan(input: CarePlanInput): Promise<PreparedChe
   const meta = getProductMeta(input.productId);
   if (!meta?.care) return { ok: false, error: "This product has no monthly plan.", status: 400 };
   const row = await getProduct(meta.id);
-  if (!row?.stripe_monthly_price_id || row.monthly_amount == null) {
-    return { ok: false, error: NOT_CONFIGURED, status: 503 };
+  const mode = input.mode ?? "live";
+  const monthlyPriceId = row ? productIds(row, mode).monthlyPriceId : null;
+  if (!row || !monthlyPriceId || row.monthly_amount == null) {
+    return { ok: false, error: mode === "test" ? TEST_NOT_SET_UP : NOT_CONFIGURED, status: 503 };
   }
 
   const purchasedAt = new Date(input.order?.paid_at ?? input.order?.created_at ?? Date.now());
@@ -245,7 +264,7 @@ export async function prepareCarePlan(input: CarePlanInput): Promise<PreparedChe
 
   const params: Stripe.Checkout.SessionCreateParams = {
     mode: "subscription",
-    line_items: [{ price: row.stripe_monthly_price_id, quantity: 1 }],
+    line_items: [{ price: monthlyPriceId, quantity: 1 }],
     ...(input.client.stripe_customer_id ? { customer: input.client.stripe_customer_id } : { customer_email: input.email }),
     client_reference_id: input.client.id,
     payment_method_collection: "always",
