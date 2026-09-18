@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import crypto from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { reportBooking } from "@/lib/meta-conversions";
 
 // HMAC verification needs the raw body, so this must run on Node.
 export const runtime = "nodejs";
@@ -116,6 +117,11 @@ export async function POST(req: NextRequest) {
     console.error("[cal webhook] insert error", err instanceof Error ? err.message : String(err));
     return NextResponse.json({ error: "Handler error." }, { status: 500 });
   }
+
+  // A new booking is a conversion worth reporting to Meta, if the booker
+  // accepted advertising cookies. reportBooking sends only once the browser
+  // has linked this booking to a consented ad context, and never throws.
+  if (row.status === "booked" && row.booking_uid) await reportBooking(row.booking_uid);
 
   return NextResponse.json({ received: true });
 }

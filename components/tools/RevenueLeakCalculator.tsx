@@ -14,6 +14,7 @@ import {
   type FollowUpBand,
 } from "@/lib/revenue-leak";
 import { getAttribution } from "@/lib/attribution";
+import { getMetaContextId, newEventId, trackMeta } from "@/lib/meta-pixel";
 
 type Status = "idle" | "loading" | "done" | "error";
 
@@ -94,6 +95,11 @@ export function RevenueLeakCalculator() {
     setMessage("");
     setFieldError(false);
 
+    // One id for this submission, used by the browser's Lead event and by the
+    // server's, so Meta counts it once. Null without advertising consent.
+    const metaContext = getMetaContextId();
+    const metaEventId = metaContext ? newEventId("lead") : null;
+
     try {
       const res = await fetch("/api/lead-magnet", {
         method: "POST",
@@ -108,6 +114,8 @@ export function RevenueLeakCalculator() {
           answers: normalized,
           path: typeof window !== "undefined" ? window.location.pathname : null,
           referrer: typeof document !== "undefined" ? document.referrer || null : null,
+          mctx: metaContext,
+          meta_event_id: metaEventId,
           ...utmFields(),
         }),
       });
@@ -119,6 +127,7 @@ export function RevenueLeakCalculator() {
       };
 
       if (res.ok && json.ok) {
+        if (metaEventId) trackMeta("Lead", { content_name: REVENUE_LEAK_SLUG }, metaEventId);
         if (json.result) setServerResult(json.result);
         setEmailed(Boolean(json.emailed));
         setStatus("done");

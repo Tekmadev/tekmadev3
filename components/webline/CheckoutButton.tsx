@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { attributionProps, getAttribution } from "@/lib/attribution";
 import { captureEvent } from "@/lib/analytics";
+import { getMetaContextId, trackMeta } from "@/lib/meta-pixel";
 
 const VARIANT = {
   primary: "bg-ink text-bg hover:bg-ink-2",
@@ -65,12 +66,17 @@ export function CheckoutButton({
     setLoading(true);
     setError(null);
     const attribution = attributionProps(getAttribution());
+    // With advertising consent, the ad context id travels into Stripe metadata
+    // so the webhook can report the purchase to Meta. Absent otherwise.
+    const mctx = getMetaContextId();
+    const checkoutAttribution = mctx ? { ...attribution, mctx } : attribution;
+    trackMeta("InitiateCheckout", { content_name: productId });
     captureEvent("begin_checkout", { product: productId, location, ...attribution });
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ product: productId, attribution }),
+        body: JSON.stringify({ product: productId, attribution: checkoutAttribution }),
       });
       const data: { url?: string; error?: string } = await res.json();
       if (data.url) {

@@ -3,6 +3,7 @@ import { Phone, Mail } from "lucide-react";
 import { business, footerColumns, footerCopy } from "@/config/site";
 import { CanadianBadge } from "@/components/CanadianBadge";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
+import { CookieSettingsButton } from "@/components/CookieSettingsButton";
 
 export function Footer() {
   return (
@@ -61,7 +62,8 @@ export function Footer() {
           <p>
             © {new Date().getFullYear()} {business.legalName}
           </p>
-          <div className="flex items-center gap-5">
+          <div className="flex flex-wrap items-center gap-5">
+            <CookieSettingsButton className="underline decoration-line-strong underline-offset-4 transition-colors hover:text-gold" />
             <p className="font-mono uppercase tracking-[0.18em]">{footerCopy.signoff}</p>
           </div>
         </div>

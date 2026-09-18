@@ -5,6 +5,7 @@ import { provisionClient } from "@/lib/client-provisioning";
 import { createNotification, getClientById, getClientByStripeCustomer, logActivity, updateClient } from "@/lib/clients-data";
 import { completeTaskByKey, getActiveOnboarding } from "@/lib/onboarding-data";
 import { getProductMeta } from "@/config/products";
+import { reportPurchase } from "@/lib/meta-conversions";
 import {
   getOrderByPaymentIntent,
   getOrderBySession,
@@ -91,6 +92,30 @@ async function handleOrderSession(stripe: Stripe, s: Stripe.Checkout.Session, st
 }
 
 /** Trial end or period end, whichever the subscription is in, as ISO. */
+/**
+ * A paid checkout is reported to Meta when the buyer accepted advertising
+ * cookies: `mctx` is only in the metadata if they did. Keyed on the session
+ * id, so a webhook retry or the async-payment event cannot count it twice.
+ * Never throws and never blocks the order handling that follows.
+ */
+async function reportPurchaseToMeta(s: Stripe.Checkout.Session): Promise<void> {
+  if (s.payment_status !== "paid" || !s.metadata?.mctx) return;
+  try {
+    await reportPurchase({
+      contextId: s.metadata.mctx,
+      sessionId: s.id,
+      email: s.customer_details?.email ?? s.customer_email ?? null,
+      name: s.customer_details?.name ?? null,
+      phone: s.customer_details?.phone ?? null,
+      amountTotal: s.amount_total ?? null,
+      currency: s.currency ?? null,
+      item: s.metadata.product ?? s.metadata.tier ?? null,
+    });
+  } catch (err) {
+    console.error("[stripe webhook] meta purchase report failed", err instanceof Error ? err.message : String(err));
+  }
+}
+
 function periodEndOf(sub: Stripe.Subscription): string | null {
   // current_period_end moved to the subscription item in recent API versions.
   const end = sub.status === "trialing" && sub.trial_end ? sub.trial_end : (sub.items?.data?.[0]?.current_period_end ?? null);
@@ -275,6 +300,7 @@ export async function POST(req: NextRequest) {
   try {
     if (event.type === "checkout.session.completed") {
       const s = event.data.object as Stripe.Checkout.Session;
+      await reportPurchaseToMeta(s);
 
       if (s.mode === "subscription" && s.metadata?.kind === "care") {
         await handleCareSession(stripe, s);
@@ -334,6 +360,7 @@ export async function POST(req: NextRequest) {
         }
       }
     } else if (event.type === "checkout.session.async_payment_succeeded") {
+      await reportPurchaseToMeta(event.data.object as Stripe.Checkout.Session);
       await handleOrderSession(stripe, event.data.object as Stripe.Checkout.Session, "paid");
     } else if (event.type === "checkout.session.async_payment_failed") {
       await handleOrderSession(stripe, event.data.object as Stripe.Checkout.Session, "failed");

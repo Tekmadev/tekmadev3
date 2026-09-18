@@ -6,6 +6,10 @@ import type { NextConfig } from "next";
  *  - PostHog (cookieless analytics: assets + ingest, US + EU hosts)
  *  - Vercel Analytics (same-origin /_vercel/insights + vitals host)
  *  - Stripe (checkout: js + iframe + form post) — preloaded for the pricing flow
+ *  - Meta Pixel (script from connect.facebook.net; events to www.facebook.com by
+ *    image, fetch, or a form posted into a hidden iframe, so it needs img-src,
+ *    connect-src, frame-src and form-action).
+ *    Allowed here, but only ever requested after cookie consent.
  * Fonts are self-hosted by next/font, so no Google Fonts host is needed.
  * 'unsafe-inline' is required for the pre-paint theme script, JSON-LD blocks,
  * Next.js hydration scripts, and Tailwind/Framer inline styles.
@@ -18,12 +22,16 @@ const csp = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
-  "script-src 'self' 'unsafe-inline' https://app.cal.com https://*.cal.com https://js.stripe.com https://us-assets.i.posthog.com https://us.i.posthog.com https://eu-assets.i.posthog.com https://eu.i.posthog.com",
+  "script-src 'self' 'unsafe-inline' https://app.cal.com https://*.cal.com https://js.stripe.com https://us-assets.i.posthog.com https://us.i.posthog.com https://eu-assets.i.posthog.com https://eu.i.posthog.com https://connect.facebook.net",
   // Supabase is allowed so the client portal can upload files straight to
   // Storage from the browser (signed upload URLs; never through our servers).
-  "connect-src 'self' https://*.cal.com https://us.i.posthog.com https://us-assets.i.posthog.com https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.posthog.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://*.supabase.co",
-  "frame-src 'self' https://*.cal.com https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com",
-  "form-action 'self' https://checkout.stripe.com",
+  "connect-src 'self' https://*.cal.com https://us.i.posthog.com https://us-assets.i.posthog.com https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.posthog.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://*.supabase.co https://www.facebook.com https://connect.facebook.net",
+  // www.facebook.com in frame-src and form-action is not optional for the
+  // pixel: it delivers events by posting a form into a hidden iframe, and with
+  // only script-src and connect-src allowed the script loads, the cookie is
+  // set, and every event is silently blocked.
+  "frame-src 'self' https://*.cal.com https://js.stripe.com https://checkout.stripe.com https://hooks.stripe.com https://www.facebook.com",
+  "form-action 'self' https://checkout.stripe.com https://www.facebook.com",
   "worker-src 'self' blob:",
   "upgrade-insecure-requests",
 ].join("; ");

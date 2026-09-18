@@ -83,7 +83,7 @@ export const privacyPolicy: LegalDoc = {
           type: "ul",
           items: [
             "Technical data: IP address, browser type, device identifiers, operating system, referring URL, pages viewed, session duration, approximate location derived from IP.",
-            "Cookies and similar technologies: see our Cookie Policy.",
+            "Cookies and similar technologies: see our Cookie Policy. If you accept advertising cookies, this includes advertising identifiers set by Meta (the _fbp and _fbc cookies).",
             "Call metadata: when the Growth System answers a call on behalf of a client, we may collect call duration, caller phone number, time of call, transcripts, and recordings if recording is enabled and disclosed by the client to its callers under applicable two-party consent rules.",
           ],
         },
@@ -117,6 +117,7 @@ export const privacyPolicy: LegalDoc = {
             "To bill, collect payment, and meet our tax and accounting obligations.",
             "To send service-related communications (system status, scheduled maintenance, billing notices).",
             "To send marketing communications about our services where you have given consent, subject to your right to withdraw at any time under the Canadian Anti-Spam Legislation (CASL).",
+            "To measure how our advertising performs and to show our ads to people likely to be interested in our services, only where you have accepted advertising cookies on our website.",
             "To detect, prevent, and respond to fraud, abuse, security incidents, and violations of our Terms of Service.",
             "To comply with legal obligations and to establish, exercise, or defend legal claims.",
           ],
@@ -135,6 +136,10 @@ export const privacyPolicy: LegalDoc = {
           type: "p",
           text: "You may withdraw consent at any time, subject to legal and contractual restrictions and reasonable notice. To withdraw consent, contact our Privacy Officer at the address in Section 16. Withdrawing consent may affect our ability to provide services to you.",
         },
+        {
+          type: "p",
+          text: "Advertising cookies are different: they are off by default and we ask before using them. When you first visit our website we ask whether you accept them, and declining takes one click, the same as accepting. Nothing is sent to an advertising platform unless you accept. You can change your choice at any time using the Cookie settings link at the bottom of every page, and refusing or withdrawing has no effect on your ability to use the website or our services.",
+        },
       ],
     },
     {
@@ -149,6 +154,7 @@ export const privacyPolicy: LegalDoc = {
           type: "ul",
           items: [
             "Service providers and sub-processors who help us deliver the Growth System (for example, our customer relationship and automation platform provider, Vercel and Cloudflare for hosting and content delivery, Cal.com for booking, payment processors for billing, and analytics or productivity vendors). A current list is available on request.",
+            "Meta Platforms, Inc. (Facebook and Instagram), for advertising measurement and delivery, and only if you have accepted advertising cookies. We share the pages you view and the actions you take on our website (such as requesting a report, booking a call, or starting a checkout), the Meta cookie values in your browser, your IP address and browser type, and, when you give us your contact details, your email address, phone number and name in hashed form (SHA-256, a one-way scramble that Meta can match only against accounts it already holds). Some of this is sent from your browser and some from our server. Meta handles this information under its own terms and privacy policy and may combine it with information it already has about you. If you decline advertising cookies, we send Meta nothing about you.",
             "Professional advisors (lawyers, accountants, auditors) under duties of confidentiality.",
             "Government, regulatory, or law enforcement authorities where we are legally required, or to protect our rights, property, or safety, or those of our clients or the public.",
             "Successors or assignees in connection with a merger, acquisition, financing, reorganization, or sale of all or part of our business. We will use commercially reasonable efforts to require the recipient to honour this Privacy Policy.",
@@ -185,6 +191,7 @@ export const privacyPolicy: LegalDoc = {
             "Active client account data: for the duration of the engagement plus 7 years to meet tax and limitation period requirements.",
             "Call recordings and transcripts processed on behalf of a client: for the period the client instructs us to retain them, then deleted on termination of the engagement.",
             "Marketing consent records and unsubscribe records: as required by CASL.",
+            "Advertising context records (the Meta cookie values, IP address and browser type of a visitor who accepted advertising cookies): 90 days.",
             "Security and audit logs: typically 12 months.",
           ],
         },
@@ -273,7 +280,7 @@ export const privacyPolicy: LegalDoc = {
       blocks: [
         {
           type: "p",
-          text: "Our public website does not set non-essential or tracking cookies, and we use only cookieless, aggregate analytics. See our Cookie Policy at /cookies for the full details, including the strictly necessary cookies used in our admin area and the embedded Cal.com booking widget.",
+          text: "Our website measures traffic with cookieless, aggregate analytics that do not identify you and need no consent. Separately, and only if you accept advertising cookies in the banner shown on your first visit, we use the Meta Pixel and the Meta Conversions API to measure and deliver our advertising, as described in Section 5. Advertising cookies are off until you accept, and you can change your choice at any time using the Cookie settings link at the bottom of every page. See our Cookie Policy at /cookies for the full details, including the specific cookies, the strictly necessary cookies used in our admin area, and the embedded Cal.com booking widget.",
         },
       ],
     },
@@ -739,7 +746,7 @@ export const cookiePolicy: LegalDoc = {
         },
         {
           type: "p",
-          text: "A small number of strictly necessary cookies are used only in our secure admin dashboard to keep an authenticated session. They are not set for visitors to the public website and do not require consent.",
+          text: "A small number of strictly necessary cookies are used only in our secure admin dashboard and client portal to keep an authenticated session. They are not set for visitors to the public website and do not require consent. We also remember your cookie choice in your browser's local storage, so that we do not ask you again on every visit.",
         },
         {
           type: "h3",
@@ -747,7 +754,23 @@ export const cookiePolicy: LegalDoc = {
         },
         {
           type: "p",
-          text: "We measure aggregate traffic with Vercel Web Analytics, which runs without cookies and does not identify you. We do not use any cookie-based analytics, advertising pixels, or cross-site tracking on this website.",
+          text: "We measure aggregate traffic with Vercel Web Analytics and our own first-party page counter. Both run without cookies, do not identify you, and build no profile of you. Because they place nothing on your device, they run whatever you choose in the cookie banner.",
+        },
+        {
+          type: "h3",
+          text: "Advertising (only if you accept)",
+        },
+        {
+          type: "p",
+          text: "If you accept advertising cookies, we load the Meta Pixel, a tool from Meta Platforms, Inc., the company behind Facebook and Instagram. It sets two cookies: _fbp, which identifies your browser to Meta, and _fbc, which is set if you arrived by clicking one of our Meta ads and records that click. Each lasts up to 90 days. The pixel tells Meta which pages you view and when you take an action such as requesting a report, booking a call, or starting a checkout. We use this to measure how our ads perform and to show them to people likely to be interested, including on Facebook and Instagram. Meta may combine it with information it already holds about you.",
+        },
+        {
+          type: "p",
+          text: "With the same consent, we also report those actions to Meta from our own server, using the Meta Conversions API, because browser tools miss some of them. That report can include the two Meta cookie values above, your IP address and browser type, and, where you have given us your contact details, your email address, phone number and name in hashed form (SHA-256, a one-way scramble). To make this possible we keep a record of those cookie values, your IP address and your browser type for 90 days.",
+        },
+        {
+          type: "p",
+          text: "If you decline, the Meta Pixel is never loaded, no Meta cookie is set, and we send Meta nothing about you, from your browser or from our server.",
         },
         {
           type: "h3",
@@ -755,7 +778,7 @@ export const cookiePolicy: LegalDoc = {
         },
         {
           type: "p",
-          text: "We store your theme preference and basic first-party marketing attribution (for example, the link or campaign that brought you here) in your browser's local storage. This is not a cookie, contains no personal information, and is never shared with third parties.",
+          text: "We store your theme preference, your cookie choice, and basic first-party marketing attribution (for example, the link or campaign that brought you here) in your browser's local storage. This is not a cookie, contains no personal information, and is never shared with third parties. If you accept advertising cookies, we also keep a random reference number in your browser for the length of your visit, so that a booking or purchase can be matched to the advertising record described above.",
         },
         {
           type: "h3",
@@ -773,7 +796,15 @@ export const cookiePolicy: LegalDoc = {
       blocks: [
         {
           type: "p",
-          text: "Because we do not set non-essential or tracking cookies on the public website, we do not show a cookie consent banner; there is nothing to opt in or out of for our own analytics.",
+          text: "When you first visit, we ask whether you accept advertising cookies. They are off until you say yes, and declining takes one click, the same as accepting. The website works exactly the same either way.",
+        },
+        {
+          type: "p",
+          text: "You can change your mind at any time using the Cookie settings link at the bottom of every page. If you withdraw consent, we stop reporting to Meta and remove the Meta cookies from your browser. If your browser sends a Global Privacy Control signal, we treat that as a refusal and do not show the banner; you can still opt in from Cookie settings.",
+        },
+        {
+          type: "p",
+          text: "You can also control how Meta uses information from other websites, and the ads you see, in the ad settings of your Facebook or Instagram account.",
         },
         {
           type: "p",

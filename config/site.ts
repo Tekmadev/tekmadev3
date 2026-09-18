@@ -75,7 +75,7 @@ export const business = {
   },
   legalDates: {
     effective: "2026-05-16",
-    lastUpdated: "2026-09-17",
+    lastUpdated: "2026-09-18",
   },
   phone: {
     tel: _phoneTel,
@@ -434,6 +434,30 @@ export const navLinks = [
   { href: "/guides", label: "Guides" },
   { href: "/#faq", label: "FAQ" },
 ];
+
+/**
+ * Advertising measurement. The pixel id is public (it is in the page source of
+ * any site that uses one); the Conversions API token is not, and lives only in
+ * META_CAPI_ACCESS_TOKEN. Nothing here runs without the visitor's consent:
+ * see lib/consent.ts.
+ */
+export const tracking = {
+  metaPixelId: process.env.NEXT_PUBLIC_META_PIXEL_ID || "1636634394735845",
+  /** The pixel fires on the live marketing site only, never the portal, a preview or localhost. */
+  metaHosts: ["tekmadev.com", "www.tekmadev.com"],
+  /** Set NEXT_PUBLIC_META_PIXEL_DEBUG=1 to let it run on localhost while testing. */
+  metaDebug: process.env.NEXT_PUBLIC_META_PIXEL_DEBUG === "1",
+};
+
+/** The cookie banner. Accept and Decline carry equal weight by design. */
+export const consentCopy = {
+  title: "Cookies for our ads, if you are okay with it",
+  body: "The site works the same either way. If you accept, we use a Meta cookie to measure our ads and show them to people like you. Nothing loads until you choose.",
+  policyLabel: "Cookie Policy",
+  accept: "Accept",
+  decline: "Decline",
+  settingsLabel: "Cookie settings",
+};
 
 /**
  * The client login entry in the nav. It sits apart from the page links because

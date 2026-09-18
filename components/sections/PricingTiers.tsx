@@ -9,6 +9,7 @@ import { PROMO } from "@/config/pricing";
 import type { DisplayTier } from "@/lib/pricing-data";
 import { attributionProps, getAttribution } from "@/lib/attribution";
 import { captureEvent } from "@/lib/analytics";
+import { getMetaContextId, trackMeta } from "@/lib/meta-pixel";
 
 function money(cents: number, currency: string) {
   return new Intl.NumberFormat("en-CA", {
@@ -54,13 +55,18 @@ export function PricingTiers({
     setBanner(null);
 
     const attribution = attributionProps(getAttribution());
+    // With advertising consent, the ad context id travels into Stripe metadata
+    // so the webhook can report the purchase to Meta. Absent otherwise.
+    const mctx = getMetaContextId();
+    const checkoutAttribution = mctx ? { ...attribution, mctx } : attribution;
+    trackMeta("InitiateCheckout", { content_name: tier.id });
     captureEvent("begin_checkout", { tier: tier.id, ...attribution });
 
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tier: tier.id, attribution, deal }),
+        body: JSON.stringify({ tier: tier.id, attribution: checkoutAttribution, deal }),
       });
       const data: { url?: string; error?: string } = await res.json();
       if (data.url) {

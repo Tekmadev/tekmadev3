@@ -3,13 +3,17 @@
 import { usePathname } from "next/navigation";
 import { AttributionTracker } from "@/components/AttributionTracker";
 import { PageviewTracker } from "@/components/PageviewTracker";
+import { ConsentBanner } from "@/components/ConsentBanner";
+import { MetaPixel } from "@/components/MetaPixel";
 
 /**
- * Marketing-site chrome (first-party attribution + cookieless pageview
- * tracking). Both are cookieless, so there is no cookie consent banner. If a
- * cookie-setting analytics tool (e.g. PostHog) is ever added back, a consent
- * mechanism must be reintroduced first. The admin app is a private tool, so
- * none of this runs or renders there.
+ * Marketing-site chrome.
+ *
+ * Attribution and the pageview counter are first-party and cookieless, so
+ * they run for everyone. The Meta Pixel sets cookies and reports to Meta, so
+ * it sits behind the consent banner and loads only after a yes. Any other
+ * cookie-setting tool added later belongs behind the same banner. The admin
+ * and the portal are private tools, so none of this runs or renders there.
  */
 export function PublicChrome() {
   const pathname = usePathname();
@@ -19,6 +23,8 @@ export function PublicChrome() {
     <>
       <AttributionTracker />
       <PageviewTracker />
+      <MetaPixel />
+      <ConsentBanner />
     </>
   );
 }

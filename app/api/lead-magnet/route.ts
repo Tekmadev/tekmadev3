@@ -8,6 +8,7 @@ import { sendMail } from "@/lib/mail/send";
 import { addSubscriber, normalizeEmail } from "@/lib/subscribers-data";
 import { pushLeadMagnetToGHL } from "@/lib/ghl";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { reportLead } from "@/lib/meta-conversions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -156,6 +157,17 @@ export async function POST(req: NextRequest) {
       });
       return sendMail({ to: email, subject: mail.subject, html: mail.html, tags: mail.tags });
     })(),
+    // Skipped unless the visitor accepted advertising cookies: `mctx` only
+    // exists after consent, and reportLead sends nothing without it.
+    reportLead({
+      contextId: body.mctx,
+      eventId: str(body.meta_event_id, 80),
+      email,
+      name,
+      phone,
+      sourceUrl: attribution.path ? `${business.url}${attribution.path}` : null,
+      magnet: magnet.slug,
+    }),
   ]);
 
   await markLeadMagnetDelivery(stored.id, { ghlSynced: ghlOk, emailed: mailResult.ok });

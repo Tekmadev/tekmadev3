@@ -1,5 +1,8 @@
 /**
  * First-party traffic attribution. No third-party tool, no cookies, no PII.
+ * This module stays that way: it runs for every visitor and needs no consent.
+ * Reporting conversions to Meta is separate, consent-gated, and lives in
+ * lib/meta-pixel.ts (browser) and lib/meta-capi.ts (server).
  *
  * How it works:
  *  - On first landing we read UTM params + ad click ids from the URL and the

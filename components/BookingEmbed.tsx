@@ -5,6 +5,8 @@ import Cal, { getCalApi } from "@calcom/embed-react";
 import { business, theme, themeDark } from "@/config/site";
 import { attributionProps, getAttribution } from "@/lib/attribution";
 import { captureEvent } from "@/lib/analytics";
+import { getMetaContextId, trackMeta } from "@/lib/meta-pixel";
+import { scheduleEventId } from "@/lib/meta-events";
 
 type Theme = "light" | "dark";
 
@@ -60,16 +62,30 @@ export function BookingEmbed() {
     })();
   }, [calTheme]);
 
-  // Stamp every completed booking with its traffic source (Vercel Analytics event).
+  // Stamp every completed booking with its traffic source (Vercel Analytics
+  // event). With advertising consent, also tell Meta, and tell our server
+  // which ad context this booking belongs to so the Cal webhook can report the
+  // same conversion with the booker's details. Both share the booking uid as
+  // the event id, so Meta counts it once.
   useEffect(() => {
     let active = true;
     (async () => {
       const cal = await getCalApi({ namespace: business.booking.namespace });
       if (!active) return;
       cal("on", {
-        action: "bookingSuccessful",
-        callback: () => {
+        action: "bookingSuccessfulV2",
+        callback: (e) => {
           captureEvent("booking", attributionProps(getAttribution()));
+          const uid = e.detail.data.uid;
+          const ctx = getMetaContextId();
+          if (!uid || !ctx) return;
+          trackMeta("Schedule", { content_name: "audit_call" }, scheduleEventId(uid));
+          void fetch("/api/meta/booking", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ uid, ctx }),
+            keepalive: true,
+          }).catch(() => undefined);
         },
       });
     })();
