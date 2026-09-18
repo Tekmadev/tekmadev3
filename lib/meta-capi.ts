@@ -55,6 +55,22 @@ export function metaConfigured(): boolean {
   return Boolean(tracking.metaPixelId && process.env.META_CAPI_ACCESS_TOKEN);
 }
 
+/** Record a conversion we had consent for but could not report, and why. */
+async function logSkipped(event: MetaServerEvent, eventId: string, contextId: string, reason: string): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return;
+  const { error } = await supabase.from("ad_conversion_events").insert({
+    platform: "meta",
+    event_name: event,
+    event_id: eventId,
+    context_id: contextId,
+    status: "skipped",
+    response: { skipped: reason },
+  });
+  // 23505 is the unique index: this conversion already has a row, which stands.
+  if (error && error.code !== "23505") console.error("[meta capi] skip log failed", error.message);
+}
+
 export async function sendMetaEvent(input: {
   event: MetaServerEvent;
   /** Must equal the eventID the browser pixel used for the same conversion, if it fired one. */
@@ -69,7 +85,14 @@ export async function sendMetaEvent(input: {
 }): Promise<MetaSendResult> {
   // No context means no consent. This is the gate, not a missing-data fallback.
   if (!input.context) return { status: "skipped", reason: "no_consent_context" };
-  if (!metaConfigured()) return { status: "skipped", reason: "not_configured" };
+  if (!metaConfigured()) {
+    // There is consent and a conversion, but no token to report it with. Put
+    // that in the log. A silent return here looks exactly like "the visitor
+    // did not consent", which is the one confusion the log exists to settle.
+    // It does not block a later send: only a `sent` row stops a retry.
+    await logSkipped(input.event, input.eventId, input.context.id, "not_configured");
+    return { status: "skipped", reason: "not_configured" };
+  }
 
   const ctx = input.context;
   const user_data: Record<string, unknown> = {
@@ -164,9 +187,19 @@ export async function sendMetaEvent(input: {
   }
 
   if (supabase && logId) {
+    // The row may be one reused from an earlier skip or failure, so write the
+    // facts of this attempt, not just its outcome.
     await supabase
       .from("ad_conversion_events")
-      .update({ status: ok ? "sent" : "failed", http_status: httpStatus, response })
+      .update({
+        status: ok ? "sent" : "failed",
+        http_status: httpStatus,
+        response,
+        matched_on: matchedOn,
+        value: input.value ?? null,
+        currency: input.currency ?? null,
+        is_test: Boolean(testCode),
+      })
       .eq("id", logId);
   }
 
