@@ -1,4 +1,5 @@
 import { business, brand, canadian, proofWins, systemSteps, faqs } from "@/config/site";
+import { CASE_STUDIES_PATH, publishedCaseStudies } from "@/config/case-studies";
 import { getDisplayProduct } from "@/lib/products-data";
 import { formatMoney } from "@/lib/money";
 
@@ -82,6 +83,16 @@ ${proofWins
       `- ${w.company} (${w.industry}): ${w.prefix ?? ""}${w.metric}${w.suffix} ${w.framing.toLowerCase()}. Before: ${w.before}. After: ${w.after}. ${w.note}.`,
   )
   .join("\n")}
+
+## Case studies
+
+${publishedCaseStudies()
+  .map(
+    (c) =>
+      `- ${c.client} (${c.industry}, ${c.location}): ${c.summary} Full case study: ${business.url}${CASE_STUDIES_PATH}/${c.slug}`,
+  )
+  .join("\n")}
+- All case studies: ${business.url}${CASE_STUDIES_PATH}
 
 ## Free tools
 

@@ -3,6 +3,7 @@ import { business } from "@/config/site";
 import { guideSlugs } from "@/lib/content";
 import { getPublishedPostSlugs } from "@/lib/blog-data";
 import { publishedLeadMagnets } from "@/config/lead-magnets";
+import { CASE_STUDIES_PATH, publishedCaseStudies } from "@/config/case-studies";
 
 const SITE_URL = business.url;
 
@@ -36,6 +37,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "monthly" as const,
       priority: 0.7,
+    })),
+    {
+      url: `${SITE_URL}${CASE_STUDIES_PATH}`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    ...publishedCaseStudies().map((c) => ({
+      url: `${SITE_URL}${CASE_STUDIES_PATH}/${c.slug}`,
+      lastModified: new Date(c.dateModified),
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
     })),
     {
       url: `${SITE_URL}/guides`,

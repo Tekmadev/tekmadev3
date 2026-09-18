@@ -1,5 +1,6 @@
 import { business, brand, faqs, systemSteps } from "@/config/site";
 import { GUIDE_PUBLISHED, type Guide } from "@/lib/content";
+import type { CaseStudy } from "@/config/case-studies";
 import type { BlogPostWithRefs } from "@/lib/blog-data";
 
 export const SITE_URL = business.url;
@@ -273,6 +274,47 @@ export function guideArticleJsonLd(guide: Guide, path: string) {
     datePublished: GUIDE_PUBLISHED,
     dateModified: GUIDE_PUBLISHED,
     mainEntityOfPage: `${SITE_URL}${path}`,
+  };
+}
+
+// ---- Case study schema ----
+
+/**
+ * An Article about the client (a LocalBusiness with its own url and city), by
+ * the founder, published by us. The share image is the route's own
+ * opengraph-image, and each cited survey is listed as a citation so the
+ * numbers in the text have a visible origin.
+ */
+export function caseStudyJsonLd(study: CaseStudy, path: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "@id": `${SITE_URL}${path}#article`,
+    headline: `${study.h1} ${study.h1Accent}`,
+    description: study.metaDescription,
+    inLanguage: "en-US",
+    isPartOf: { "@id": `${SITE_URL}#website` },
+    about: {
+      "@type": study.about.types,
+      name: study.about.name,
+      url: study.about.url,
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: study.about.locality,
+        addressRegion: study.about.region,
+        addressCountry: study.about.country,
+      },
+    },
+    mentions: { "@id": `${SITE_URL}#service` },
+    author: { "@id": `${SITE_URL}#founder` },
+    publisher: { "@id": `${SITE_URL}#organization` },
+    datePublished: study.datePublished,
+    dateModified: study.dateModified,
+    mainEntityOfPage: `${SITE_URL}${path}`,
+    image: [`${SITE_URL}${path}/opengraph-image`],
+    ...(study.stats.length
+      ? { citation: study.stats.map((s) => ({ "@type": "CreativeWork", name: s.source, url: s.sourceUrl })) }
+      : {}),
   };
 }
 

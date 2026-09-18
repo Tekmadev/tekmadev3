@@ -451,6 +451,7 @@ export const footerColumns = [
     items: [
       { label: "The System", href: "/#system" },
       { label: "Proof", href: "/#proof" },
+      { label: "Case studies", href: "/case-studies" },
       { label: "Pricing", href: "/#pricing" },
       { label: "Webline for startups", href: "/webline" },
       { label: "Free tools", href: "/tools" },

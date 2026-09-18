@@ -8,8 +8,13 @@ import {
   useMotionValueEvent,
   type MotionValue,
 } from "motion/react";
+import { ArrowRight } from "lucide-react";
 import { Section, Eyebrow } from "@/components/Section";
 import { proofWins as wins, aggregateStats, type ProofWin as Win } from "@/config/site";
+import { CASE_STUDIES_PATH, publishedCaseStudies } from "@/config/case-studies";
+
+/** The newest full write-up gets a band under the cards. */
+const featured = publishedCaseStudies()[0];
 
 export function Proof() {
   const ref = useRef<HTMLDivElement>(null);
@@ -39,6 +44,32 @@ export function Proof() {
             <Card key={w.company} win={w} progress={scrollYProgress} index={i} />
           ))}
         </div>
+
+        {featured && (
+          <a
+            href={`${CASE_STUDIES_PATH}/${featured.slug}`}
+            className="group mt-6 flex flex-col gap-8 rounded-3xl border border-line bg-surface p-8 transition-colors hover:border-gold/60 sm:p-10 lg:flex-row lg:items-center lg:justify-between"
+          >
+            <div className="max-w-2xl">
+              <p className="eyebrow">
+                Case study · {featured.industry} · {featured.location}
+              </p>
+              <p className="display-m mt-4 text-balance text-2xl text-ink sm:text-3xl">{featured.card.title}</p>
+              <p className="mt-3 text-base leading-relaxed text-ink-3">{featured.card.blurb}</p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {featured.card.highlights.map((h) => (
+                  <span key={h} className="rounded-full border border-line-strong bg-bg-2 px-2.5 py-0.5 text-xs text-ink-3">
+                    {h}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <span className="inline-flex shrink-0 items-center gap-2 self-start rounded-full border border-line-strong px-5 py-3 text-sm font-medium text-ink transition-colors group-hover:border-gold group-hover:text-gold lg:self-auto">
+              Read the case study
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </span>
+          </a>
+        )}
 
         <div className="mt-16 grid grid-cols-2 gap-x-8 gap-y-10 border-t border-line pt-10 md:grid-cols-4">
           {aggregateStats.map((s) => (
