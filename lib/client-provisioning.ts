@@ -31,6 +31,9 @@ import {
   type OnboardingTask,
 } from "@/lib/onboarding-data";
 import { portalUrl } from "@/lib/portal-host";
+import { getDisplayProduct } from "@/lib/products-data";
+import { formatMoney } from "@/lib/money";
+import { weblineWelcomeEmail, type WelcomeEmail } from "@/lib/mail/welcome";
 
 /**
  * Turns a paid checkout (or an admin's "add client") into a working portal
@@ -223,10 +226,40 @@ export async function provisionClient(input: ProvisionInput): Promise<ProvisionR
   }
 
   if (createdOnboarding) {
+    // A Webline buyer is welcomed by email now, at the moment of purchase. This
+    // branch runs once per new onboarding, so a retried Stripe webhook cannot
+    // send it twice. Skipped when an admin adds an offline client without an
+    // invite. If building or sending it fails, nothing else here is affected,
+    // and the first-sign-in welcome still goes out as the fallback, because
+    // that one is only held back when this one is logged as sent.
+    let welcome: WelcomeEmail | null = null;
+    if (shouldInvite && product?.id === "webline") {
+      try {
+        const display = await getDisplayProduct(product.id);
+        welcome = weblineWelcomeEmail({
+          businessName: client.business_name,
+          firstName: (input.name || "").trim().split(/\s+/)[0] || null,
+          liveInDays: product.onboarding.targetLiveDays,
+          access: member.status !== "invited" ? "signed_in" : invite?.ok ? "invited" : "self_serve",
+          care:
+            product.care && display?.monthly
+              ? {
+                  name: product.care.name,
+                  monthly: formatMoney(display.monthly.amount, display.currency),
+                  trialDays: display.monthly.trialDays,
+                }
+              : null,
+        });
+      } catch (err) {
+        console.error("[provision] webline welcome not built", err instanceof Error ? err.message : String(err));
+      }
+    }
+
     await createNotification({
       client_id: client.id,
       member_id: member.id,
       template_key: "welcome",
+      ...(welcome ? { email: { to: email, subject: welcome.subject, html: welcome.html, tags: welcome.tags } } : {}),
       subject: `Welcome to Tekmadev, ${client.business_name}`,
       body: hasKickoff
         ? "Your onboarding has started. Two quick things to do today: accept your agreement and book your kickoff call."

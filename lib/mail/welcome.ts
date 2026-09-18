@@ -105,3 +105,72 @@ export function clientWelcomeEmail(opts: {
     }),
   };
 }
+
+/**
+ * Someone who just bought Webline. Unlike the two above, this one goes out at
+ * the moment of purchase, not at first sign-in: a person who has just paid
+ * should hear from us before they have done anything. That means the portal
+ * link may not work for them yet, so the first step is how to get in.
+ *
+ * The steps mirror the Webline checklist in the portal. If that checklist
+ * changes (onboarding_task_templates), change this with it. The care plan's
+ * price and first-charge delay are passed in from the products table, never
+ * written here, because both are editable in the admin.
+ */
+export function weblineWelcomeEmail(opts: {
+  businessName: string;
+  firstName?: string | null;
+  liveInDays: number;
+  /**
+   * How they reach the portal: `invited` got a separate set-password email,
+   * `self_serve` did not (or it failed) and uses the reset link, `signed_in`
+   * bought from inside the portal and is already there.
+   */
+  access: "invited" | "self_serve" | "signed_in";
+  care: { name: string; monthly: string; trialDays: number } | null;
+}): WelcomeEmail {
+  const resetRoute = 'open the portal, choose "Forgot password, or never set one?" and enter this email address';
+  const getIn =
+    opts.access === "signed_in"
+      ? "You are already signed in, so your checklist is waiting for you now."
+      : opts.access === "invited"
+        ? `We just sent a separate email with a secure link to set your password. If it does not show up, ${resetRoute}.`
+        : `To set your password, ${resetRoute}. You will get a secure link within a minute.`;
+
+  const steps = [
+    { title: "Get into your portal", body: getIn },
+    {
+      title: "This week: the four things we build from",
+      body: "Accept your agreement, tell us about your business, upload your logo and photos, and give us access to your domain. Each one is a short step in the portal. We start designing the moment they land, so the sooner they arrive, the sooner you launch.",
+    },
+    ...(opts.care
+      ? [
+          {
+            title: `Set up ${opts.care.name}`,
+            body: `This one is required. ${opts.care.name} is the hosting and maintenance that keeps your site online, secure and backed up, at ${opts.care.monthly} a month. You add a card in the portal and nothing is charged today: the first charge is ${opts.care.trialDays} days from now, and you can cancel anytime. Your site goes live once it is set up.`,
+          },
+        ]
+      : []),
+    {
+      title: "Approve the design, then the site",
+      body: "We send your homepage design for approval within the first week, with one round of revisions included. Then we build the rest, and you approve the finished site before anything goes live. The copy, the SEO, GEO and AEO foundation, the launch on your domain, and submitting you to Google and Bing are all on us.",
+    },
+  ];
+
+  return {
+    subject: "Your Webline site is underway: what happens next",
+    tags: [{ name: "template", value: "welcome-webline" }],
+    html: renderMail({
+      preheader: `Payment received. A few things we need from you this week, and your site is live in ${opts.liveInDays} days.`,
+      heading: opts.firstName ? `${opts.firstName}, your site is underway` : "Your site is underway",
+      paragraphs: [
+        `Thank you for choosing Webline. Your payment is confirmed and the build for ${opts.businessName} has started. The plan from here is simple: you give us what we need this week, we design and build, and your site is live in ${opts.liveInDays} days.`,
+        "Everything below lives in your client portal, with dates, so you never have to guess what is next.",
+      ],
+      steps,
+      cta: { label: "Open your portal", url: portalUrl("/onboarding") },
+      note: `Want to talk it through first? There is an optional 20-minute design brief you can book from the portal. Or reply to this email, or call ${business.phone.display}. A human answers.`,
+      footerNote: `You are receiving this because you purchased Webline for ${opts.businessName}.`,
+    }),
+  };
+}

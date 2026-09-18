@@ -391,6 +391,11 @@ export async function activateMembershipsForUser(userId: string, email: string |
       // its "open your onboarding" link) is safe to send now and not before.
       const to = (email || m.email || "").trim().toLowerCase();
       if (to) {
+        // A product buyer was already welcomed by email when they paid, with
+        // the steps for what they bought. Sending the general welcome now
+        // would be a second one that says different things. Held back only if
+        // that earlier email to this same address is logged as sent.
+        const alreadyWelcomed = await welcomedAtPurchase(m.client_id, to);
         const mail = clientWelcomeEmail({
           businessName: m.client.business_name,
           firstName: (name || m.name || "").split(" ")[0] || null,
@@ -404,12 +409,27 @@ export async function activateMembershipsForUser(userId: string, email: string |
           subject: mail.subject,
           body: "Your portal is open. Your checklist and everything we need from you is inside.",
           action_url: "/onboarding",
-          email: { to, html: mail.html, tags: mail.tags },
+          ...(alreadyWelcomed ? {} : { email: { to, html: mail.html, tags: mail.tags } }),
         });
       }
     }
   }
   return memberships;
+}
+
+/** True when the purchase-time welcome (template "welcome") reached this address. */
+export async function welcomedAtPurchase(clientId: string, to: string): Promise<boolean> {
+  const { data, error } = await db()
+    .from("client_notifications")
+    .select("id")
+    .eq("client_id", clientId)
+    .eq("channel", "email")
+    .eq("template_key", "welcome")
+    .eq("status", "sent")
+    .eq("metadata->>to", to)
+    .limit(1);
+  if (error) console.error("[client_notifications] welcome lookup failed", error.message);
+  return Boolean(data?.length);
 }
 
 export async function upsertMember(input: {
