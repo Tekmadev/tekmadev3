@@ -22,10 +22,10 @@ const csp = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
-  "script-src 'self' 'unsafe-inline' https://app.cal.com https://*.cal.com https://js.stripe.com https://us-assets.i.posthog.com https://us.i.posthog.com https://eu-assets.i.posthog.com https://eu.i.posthog.com https://connect.facebook.net",
+  "script-src 'self' 'unsafe-inline' https://app.cal.com https://*.cal.com https://js.stripe.com https://connect.facebook.net",
   // Supabase is allowed so the client portal can upload files straight to
   // Storage from the browser (signed upload URLs; never through our servers).
-  "connect-src 'self' https://*.cal.com https://us.i.posthog.com https://us-assets.i.posthog.com https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.posthog.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://*.supabase.co https://www.facebook.com https://connect.facebook.net",
+  "connect-src 'self' https://*.cal.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://*.supabase.co https://www.facebook.com https://connect.facebook.net",
   // www.facebook.com in frame-src and form-action is not optional for the
   // pixel: it delivers events by posting a form into a hidden iframe, and with
   // only script-src and connect-src allowed the script loads, the cookie is

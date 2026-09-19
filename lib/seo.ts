@@ -119,13 +119,11 @@ export const serviceJsonLd = {
       { "@type": "Offer", itemOffered: { "@type": "Service", name: "Live ops and optimization" } },
     ],
   },
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: String(brand.rating.value),
-    reviewCount: String(brand.rating.reviews),
-    bestRating: "5",
-    worstRating: "1",
-  },
+  // No aggregateRating here, on purpose. This used to claim 4.9 stars from 40
+  // reviews that do not exist anywhere. Google requires review markup to match
+  // reviews a visitor can read on the page, ignores self-serving ratings on a
+  // business's own site, and can issue a manual action for invented ones. Add
+  // it back only with real, visible, attributable reviews behind it.
 };
 
 export const offerJsonLd = {

@@ -153,7 +153,6 @@ export const brand = {
     "If the system stops booking, we stop billing.",
     "Cancel any month. No long-term contract.",
   ],
-  rating: { value: 4.9, reviews: 40 },
 };
 
 /**
