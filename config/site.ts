@@ -519,3 +519,63 @@ export const newsletterCopy = {
   disclaimer:
     "Join for the growth playbook. We never share your email, and you can unsubscribe in one click.",
 };
+
+/**
+ * The unsubscribe page, reached from the link in a newsletter.
+ *
+ * The first screen is allowed to make the case for staying: it reminds people
+ * what they get for free. It is never allowed to get in the way. Both buttons
+ * are the same size, leaving takes one click, and nothing here shames the
+ * person for going. CASL requires an unsubscribe that is "readily performed",
+ * so keep it that way when editing. `{email}` is swapped for the masked address.
+ */
+export const unsubscribeCopy = {
+  eyebrow: "The Growth Memo",
+  confirm: {
+    title: "You're about to switch off the free part.",
+    lead: "Clients pay us to install these plays. You get them for nothing: what is working right now to win more leads, follow up faster, and grow a business like yours.",
+    points: [
+      "The same growth plays we build for paying clients",
+      "Business knowledge you can put to work the same week",
+      "One or two emails a month. Never spam.",
+    ],
+    nudge:
+      "We put real work into every memo and never ask for a cent. If it still isn't for you, no hard feelings. One click below and you're out.",
+    stay: "Keep my free growth plays",
+    leave: "Unsubscribe me",
+    address: "This will unsubscribe {email}",
+  },
+  stay: {
+    title: "Good call.",
+    body: "You're still on the list. The next Growth Memo comes straight to your inbox, free as always.",
+  },
+  done: {
+    title: "You're unsubscribed.",
+    body: "We took {email} off the Growth Memo. You won't get any more marketing emails from us.",
+    reasonPrompt: "Mind telling us why? It's optional, and it helps.",
+    reasonThanks: "Thanks. That helps us make the memo better.",
+    mistake: "Unsubscribed by mistake?",
+    resubscribe: "Put me back on the list",
+  },
+  back: {
+    title: "Welcome back.",
+    body: "You're on the Growth Memo again. Same deal as before: free, useful, and one click to leave.",
+  },
+  invalid: {
+    title: "Link not recognized",
+    body: "This unsubscribe link is invalid or has expired. If you keep getting emails, reply to any of them and we'll remove you.",
+    cta: "Email us to unsubscribe",
+  },
+  error: {
+    title: "Something went wrong",
+    body: "We couldn't process that just now. Please try again in a moment.",
+  },
+  home: "Back to tekmadev.com",
+  /** Keys are stored in subscribers.unsubscribe_reason. Add freely, never rename. */
+  reasons: [
+    { key: "too_many", label: "Too many emails" },
+    { key: "not_relevant", label: "Not relevant to me" },
+    { key: "never_signed_up", label: "I never signed up" },
+    { key: "other", label: "Something else" },
+  ],
+} as const;

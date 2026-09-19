@@ -25,6 +25,8 @@ export type MailInput = {
   replyTo?: string;
   /** Resend tags for filtering in their dashboard. Values must be ASCII letters, numbers, _ or -. */
   tags?: { name: string; value: string }[];
+  /** Extra mail headers, e.g. List-Unsubscribe on anything that is marketing. */
+  headers?: Record<string, string>;
 };
 
 /** The From header. Its domain must be verified in Resend before anything sends. */
@@ -77,6 +79,7 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
       text: input.text ?? toPlainText(input.html),
       replyTo: input.replyTo ?? business.email,
       ...(input.tags?.length ? { tags: input.tags } : {}),
+      ...(input.headers ? { headers: input.headers } : {}),
     });
 
     if (error) {

@@ -88,8 +88,10 @@ export async function unsubscribeSubscriberAction(formData: FormData) {
   const now = new Date().toISOString();
   const { error } = await supabase
     .from("subscribers")
-    .update({ status: "unsubscribed", unsubscribed_at: now, updated_at: now })
-    .eq("id", id);
+    .update({ status: "unsubscribed", status_source: "admin", unsubscribed_at: now, updated_at: now })
+    .eq("id", id)
+    // Already unsubscribed rows are left alone, so their history keeps the real source.
+    .neq("status", "unsubscribed");
   if (error) {
     console.error("[email] unsubscribe failed", error.message);
     redirect("/admin/email?e=db");

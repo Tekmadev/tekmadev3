@@ -1,7 +1,14 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { unsubscribeCopy } from "@/config/site";
 
 /** A newsletter subscriber captured first-party from the site footer. */
 export type SubscriberStatus = "active" | "unsubscribed" | "bounced" | "complained";
+
+/**
+ * Where an unsubscribe came from. Written to subscribers.status_source, and the
+ * database trigger copies it onto the history row in subscriber_events.
+ */
+export type UnsubscribeSource = "email_link" | "admin" | "ghl";
 
 export type SubscriberRow = {
   id: string;
@@ -17,6 +24,9 @@ export type SubscriberRow = {
   device: string | null;
   unsubscribe_token: string;
   ghl_synced_at: string | null;
+  unsubscribed_at: string | null;
+  status_source: string | null;
+  unsubscribe_reason: string | null;
 };
 
 export type SubscriberStats = {
@@ -107,7 +117,9 @@ export async function addSubscriber(input: AddSubscriberInput): Promise<AddSubsc
       .from("subscribers")
       .update({
         status: "active",
+        status_source: input.source ?? "footer",
         unsubscribed_at: null,
+        unsubscribe_reason: null,
         updated_at: now,
         consented_at: now,
         consent_policy_version: input.consentPolicyVersion ?? null,
@@ -149,9 +161,58 @@ export async function addSubscriber(input: AddSubscriberInput): Promise<AddSubsc
   return { ok: true, created: true, reactivated: false, subscriber: summary };
 }
 
-/** Mark a subscriber unsubscribed by their opaque token. Idempotent. */
+/** What the unsubscribe page may know about whoever is holding the link. */
+export type TokenSubscriber = {
+  status: SubscriberStatus;
+  /** Masked, e.g. "sa***@gmail.com". A forwarded email must not leak the address. */
+  maskedEmail: string;
+  unsubscribe_reason: string | null;
+};
+
+/** "sam@gmail.com" -> "sa***@gmail.com". Enough to recognise, not enough to harvest. */
+export function maskEmail(email: string): string {
+  const at = email.lastIndexOf("@");
+  if (at < 1) return "your address";
+  const local = email.slice(0, at);
+  return `${local.slice(0, local.length > 2 ? 2 : 1)}***${email.slice(at)}`;
+}
+
+/** Look up the holder of an unsubscribe link. Reads only, so a mail scanner opening the link changes nothing. */
+export async function getSubscriberByToken(
+  token: string,
+): Promise<{ ok: true; subscriber: TokenSubscriber } | { ok: false; reason: "notfound" | "config" }> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return { ok: false, reason: "config" };
+  if (!UUID_RE.test(token)) return { ok: false, reason: "notfound" };
+
+  const { data, error } = await supabase
+    .from("subscribers")
+    .select("email,status,unsubscribe_reason")
+    .eq("unsubscribe_token", token)
+    .maybeSingle();
+  if (error) {
+    console.error("[subscribers] token lookup failed", error.message);
+    return { ok: false, reason: "config" };
+  }
+  if (!data) return { ok: false, reason: "notfound" };
+  return {
+    ok: true,
+    subscriber: {
+      status: data.status as SubscriberStatus,
+      maskedEmail: maskEmail(String(data.email)),
+      unsubscribe_reason: (data.unsubscribe_reason as string | null) ?? null,
+    },
+  };
+}
+
+/**
+ * Mark a subscriber unsubscribed by their opaque token. Idempotent: only a row
+ * that is not already unsubscribed changes, so a second click never writes a
+ * second history row.
+ */
 export async function unsubscribeByToken(
   token: string,
+  source: UnsubscribeSource = "email_link",
 ): Promise<"ok" | "notfound" | "config"> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return "config";
@@ -160,12 +221,82 @@ export async function unsubscribeByToken(
   const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("subscribers")
-    .update({ status: "unsubscribed", unsubscribed_at: now, updated_at: now })
+    .update({ status: "unsubscribed", status_source: source, unsubscribed_at: now, updated_at: now })
     .eq("unsubscribe_token", token)
+    .neq("status", "unsubscribed")
     .select("id")
     .maybeSingle();
   if (error) {
     console.error("[subscribers] unsubscribe failed", error.message);
+    return "config";
+  }
+  if (data) return "ok";
+
+  // Nothing changed: already unsubscribed (still a success) or no such token.
+  const { data: existing } = await supabase
+    .from("subscribers")
+    .select("id")
+    .eq("unsubscribe_token", token)
+    .maybeSingle();
+  return existing ? "ok" : "notfound";
+}
+
+/**
+ * Undo an unsubscribe from the same link. Pressing the button is the person's
+ * own express consent, so it is stamped with the time and the policy version
+ * like any other signup. Only an unsubscribed row comes back: a bounced or
+ * complained address is never revived from here.
+ */
+export async function resubscribeByToken(
+  token: string,
+  consentPolicyVersion: string | null,
+): Promise<"ok" | "notfound" | "config"> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return "config";
+  if (!UUID_RE.test(token)) return "notfound";
+
+  const now = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("subscribers")
+    .update({
+      status: "active",
+      status_source: "unsubscribe_page",
+      unsubscribed_at: null,
+      unsubscribe_reason: null,
+      consented_at: now,
+      consent_policy_version: consentPolicyVersion,
+      updated_at: now,
+    })
+    .eq("unsubscribe_token", token)
+    .eq("status", "unsubscribed")
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("[subscribers] resubscribe failed", error.message);
+    return "config";
+  }
+  return data ? "ok" : "notfound";
+}
+
+/** Save the optional "why are you leaving" answer. Unknown keys are dropped, never stored. */
+export async function setUnsubscribeReason(
+  token: string,
+  reason: string,
+): Promise<"ok" | "notfound" | "config"> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return "config";
+  if (!UUID_RE.test(token)) return "notfound";
+  if (!unsubscribeCopy.reasons.some((r) => r.key === reason)) return "notfound";
+
+  const { data, error } = await supabase
+    .from("subscribers")
+    .update({ unsubscribe_reason: reason, updated_at: new Date().toISOString() })
+    .eq("unsubscribe_token", token)
+    .eq("status", "unsubscribed")
+    .select("id")
+    .maybeSingle();
+  if (error) {
+    console.error("[subscribers] reason save failed", error.message);
     return "config";
   }
   return data ? "ok" : "notfound";
@@ -190,7 +321,7 @@ export async function getSubscribers(limit = 200): Promise<SubscriberRow[]> {
   const { data } = await supabase
     .from("subscribers")
     .select(
-      "id,created_at,email,status,source,name,utm_source,utm_medium,utm_campaign,country,device,unsubscribe_token,ghl_synced_at",
+      "id,created_at,email,status,source,name,utm_source,utm_medium,utm_campaign,country,device,unsubscribe_token,ghl_synced_at,unsubscribed_at,status_source,unsubscribe_reason",
     )
     .order("created_at", { ascending: false })
     .limit(limit);

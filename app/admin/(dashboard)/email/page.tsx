@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Users, UserPlus, MailOpen, MousePointerClick, LayoutTemplate } from "lucide-react";
 import { requireOwner } from "@/lib/admin";
 import { getSubscribers, getSubscriberStats } from "@/lib/subscribers-data";
+import { unsubscribeCopy } from "@/config/site";
 import { getCampaigns, getRecentEmailEvents, getEmailStats } from "@/lib/email-data";
 import {
   PageHeader,
@@ -123,9 +124,20 @@ export default async function EmailAdmin({
         active
       </Badge>
     ) : (
-      <Badge key="st" tone="muted">
-        {s.status}
-      </Badge>
+      <div key="st">
+        <Badge tone="muted">{s.status}</Badge>
+        {/* Why and how they left, when we know. "I never signed up" is the one to act on. */}
+        {(s.unsubscribe_reason || s.status_source) && (
+          <p className="mt-1 text-xs text-ink-4">
+            {[
+              unsubscribeCopy.reasons.find((r) => r.key === s.unsubscribe_reason)?.label,
+              s.status_source ? `via ${s.status_source.replace(/_/g, " ")}` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        )}
+      </div>
     ),
     txt(s.country),
     <div key="act" className="flex items-center gap-2">
