@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { isPortalHost } from "@/lib/portal-host";
+import { isInternalDevice } from "@/lib/internal-device";
 
 // Per-page-load id, kept in memory only (never stored on the device, so the
 // whole thing stays cookieless and consent-free).
@@ -23,6 +24,8 @@ export function PageviewTracker() {
     if (!pathname || pathname.startsWith("/admin") || pathname.startsWith("/portal")) return;
     // The client portal runs on its own subdomain with bare paths; never track it.
     if (isPortalHost(window.location.hostname)) return;
+    // A browser that has signed in to the admin belongs to the team, not a visitor.
+    if (isInternalDevice()) return;
     if (last.current === pathname) return;
     last.current = pathname;
 

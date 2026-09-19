@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Analytics } from "@vercel/analytics/next";
 import { JsonLd } from "@/components/JsonLd";
 import { PublicChrome } from "@/components/PublicChrome";
+import { SiteAnalytics } from "@/components/SiteAnalytics";
 import { organizationJsonLd, personJsonLd, websiteJsonLd } from "@/lib/seo";
 import { brand, business, theme, themeDark } from "@/config/site";
 
@@ -122,7 +122,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd data={websiteJsonLd} />
         {children}
         <PublicChrome />
-        <Analytics />
+        <SiteAnalytics />
       </body>
     </html>
   );

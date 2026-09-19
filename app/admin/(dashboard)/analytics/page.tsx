@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin";
 import { ANALYTICS_RANGES, DEFAULT_RANGE, getTrafficAnalytics, resolveRange } from "@/lib/analytics-data";
 import { PageHeader, Panel, Notice, StatCard, fmtDate } from "@/components/admin/ui";
 import { AreaChart, Donut, HBars } from "@/components/admin/Charts";
+import { InternalDeviceNote } from "@/components/admin/InternalDevice";
 import { cn } from "@/lib/cn";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +48,8 @@ export default async function Analytics({ searchParams }: { searchParams: Promis
           </Link>
         ))}
       </nav>
+
+      <InternalDeviceNote />
 
       {!data ? (
         <Notice kind="err">Connect the Supabase server env to load analytics.</Notice>
