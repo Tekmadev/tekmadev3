@@ -21,8 +21,21 @@ export type TierMeta = {
   /** Higher-tier items this plan does NOT get. Shown as a "what you give up" list
    *  to make the next tier up feel like the better deal (loss aversion). */
   missing?: string[];
+  /**
+   * What the one-time fee buys, itemized. A bare "$4,997 setup" reads like a
+   * toll; the same number next to the work it pays for reads like a build.
+   * Only list work that tier actually includes, and never attach dollar
+   * "values" we cannot back up.
+   */
+  install?: string[];
   cta: { type: "checkout"; label: string } | { type: "contact"; label: string; href: string };
 };
+
+/**
+ * The customer-facing name of the one-time fee. Internally (database columns,
+ * Stripe sync, coupon scopes, the Terms' defined term) it is still "setup".
+ */
+export const INSTALL_NAME = "Build & Install";
 
 /** Optional promo banner (the "free website on every tier" launch offer). */
 export const PROMO = {
@@ -55,6 +68,15 @@ export const tierMeta: TierMeta[] = [
       "Email and SMS campaigns that turn old leads into new revenue",
       "A dedicated strategist on your account, plus front-of-line support",
     ],
+    install: [
+      "A full audit of how leads reach you today, and exactly where they leak",
+      "Your AI receptionist built and trained on your business, your services, your answers",
+      "Missed-call text back, one shared inbox, and online booking wired to your calendar",
+      "12 follow-up messages written for your offer, not a template",
+      "Your pipeline and dashboard set up and wired to every channel",
+      "Your professional website, built to be found on Google and AI search",
+      "Testing, launch, and training for you and your team",
+    ],
     cta: { type: "checkout", label: "Get started" },
   },
   {
@@ -74,6 +96,15 @@ export const tierMeta: TierMeta[] = [
       "Email and SMS campaigns that turn old leads into new revenue",
       "Payments and invoicing built in, get paid without the back-and-forth",
       "A dedicated strategist on your account, plus front-of-line support",
+    ],
+    install: [
+      "Everything in the Convert build, plus:",
+      "Your offer sharpened, so the ads have something worth clicking",
+      "Google and Meta ad accounts, tracking, and your first campaigns built",
+      "The ads themselves: creative and copy produced for launch",
+      "Funnels and landing pages built to turn clicks into bookings",
+      "Email and SMS campaigns written to wake up your old leads",
+      "Review management and payments connected",
     ],
     cta: { type: "checkout", label: "Get started" },
   },

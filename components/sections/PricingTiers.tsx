@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Check, Loader2, ShieldCheck, X } from "lucide-react";
+import { Check, ChevronDown, Loader2, ShieldCheck, X } from "lucide-react";
 import { Section, Eyebrow } from "@/components/Section";
 import { cn } from "@/lib/cn";
-import { PROMO } from "@/config/pricing";
+import { INSTALL_NAME, PROMO } from "@/config/pricing";
 import type { DisplayTier } from "@/lib/pricing-data";
 import { attributionProps, getAttribution } from "@/lib/attribution";
 import { captureEvent } from "@/lib/analytics";
@@ -201,11 +201,35 @@ function TierCard({
           {isCustom
             ? "custom scope"
             : dealActive && tier.cta.type === "checkout"
-              ? "Setup fee waived"
+              ? `${INSTALL_NAME} waived`
               : tier.setupAmount && tier.setupAmount > 0
-                ? `${money(tier.setupAmount, tier.currency)} setup, then monthly`
+                ? `${money(tier.setupAmount, tier.currency)} one-time ${INSTALL_NAME}. Monthly starts 30 days later.`
                 : "billed monthly"}
         </p>
+
+        {/* What the one-time fee pays for. Native <details>: no script, keyboard and screen reader friendly. */}
+        {!isCustom && tier.install && tier.install.length > 0 && !(dealActive && tier.cta.type === "checkout") && (
+          <details className="group mt-3 rounded-xl border border-line bg-bg-2 px-3.5 py-2.5">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-ink-2 [&::-webkit-details-marker]:hidden">
+              What your {INSTALL_NAME} covers
+              <ChevronDown className="h-4 w-4 shrink-0 text-ink-4 transition-transform group-open:rotate-180" />
+            </summary>
+            <ul className="mt-3 flex flex-col gap-2.5 pb-1">
+              {tier.install.map((item) =>
+                item.endsWith("plus:") ? (
+                  <li key={item} className="text-sm font-medium text-ink">
+                    {item}
+                  </li>
+                ) : (
+                  <li key={item} className="flex items-start gap-2.5 text-sm leading-snug text-ink-3">
+                    <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold-deep" />
+                    {item}
+                  </li>
+                ),
+              )}
+            </ul>
+          </details>
+        )}
       </div>
 
       {tier.guarantee && (

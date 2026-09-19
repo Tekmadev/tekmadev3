@@ -22,7 +22,7 @@ ${business.name} (legal name: ${business.legalName}) is a performance-based grow
 
 - One core productized offer: the ${business.name} Growth System (subscription)
 - One fixed-scope product for startups: Webline, a website built and live in 14 days for a one-time build fee plus a monthly hosting and care plan (see below)
-- Performance-guaranteed: a one-time setup fee plus a monthly fee, backed by a performance guarantee (exact pricing is shared on a qualification call)
+- Performance-guaranteed: a one-time Build & Install fee plus a monthly fee, backed by a performance guarantee (exact pricing is shared on a qualification call)
 - Hard guarantee: 30 qualified appointments in 60 days, or we keep working free and pause billing until the client hits it. An appointment is any real prospect who books through the system we built: a sales call, a quote, a consult, a site visit or a service booking
 - Cancel any month, no clawback, no long-term contract
 - System goes live in 14 days from kickoff in 90% of cases

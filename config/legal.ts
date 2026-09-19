@@ -458,7 +458,7 @@ export const termsOfService: LegalDoc = {
         {
           type: "ul",
           items: [
-            "A one-time setup fee and a recurring monthly fee, as set out in the Order Form. The setup fee covers the design, build, and installation of the growth system and the assets delivered to the Client, which the Client retains, and is non-refundable.",
+            "A one-time setup fee (shown on our pricing page and at checkout as \"Build & Install\") and a recurring monthly fee, as set out in the Order Form. The setup fee covers the design, build, and installation of the growth system and the assets delivered to the Client, which the Client retains, and is non-refundable.",
             "A performance guarantee: if the system does not produce 30 Qualified Bookings within 60 days of go-live, Tekmadev will not invoice further fees for that period and will continue to operate the system at no additional charge until the target is reached, as set out in Section 4 and the Order Form.",
             "Fees are quoted in Canadian dollars (CAD) unless otherwise stated and are exclusive of applicable taxes (HST, GST, QST), which will be added where applicable.",
             "Website packages (Section 5A) have a build fee paid in full at checkout and, where stated, a required monthly hosting and care plan billed to the Client's card. Where a buy-now-pay-later option (such as Afterpay, Klarna, or Affirm) is offered at checkout, the instalment agreement covers the build fee only, is between the Client and that provider, and is subject to the provider's terms and approval; Tekmadev receives the full build fee at checkout.",

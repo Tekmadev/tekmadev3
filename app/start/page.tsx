@@ -4,10 +4,11 @@ import { Footer } from "@/components/Footer";
 import { PricingTiers } from "@/components/sections/PricingTiers";
 import { getDisplayTiers } from "@/lib/pricing-data";
 import { getCoupons, type CouponRow } from "@/lib/coupon-data";
+import { INSTALL_NAME } from "@/config/pricing";
 
 /** Human-readable summary of what a startup deal link gives (free setup + the code). */
 function describeDeal(c: CouponRow | undefined): string {
-  if (!c) return "Your setup fee is waived at checkout.";
+  if (!c) return `Your ${INSTALL_NAME} fee is waived at checkout.`;
   const amount =
     c.discount_type === "percent"
       ? `${c.percent_off}% off`
@@ -22,7 +23,7 @@ function describeDeal(c: CouponRow | undefined): string {
       : c.duration === "repeating"
         ? ` for ${c.duration_in_months} months`
         : " on your first month";
-  return `Setup fee waived, plus ${amount} your monthly${span}.`;
+  return `${INSTALL_NAME} fee waived, plus ${amount} your monthly${span}.`;
 }
 
 /**
