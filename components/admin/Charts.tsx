@@ -5,7 +5,8 @@ import { useEffect, useId, useRef, useState } from "react";
 /* Gold / neutral palette that reads well on both light and dark themes. */
 const PALETTE = ["#a17a4f", "#c89c65", "#7a5b3a", "#dcc399", "#b79368", "#8a857a", "#56524b"];
 
-export type DayPoint = { day: string; count: number };
+// `label` (axis) and `title` (tooltip) are set when a bucket is not a plain day.
+export type DayPoint = { day: string; count: number; label?: string; title?: string };
 export type Tally = { label: string; count: number };
 
 /** Tracks a container's pixel width so the SVG can render crisply (no distortion). */
@@ -130,7 +131,7 @@ export function AreaChart({ data, height = 240 }: { data: DayPoint[]; height?: n
                 fontSize="10"
                 fill="var(--color-ink-4)"
               >
-                {d.day.slice(5)}
+                {d.label ?? d.day.slice(5)}
               </text>
             ) : null,
           )}
@@ -154,11 +155,11 @@ export function AreaChart({ data, height = 240 }: { data: DayPoint[]; height?: n
 
       {hover !== null && pts[hover] && (
         <div
-          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-lg border border-line-strong bg-surface px-2.5 py-1.5 text-xs shadow-sm"
+          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-line-strong bg-surface px-2.5 py-1.5 text-xs shadow-sm"
           style={{ left: pts[hover].x, top: pts[hover].y - 8 }}
         >
           <span className="font-medium text-ink">{data[hover].count}</span>
-          <span className="text-ink-4"> · {data[hover].day.slice(5)}</span>
+          <span className="text-ink-4"> · {data[hover].title ?? data[hover].day.slice(5)}</span>
         </div>
       )}
     </div>

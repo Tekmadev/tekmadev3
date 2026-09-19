@@ -10,8 +10,14 @@ const str = (v: unknown, max: number) =>
  * Cookieless first-party pageview capture. Stores path, referrer, UTM, coarse
  * country (from the edge header, no raw IP), and device class. No persistent
  * device id, so no consent is required. Best-effort: never throws at the client.
+ *
+ * Production only. Local development and preview deployments share the live
+ * database, and until 2026-09-19 every page opened while building the site was
+ * counted as a visitor: about a quarter of a month's "traffic" was us.
  */
 export async function POST(req: NextRequest) {
+  if (process.env.VERCEL_ENV !== "production") return NextResponse.json({ ok: true, recorded: false });
+
   const supabase = getSupabaseAdmin();
   if (!supabase) return NextResponse.json({ ok: false });
 
@@ -36,7 +42,9 @@ export async function POST(req: NextRequest) {
       utm_campaign: str(body.utm_campaign, 128),
       utm_term: str(body.utm_term, 128),
       utm_content: str(body.utm_content, 128),
-      country: country ? country.slice(0, 8) : null,
+      // Never null: the analytics read a null country as "recorded off Vercel",
+      // which is how the old development rows are told apart and left out.
+      country: country ? country.slice(0, 8) : "unknown",
       device,
       session_id: str(body.session_id, 64),
     });
