@@ -84,6 +84,10 @@ ${proofWins
   )
   .join("\n")}
 
+## About
+
+- [About ${business.name}](${business.url}/about): who we are, what we do, how we differ from an agency, the guarantee, and the company facts (legal name, founder, Hamilton, Ontario office).
+
 ## Case studies
 
 ${publishedCaseStudies()

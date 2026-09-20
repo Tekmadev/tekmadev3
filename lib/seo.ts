@@ -318,6 +318,27 @@ export function caseStudyJsonLd(study: CaseStudy, path: string) {
   };
 }
 
+/**
+ * AboutPage schema. Its whole job is entity clarity: it tells search and AI
+ * engines that this URL is the page about the Organization already described
+ * in the root layout, rather than describing the company a second time with
+ * facts that could drift from the first.
+ */
+export function aboutPageJsonLd(path: string, name: string, description: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "@id": `${SITE_URL}${path}#webpage`,
+    url: `${SITE_URL}${path}`,
+    name,
+    description,
+    inLanguage: "en",
+    isPartOf: { "@id": `${SITE_URL}#website` },
+    about: { "@id": `${SITE_URL}#organization` },
+    mainEntity: { "@id": `${SITE_URL}#organization` },
+  };
+}
+
 export function faqPageJsonLd(items: { q: string; a: string }[]) {
   return {
     "@context": "https://schema.org",

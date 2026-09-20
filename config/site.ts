@@ -472,6 +472,7 @@ export const footerColumns = [
   {
     label: "Tekmadev",
     items: [
+      { label: "About", href: "/about" },
       { label: "The System", href: "/#system" },
       { label: "Proof", href: "/#proof" },
       { label: "Case studies", href: "/case-studies" },
