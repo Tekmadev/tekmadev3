@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { Section } from "@/components/Section";
@@ -134,6 +135,13 @@ export default function AboutPage() {
           </Block>
 
           <Block heading={about.who.heading} answer={about.who.answer}>
+            <Image
+              src={business.privacyOfficer.photo}
+              alt={`${business.privacyOfficer.name}, founder of Tekmadev`}
+              width={112}
+              height={112}
+              className="mt-6 h-28 w-28 rounded-full object-cover"
+            />
             <p className="mt-4 text-base leading-relaxed text-ink-3">{about.who.body}</p>
           </Block>
 

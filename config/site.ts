@@ -73,7 +73,9 @@ export const business = {
     primary: "Ontario, Canada",
   },
   privacyOfficer: {
-    name: "Kazi Shajeedul Islam",
+    // Owner's choice (2026-09-20): the public name is "Shajeed I.", never the full legal name.
+    name: "Shajeed I.",
+    photo: "/images/assets/kazi.webp",
     title: "Founder and Privacy Officer",
     email: _legalEmail,
   },

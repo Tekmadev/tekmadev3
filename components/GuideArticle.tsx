@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { getGuide, guides, guideTitle, GUIDE_PUBLISHED, type Guide } from "@/lib/content";
@@ -183,6 +184,13 @@ export function GuideArticle({ guide }: { guide: Guide }) {
       {/* About the author */}
       <section className="mt-16 rounded-2xl border border-line p-6 sm:p-7">
         <p className="eyebrow">About the author</p>
+        <Image
+          src={business.privacyOfficer.photo}
+          alt={`${business.privacyOfficer.name}, founder of Tekmadev`}
+          width={72}
+          height={72}
+          className="mt-4 h-[72px] w-[72px] rounded-full object-cover"
+        />
         <p className="mt-4 text-base leading-relaxed text-ink-2">
           <span className="font-medium text-ink">{business.privacyOfficer.name}</span> founded Tekmadev in{" "}
           {business.foundingYear} and runs it from Hamilton, Ontario, building and managing the systems that get

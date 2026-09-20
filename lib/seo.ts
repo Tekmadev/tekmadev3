@@ -32,6 +32,7 @@ export const personJsonLd = {
   "@type": "Person",
   "@id": `${SITE_URL}#founder`,
   name: business.privacyOfficer.name,
+  image: `${SITE_URL}${business.privacyOfficer.photo}`,
   jobTitle: "Founder",
   worksFor: { "@id": `${SITE_URL}#organization` },
   url: `${SITE_URL}/about`,
