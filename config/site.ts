@@ -50,6 +50,14 @@ export const portal = {
   },
 };
 
+/** The founder's own public profiles. Shown as icons beside the photo, and as sameAs in the Person schema. */
+export type FounderProfile = { network: "linkedin" | "instagram"; label: string; url: string };
+const _founderProfiles: FounderProfile[] = [
+  { network: "linkedin", label: "LinkedIn", url: "https://www.linkedin.com/in/sajistreo3/" },
+  // Clean profile URL only: a link copied from the app carries share tokens that identify the sharer.
+  { network: "instagram", label: "Instagram", url: "https://www.instagram.com/its.shajeed/" },
+];
+
 const _office = {
   line1: "40 Courtland Ave",
   city: "Hamilton",
@@ -76,6 +84,7 @@ export const business = {
     // Owner's choice (2026-09-20): the public name is "Shajeed I.", never the full legal name.
     name: "Shajeed I.",
     photo: "/images/assets/kazi.webp",
+    profiles: _founderProfiles,
     title: "Founder and Privacy Officer",
     email: _legalEmail,
   },

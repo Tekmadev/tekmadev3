@@ -33,6 +33,7 @@ export const personJsonLd = {
   "@id": `${SITE_URL}#founder`,
   name: business.privacyOfficer.name,
   image: `${SITE_URL}${business.privacyOfficer.photo}`,
+  sameAs: business.privacyOfficer.profiles.map((p) => p.url),
   jobTitle: "Founder",
   worksFor: { "@id": `${SITE_URL}#organization` },
   url: `${SITE_URL}/about`,
