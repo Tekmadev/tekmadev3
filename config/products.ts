@@ -84,7 +84,8 @@ export const productMeta: ProductMeta[] = [
         "Custom-designed startup website with the SEO, GEO, and AEO foundation built in. Up to 5 pages, copy written for you, live on your domain in 14 days. You own everything.",
       statementDescriptor: "TEKMADEV WEBLINE",
     },
-    defaultAmount: 79700,
+    // Only shown if the products table cannot be read. Keep it equal to the live price (Admin, Pricing).
+    defaultAmount: 99700,
     currency: "cad",
     guarantee: false,
     onboarding: { kickoffCall: false, targetLiveDays: 14 },
