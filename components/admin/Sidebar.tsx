@@ -19,15 +19,28 @@ import {
   Settings,
   LogOut,
   Menu,
-  X, FlaskConical } from "lucide-react";
+  X,
+  FlaskConical,
+  Bell,
+} from "lucide-react";
 import { signOutAction } from "@/app/admin/actions";
+import { NotificationBell, useAdminNotifications } from "@/components/admin/NotificationBell";
+import type { AdminNotification, NotificationSummary } from "@/lib/admin-notifications-data";
 
 type Role = "owner" | "manager";
 
-type NavItem = { href: string; label: string; icon: typeof LayoutDashboard; ownerOnly?: boolean };
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  ownerOnly?: boolean;
+  /** Shows the live unread count next to the label. */
+  unreadBadge?: boolean;
+};
 
 const NAV: NavItem[] = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
+  { href: "/admin/notifications", label: "Notifications", icon: Bell, unreadBadge: true },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/leads", label: "Leads", icon: UserRound },
   { href: "/admin/tools", label: "Free tools", icon: Calculator },
@@ -43,9 +56,21 @@ const NAV: NavItem[] = [
   { href: "/admin/profile", label: "Profile", icon: Settings },
 ];
 
-export function Sidebar({ email, name, role }: { email: string; name: string | null; role: Role }) {
+export function Sidebar({
+  email,
+  name,
+  role,
+  notifications,
+}: {
+  email: string;
+  name: string | null;
+  role: Role;
+  /** Server-rendered starting point; the hook keeps it live from there. */
+  notifications: { summary: NotificationSummary; items: AdminNotification[] };
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const inbox = useAdminNotifications(notifications);
   const items = NAV.filter((i) => !i.ownerOnly || role === "owner");
 
   const isActive = (href: string) => (href === "/admin" ? pathname === "/admin" : pathname.startsWith(href));
@@ -57,13 +82,16 @@ export function Sidebar({ email, name, role }: { email: string; name: string | n
         <Link href="/admin" className="font-display text-base font-bold text-ink">
           Tekmadev
         </Link>
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Open menu"
-          className="rounded-lg border border-line-strong p-2 text-ink-2"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <NotificationBell state={inbox} align="right" />
+          <button
+            onClick={() => setOpen(true)}
+            aria-label="Open menu"
+            className="rounded-lg border border-line-strong p-2 text-ink-2"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       {/* Overlay (mobile) */}
@@ -92,6 +120,10 @@ export function Sidebar({ email, name, role }: { email: string; name: string | n
           <button onClick={() => setOpen(false)} aria-label="Close menu" className="text-ink-3 lg:hidden">
             <X className="h-5 w-5" />
           </button>
+          {/* Desktop bell. On a phone it lives in the top bar instead. */}
+          <div className="hidden lg:block">
+            <NotificationBell state={inbox} align="left" />
+          </div>
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 px-3 py-2">
@@ -111,7 +143,17 @@ export function Sidebar({ email, name, role }: { email: string; name: string | n
                 }
               >
                 <Icon className={"h-[18px] w-[18px] " + (active ? "text-gold" : "text-ink-4")} />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {item.unreadBadge && inbox.summary.unread > 0 && (
+                  <span
+                    className={
+                      "rounded-full px-2 py-0.5 text-[11px] font-semibold " +
+                      (inbox.summary.criticalUnread > 0 ? "bg-signal/10 text-signal" : "bg-gold/15 text-gold-deep")
+                    }
+                  >
+                    {inbox.summary.unread > 99 ? "99+" : inbox.summary.unread}
+                  </span>
+                )}
               </Link>
             );
           })}

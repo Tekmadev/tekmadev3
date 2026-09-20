@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { tracking } from "@/config/site";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import type { AdContext } from "@/lib/ad-context-data";
+import { notifyAdmins } from "@/lib/admin-notify";
 
 /**
  * Meta Conversions API: conversions reported from our server.
@@ -201,6 +202,18 @@ export async function sendMetaEvent(input: {
         is_test: Boolean(testCode),
       })
       .eq("id", logId);
+  }
+
+  // A conversion Meta never heard about quietly makes the ads look worse than
+  // they are. Keyed like the conversion log, so a retry is not a second row.
+  if (!ok) {
+    await notifyAdmins({
+      event: "meta.capi_failed",
+      title: `Meta did not accept a ${input.event} conversion`,
+      body: `HTTP ${httpStatus ?? "error"}. The conversion is saved and marked failed, so nothing is lost on our side, but Meta's numbers will be short by one.`,
+      dedupeKey: `meta:${input.event}:${input.eventId}`,
+      data: { event_name: input.event, event_id: input.eventId, http_status: httpStatus ?? null },
+    });
   }
 
   return { status: ok ? "sent" : "failed" };

@@ -9,6 +9,7 @@ import { addSubscriber, normalizeEmail } from "@/lib/subscribers-data";
 import { pushLeadMagnetToGHL } from "@/lib/ghl";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { reportLead } from "@/lib/meta-conversions";
+import { dayKey, hourKey, moneyLabel, notifyAdmins } from "@/lib/admin-notify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -106,6 +107,18 @@ export async function POST(req: NextRequest) {
   });
 
   if (!stored.ok) {
+    // A lead typed their numbers and their email and we lost it. Say so, with
+    // enough to follow up by hand.
+    await notifyAdmins({
+      event: "lead_magnet.store_failed",
+      title: `A ${magnet.name} submission from ${email} could not be saved`,
+      body: [name, company, phone].filter(Boolean).join(" · ") || null,
+      url: "/admin/tools",
+      actor: { type: "visitor", label: email },
+      dedupeKey: hourKey(`magnet_store_failed:${magnet.slug}`),
+      collapse: true,
+      data: { email, name, company, phone, reason: stored.reason },
+    });
     return NextResponse.json({ ok: false, error: "server" }, { status: 500 });
   }
 
@@ -171,6 +184,44 @@ export async function POST(req: NextRequest) {
   ]);
 
   await markLeadMagnetDelivery(stored.id, { ghlSynced: ghlOk, emailed: mailResult.ok });
+
+  // A lead with a dollar figure attached is the warmest kind. The key collapses
+  // a double submit from the same person on the same day.
+  await notifyAdmins({
+    event: "lead.magnet_submitted",
+    title: `${name || email} ran the ${magnet.name}: ${moneyLabel(Math.round(result.monthlyLeak * 100), "cad")} a month leaking`,
+    body: [company, email, phone, consentMarketing ? "joined the newsletter" : null].filter(Boolean).join(" · "),
+    url: "/admin/tools",
+    entity: { type: "lead_magnet_submission", id: stored.id },
+    actor: { type: "visitor", label: email },
+    dedupeKey: dayKey(`magnet:${magnet.slug}:${email}`),
+    collapse: true,
+    data: {
+      magnet: magnet.slug,
+      email,
+      company,
+      phone,
+      monthly_leak: result.monthlyLeak,
+      annual_leak: result.annualLeak,
+      consent_marketing: consentMarketing,
+      utm_source: attribution.utm_source ?? null,
+    },
+  });
+  // The visitor was promised a report. If it did not go out, someone should send it by hand.
+  if (!mailResult.ok) {
+    const missingKey = "skipped" in mailResult && mailResult.skipped;
+    await notifyAdmins({
+      event: missingKey ? "email.not_configured" : "email.failed",
+      title: missingKey
+        ? "Email is not configured: a free tool report was not sent"
+        : `The ${magnet.name} report to ${email} failed to send`,
+      body: missingKey ? "RESEND_API_KEY is missing, so no transactional email is going out." : "error" in mailResult ? mailResult.error : null,
+      url: "/admin/tools",
+      dedupeKey: missingKey ? dayKey("mail_not_configured") : dayKey(`mail:lead_magnet:${email}`),
+      collapse: true,
+      data: { to: email, template: "lead_magnet_report" },
+    });
+  }
 
   return NextResponse.json({ ok: true, result, emailed: mailResult.ok });
 }

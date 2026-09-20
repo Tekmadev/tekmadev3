@@ -7,6 +7,7 @@ import { completeTaskByKey, getActiveOnboarding } from "@/lib/onboarding-data";
 import { getProductMeta } from "@/config/products";
 import { reportPurchase } from "@/lib/meta-conversions";
 import { stripeFor, webhookSecret, type StripeMode } from "@/lib/stripe-mode";
+import { hourKey, moneyLabel, notifyAdmins, resolveAdminNotifications } from "@/lib/admin-notify";
 import {
   getOrderByPaymentIntent,
   getOrderBySession,
@@ -89,8 +90,59 @@ async function handleOrderSession(stripe: Stripe, s: Stripe.Checkout.Session, st
       });
     } catch (err) {
       console.error("[stripe webhook] client provisioning failed", err instanceof Error ? err.message : String(err));
+      await notifyProvisionFailed(s, order.email, err);
     }
   }
+
+  // Staff hear about it once per outcome, and only after provisioning above: a
+  // notification must never delay the buyer's account or invite. Keyed on the
+  // session, so the three ways one payment can arrive (completed, async
+  // succeeded, a retry) are one row. A re-delivery that lands after the order
+  // was refunded or disputed keeps that final status and says nothing new.
+  if (!(existing && FINAL.includes(existing.status))) {
+    const buyer = order.business_name || order.name || order.email || "Someone";
+    const amount = moneyLabel(order.amount_total, order.currency);
+    const what = getProductMeta(productId)?.name ?? "a one-time purchase";
+    const method = paymentMethodLabel(order.payment_method_type);
+    await notifyAdmins({
+      event: order.status === "paid" ? "order.paid" : order.status === "failed" ? "order.payment_failed" : "order.pending",
+      title:
+        order.status === "paid"
+          ? `${buyer} paid ${amount} for ${what}`
+          : order.status === "failed"
+            ? `${buyer}'s payment of ${amount} for ${what} failed`
+            : `${buyer}'s payment of ${amount} for ${what} is processing`,
+      body: [order.email, method && method !== "-" ? method : null, s.livemode ? null : "Stripe sandbox"].filter(Boolean).join(" · "),
+      url: order.client_id ? `/admin/clients/${order.client_id}` : "/admin/subscriptions",
+      entity: { type: "order", id: order.id },
+      clientId: order.client_id ?? null,
+      actor: { type: "stripe", label: order.email },
+      isTest: !s.livemode,
+      dedupeKey: `order:${s.id}:${order.status}`,
+      data: {
+        email: order.email,
+        product: productId,
+        amount_total: order.amount_total,
+        currency: order.currency,
+        payment_method: order.payment_method_type,
+        stripe_checkout_session_id: s.id,
+      },
+    });
+  }
+}
+
+/** Someone paid and has no portal account. The worst silent failure there is. */
+async function notifyProvisionFailed(s: Stripe.Checkout.Session, email: string | null, err: unknown) {
+  await notifyAdmins({
+    event: "client.provision_failed",
+    title: `${email ?? "A customer"} paid, but their portal account was not created`,
+    body: `${err instanceof Error ? err.message : String(err)}. Add them by hand from Clients, Add client, so they get their invite.`,
+    url: "/admin/clients/new",
+    actor: { type: "system", label: email },
+    isTest: !s.livemode,
+    dedupeKey: `provision_failed:${s.id}`,
+    data: { email, stripe_checkout_session_id: s.id },
+  });
 }
 
 /** Trial end or period end, whichever the subscription is in, as ISO. */
@@ -170,7 +222,10 @@ async function handleCareSession(stripe: Stripe, s: Stripe.Checkout.Session) {
     }
   }
 
-  await supabase.from("subscriptions").upsert(
+  // supabase-js returns a failed write in `error`; it does not throw. Unchecked,
+  // a subscription that was never recorded still answered Stripe with 200, so
+  // Stripe never retried and nobody was told.
+  const { error: careWriteError } = await supabase.from("subscriptions").upsert(
     {
       stripe_customer_id: customerId,
       stripe_subscription_id: subId,
@@ -189,6 +244,7 @@ async function handleCareSession(stripe: Stripe, s: Stripe.Checkout.Session) {
     },
     { onConflict: "stripe_subscription_id" },
   );
+  if (careWriteError) throw new Error(`care subscription not saved: ${careWriteError.message}`);
 
   if (!clientId) return;
   const client = await getClientById(clientId);
@@ -236,7 +292,26 @@ async function handleChargeEvent(event: Stripe.Event) {
   const piId = idOf(obj.payment_intent);
   if (!piId) return;
   const order = await getOrderByPaymentIntent(piId);
-  if (!order) return;
+  if (!order) {
+    // Plan and care plan charges have no orders row. They still get refunded and
+    // disputed, and a dispute has an evidence deadline: staff must hear of it.
+    const disputedNoOrder = event.type === "charge.dispute.created";
+    const charge = obj as Stripe.Charge;
+    const email = (charge.billing_details?.email as string | null | undefined) ?? null;
+    await notifyAdmins({
+      event: disputedNoOrder ? "order.disputed" : "order.refunded",
+      title: disputedNoOrder
+        ? `${email ?? "A customer"} disputed a subscription payment of ${moneyLabel(obj.amount, obj.currency)}`
+        : `${email ?? "A customer"} was refunded ${moneyLabel(charge.amount_refunded ?? obj.amount, obj.currency)} on a subscription payment`,
+      body: disputedNoOrder ? "Stripe sets a deadline to respond with evidence. Open the dispute in Stripe now." : null,
+      url: "/admin/subscriptions",
+      actor: { type: "stripe", label: email },
+      isTest: !event.livemode,
+      dedupeKey: `evt:${event.id}`,
+      data: { payment_intent: piId, amount: obj.amount, currency: obj.currency, email },
+    });
+    return;
+  }
 
   let patch: Partial<typeof order> = {};
   let summary = "";
@@ -257,6 +332,22 @@ async function handleChargeEvent(event: Stripe.Event) {
   }
 
   await updateOrder(order.id, patch);
+  const disputed = event.type === "charge.dispute.created";
+  await notifyAdmins({
+    event: disputed ? "order.disputed" : "order.refunded",
+    title: `${order.business_name || order.name || order.email || "An order"}: ${summary}`,
+    body: disputed
+      ? "Stripe sets a deadline to respond with evidence. Open the dispute in Stripe now."
+      : order.email,
+    url: "/admin/subscriptions",
+    entity: { type: "order", id: order.id },
+    clientId: order.client_id ?? null,
+    actor: { type: "stripe", label: order.email },
+    isTest: order.livemode === false,
+    // Partial refunds repeat for real, so this one is keyed on the delivery.
+    dedupeKey: `evt:${event.id}`,
+    data: { order_id: order.id, email: order.email, ...patch },
+  });
   if (order.client_id) {
     await logActivity({
       client_id: order.client_id,
@@ -312,6 +403,165 @@ function verifyEvent(body: string, sig: string): { event: Stripe.Event; mode: St
   return null;
 }
 
+/**
+ * customer.subscription.updated fires for every change to a subscription, most
+ * of them noise. Staff hear about the four that matter, and only on the real
+ * transition, read from `previous_attributes`: a cancellation scheduled (the
+ * window to save the account), that cancellation undone, the subscription
+ * ending, and a payment going past due or recovering.
+ */
+async function notifySubscriptionChange(
+  event: Stripe.Event,
+  sub: Stripe.Subscription,
+  scheduled: boolean,
+  endsAt: string | null,
+  isCare: boolean,
+  careClientId: string | null,
+) {
+  const prev = ((event.data as { previous_attributes?: Partial<Stripe.Subscription> }).previous_attributes ?? {}) as Partial<Stripe.Subscription>;
+  const label = isCare ? "care plan" : `${sub.metadata?.tier ?? "plan"} subscription`;
+  const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
+
+  // Who is this? "A subscription is set to cancel" is no use to anyone with more
+  // than one customer. Same mode only: a sandbox event never names a real client.
+  let who: string | null = null;
+  let clientId: string | null = null;
+  try {
+    const found = (careClientId ? await getClientById(careClientId) : null) ?? (await getClientByStripeCustomer(customerId));
+    if (found && Boolean(found.is_test) !== sub.livemode) {
+      who = found.business_name;
+      clientId = found.id;
+    } else {
+      const db = getSupabaseAdmin();
+      const { data } = db
+        ? await db.from("subscriptions").select("email").eq("stripe_subscription_id", sub.id).maybeSingle()
+        : { data: null };
+      who = (data?.email as string | undefined) ?? null;
+    }
+  } catch {
+    /* the name is a nicety; the notification still goes out without it */
+  }
+  const owner = who ? `${who}'s` : "A";
+
+  const base = {
+    url: clientId ? `/admin/clients/${clientId}` : "/admin/subscriptions",
+    entity: { type: "subscription", id: sub.id },
+    clientId,
+    actor: { type: "stripe" as const, label: who ?? customerId },
+    isTest: !sub.livemode,
+    data: {
+      stripe_subscription_id: sub.id,
+      stripe_customer_id: customerId,
+      status: sub.status,
+      ends_at: endsAt,
+      cancellation_reason: sub.cancellation_details?.reason ?? null,
+      cancellation_feedback: sub.cancellation_details?.feedback ?? null,
+      cancellation_comment: sub.cancellation_details?.comment ?? null,
+    },
+  };
+  const why = [sub.cancellation_details?.reason, sub.cancellation_details?.feedback, sub.cancellation_details?.comment]
+    .filter((v) => v && v !== "cancellation_requested")
+    .join(": ");
+  const on = endsAt ? ` on ${longDate(endsAt)}` : "";
+
+  if (event.type === "customer.subscription.deleted") {
+    await notifyAdmins({
+      ...base,
+      event: "subscription.canceled",
+      title: `${owner} ${label} has ended`,
+      body: why ? `Their reason: ${why.replace(/_/g, " ")}` : null,
+      dedupeKey: `sub:${sub.id}:canceled`,
+    });
+    // It is over. Nothing left to save, so the "set to cancel" item closes.
+    await resolveAdminNotifications({ events: ["subscription.cancel_scheduled", "subscription.past_due", "subscription.payment_failed"], entityId: sub.id });
+    return;
+  }
+  if (event.type !== "customer.subscription.updated") return;
+
+  const wasScheduled =
+    typeof prev.cancel_at_period_end === "boolean"
+      ? prev.cancel_at_period_end || Boolean(sub.cancel_at && !("cancel_at" in prev))
+      : "cancel_at" in prev
+        ? Boolean(prev.cancel_at)
+        : undefined;
+  if (wasScheduled !== undefined && wasScheduled !== scheduled) {
+    await notifyAdmins({
+      ...base,
+      event: scheduled ? "subscription.cancel_scheduled" : "subscription.cancel_undone",
+      title: scheduled ? `${owner} ${label} is set to cancel${on}` : `${owner} ${label} was renewed: the cancellation is undone`,
+      body: scheduled ? (why ? `Their reason: ${why.replace(/_/g, " ")}. There is still time to save it.` : "There is still time to save it.") : null,
+      // Flip-flops are real and repeatable, so this is keyed on the delivery.
+      dedupeKey: `evt:${event.id}:cancel`,
+    });
+    if (!scheduled) await resolveAdminNotifications({ events: ["subscription.cancel_scheduled"], entityId: sub.id });
+  }
+
+  if (typeof prev.status === "string" && prev.status !== sub.status) {
+    const failing = sub.status === "past_due" || sub.status === "unpaid";
+    const wasFailing = prev.status === "past_due" || prev.status === "unpaid";
+    // Keyed on the delivery, not on the period end: older Stripe API versions do
+    // not send one, and the key then collapsed every later failure into the first.
+    if (failing && !wasFailing) {
+      await notifyAdmins({
+        ...base,
+        event: "subscription.past_due",
+        title: `A payment failed: ${owner.toLowerCase() === "a" ? "a" : owner} ${label} is now ${sub.status.replace("_", " ")}`,
+        body: "Stripe will retry the card. If it keeps failing the subscription ends, so reach out before it does.",
+        dedupeKey: `evt:${event.id}:status`,
+      });
+    } else if (wasFailing && sub.status === "active") {
+      await notifyAdmins({
+        ...base,
+        event: "subscription.recovered",
+        title: `A failed payment went through: ${owner.toLowerCase() === "a" ? "the" : owner} ${label} is active again`,
+        dedupeKey: `evt:${event.id}:status`,
+      });
+      await resolveAdminNotifications({ events: ["subscription.past_due", "subscription.payment_failed"], entityId: sub.id });
+    }
+  }
+}
+
+/**
+ * Renewals. The subscription events above only show status changes, so a
+ * renewal that simply works, and the amount and attempt number of one that does
+ * not, are only visible here. These fire once the Stripe endpoint is subscribed
+ * to invoice.paid and invoice.payment_failed; until then this code is idle.
+ */
+async function notifyInvoice(event: Stripe.Event) {
+  const inv = event.data.object as Stripe.Invoice & {
+    subscription?: string | { id: string } | null;
+    parent?: { subscription_details?: { subscription?: string | { id: string } | null } | null } | null;
+  };
+  // The subscription id moved inside `parent` in 2025 API versions. Read both.
+  const subRef = inv.parent?.subscription_details?.subscription ?? inv.subscription ?? null;
+  const subId = typeof subRef === "string" ? subRef : (subRef?.id ?? null);
+  if (!subId) return;
+  // The first invoice is the purchase itself, already announced as a new subscription.
+  if (event.type === "invoice.paid" && inv.billing_reason !== "subscription_cycle") return;
+
+  const who = inv.customer_name || inv.customer_email || "A customer";
+  const amount = moneyLabel(event.type === "invoice.paid" ? inv.amount_paid : inv.amount_due, inv.currency);
+  const failed = event.type === "invoice.payment_failed";
+  await notifyAdmins({
+    event: failed ? "subscription.payment_failed" : "subscription.renewed",
+    title: failed
+      ? `${who}'s renewal of ${amount} failed${inv.attempt_count ? ` (attempt ${inv.attempt_count})` : ""}`
+      : `${who} renewed: ${amount}`,
+    body: failed ? "Stripe will retry. If it keeps failing the subscription ends, so reach out before it does." : inv.customer_email,
+    url: "/admin/subscriptions",
+    entity: { type: "subscription", id: subId },
+    actor: { type: "stripe", label: inv.customer_email ?? null },
+    isTest: !event.livemode,
+    dedupeKey: `invoice:${inv.id}:${failed ? `failed:${inv.attempt_count ?? 0}` : "paid"}`,
+    data: { invoice_id: inv.id, stripe_subscription_id: subId, amount_due: inv.amount_due, amount_paid: inv.amount_paid, currency: inv.currency, attempt_count: inv.attempt_count ?? null },
+  });
+  if (!failed) await resolveAdminNotifications({ events: ["subscription.past_due", "subscription.payment_failed"], entityId: subId });
+}
+
+// Anyone can POST junk here. The hourly key stops a flood of rows, but not a
+// flood of database calls, so this instance alerts at most once an hour.
+let lastSignatureAlert = "";
+
 export async function POST(req: NextRequest) {
   const sig = req.headers.get("stripe-signature");
   if (!sig) return NextResponse.json({ error: "Missing signature." }, { status: 400 });
@@ -321,7 +571,19 @@ export async function POST(req: NextRequest) {
   if (verified === "unconfigured") {
     return NextResponse.json({ error: "Stripe webhook not configured." }, { status: 503 });
   }
-  if (!verified) return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
+  if (!verified) {
+    if (lastSignatureAlert !== hourKey("stripe_sig")) {
+      lastSignatureAlert = hourKey("stripe_sig");
+      await notifyAdmins({
+        event: "stripe.webhook_signature_failed",
+        title: "A Stripe event failed its signature check",
+        body: "If this keeps happening, the webhook signing secret in Vercel no longer matches Stripe, and payments are not being recorded.",
+        dedupeKey: hourKey("stripe_sig"),
+        collapse: true,
+      });
+    }
+    return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
+  }
   const { event, stripe } = verified;
 
   const supabase = getSupabaseAdmin();
@@ -349,7 +611,7 @@ export async function POST(req: NextRequest) {
 
       const customerId = idOf(s.customer);
       const email = s.customer_details?.email ?? s.customer_email ?? null;
-      const { data: subRow } = await supabase
+      const { data: subRow, error: subWriteError } = await supabase
         .from("subscriptions")
         .upsert(
           {
@@ -369,6 +631,19 @@ export async function POST(req: NextRequest) {
         )
         .select("id")
         .maybeSingle();
+      if (subWriteError) throw new Error(`subscription not saved: ${subWriteError.message}`);
+
+      await notifyAdmins({
+        event: "subscription.created",
+        title: `${s.customer_details?.name || email || "Someone"} subscribed to ${s.metadata?.tier ?? "a plan"}${s.amount_total ? `: ${moneyLabel(s.amount_total, s.currency)} today` : ""}`,
+        body: [email, s.livemode ? null : "Stripe sandbox"].filter(Boolean).join(" · "),
+        url: "/admin/subscriptions",
+        entity: { type: "subscription", id: (subRow as { id: string } | null)?.id ?? idOf(s.subscription) },
+        actor: { type: "stripe", label: email },
+        isTest: !s.livemode,
+        dedupeKey: `sub:${idOf(s.subscription) ?? s.id}:created`,
+        data: { email, tier: s.metadata?.tier ?? null, amount_total: s.amount_total, currency: s.currency, stripe_subscription_id: idOf(s.subscription) },
+      });
 
       // Day 0 of onboarding: the paid customer becomes a portal account and
       // gets their invite within minutes. Never let this break the billing
@@ -392,6 +667,7 @@ export async function POST(req: NextRequest) {
           });
         } catch (err) {
           console.error("[stripe webhook] client provisioning failed", err instanceof Error ? err.message : String(err));
+          await notifyProvisionFailed(s, email, err);
         }
       }
     } else if (event.type === "checkout.session.async_payment_succeeded") {
@@ -401,6 +677,8 @@ export async function POST(req: NextRequest) {
       await handleOrderSession(stripe, event.data.object as Stripe.Checkout.Session, "failed");
     } else if (event.type === "charge.refunded" || event.type === "charge.dispute.created") {
       await handleChargeEvent(event);
+    } else if (event.type === "invoice.paid" || event.type === "invoice.payment_failed") {
+      await notifyInvoice(event);
     } else if (
       event.type === "customer.subscription.created" ||
       event.type === "customer.subscription.updated" ||
@@ -415,7 +693,7 @@ export async function POST(req: NextRequest) {
       // `cancel_at` date, so treat either as "scheduled to end".
       const scheduled = sub.status !== "canceled" && (sub.cancel_at_period_end || Boolean(sub.cancel_at));
       const endsAt = scheduled ? (isoOf(sub.cancel_at) ?? periodEndOf(sub)) : null;
-      await supabase.from("subscriptions").upsert(
+      const { error: lifecycleWriteError } = await supabase.from("subscriptions").upsert(
         {
           stripe_customer_id: customerId,
           stripe_subscription_id: sub.id,
@@ -436,6 +714,9 @@ export async function POST(req: NextRequest) {
         },
         { onConflict: "stripe_subscription_id" },
       );
+      if (lifecycleWriteError) throw new Error(`subscription change not saved: ${lifecycleWriteError.message}`);
+
+      await notifySubscriptionChange(event, sub, scheduled, endsAt, care.kind === "care", care.client_id ?? null);
 
       // Keep the client account in step with billing. A fully cancelled
       // subscription churns the account; everything else is just recorded.
@@ -506,6 +787,16 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error("[stripe webhook] handler error", err instanceof Error ? err.message : String(err));
+    // Stripe retries a 500 for days. One row per event, however many retries.
+    await notifyAdmins({
+      event: "stripe.webhook_error",
+      title: `A Stripe event could not be processed: ${event.type}`,
+      body: `${err instanceof Error ? err.message : String(err)}. Stripe will retry it. If this stays unresolved, a payment or cancellation is missing from your records.`,
+      url: "/admin/subscriptions",
+      isTest: !event.livemode,
+      dedupeKey: `stripe_err:${event.id}`,
+      data: { stripe_event_id: event.id, type: event.type },
+    });
     return NextResponse.json({ error: "Handler error." }, { status: 500 });
   }
 

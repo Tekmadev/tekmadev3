@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { ownerEmails, type AdminRole } from "@/lib/admin";
+import { notifyAdmins } from "@/lib/admin-notify";
 
 export type AdminUser = {
   email: string;
@@ -114,6 +115,17 @@ export async function addManager(opts: {
     );
   if (rowErr) return { ok: false, error: rowErr.message };
 
+  // Owner only: who can get into the admin is a security matter.
+  await notifyAdmins({
+    event: "team.admin_added",
+    title: `${opts.name || email} now has admin access as ${opts.role}`,
+    body: opts.invitedBy ? `Added by ${opts.invitedBy}` : null,
+    url: "/admin/team",
+    actor: { type: "staff", label: opts.invitedBy ?? null },
+    dedupeKey: `admin:${email}:${opts.role}:${new Date().toISOString().slice(0, 10)}`,
+    data: { email, role: opts.role },
+  });
+
   return { ok: true };
 }
 
@@ -126,6 +138,13 @@ export async function removeAdmin(email: string): Promise<AddManagerResult> {
   if (ownerEmails().includes(target)) return { ok: false, error: "The owner cannot be removed." };
 
   await db.from("admins").delete().eq("email", target);
+  await notifyAdmins({
+    event: "team.admin_removed",
+    title: `${target} no longer has admin access`,
+    url: "/admin/team",
+    actor: { type: "staff" },
+    data: { email: target },
+  });
 
   // Best effort: also delete the auth account so they can no longer sign in.
   try {

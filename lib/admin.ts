@@ -86,6 +86,27 @@ export async function getAdminContext(): Promise<AdminContext | null> {
   return { user, email: (user.email || "").toLowerCase(), name, role };
 }
 
+/**
+ * The same check for a client that cannot hold cookies: a mobile app sends the
+ * Supabase access token as `Authorization: Bearer <jwt>`. The token is verified
+ * by Supabase (signature and expiry), then the email must still resolve to a
+ * role, exactly as it must for a browser session.
+ */
+export async function getAdminContextFromBearer(authorization: string | null): Promise<AdminContext | null> {
+  const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1]?.trim();
+  if (!token) return null;
+  const db = getSupabaseAdmin();
+  if (!db) return null;
+  const {
+    data: { user },
+  } = await db.auth.getUser(token);
+  if (!user) return null;
+  const role = await resolveRole(user.email);
+  if (!role) return null;
+  const name = (typeof user.user_metadata?.name === "string" && user.user_metadata.name) || null;
+  return { user, email: (user.email || "").toLowerCase(), name, role };
+}
+
 /** Like requireAdmin, but only owners pass. Managers bounce back to the overview. */
 export async function requireOwner(): Promise<AdminContext> {
   const ctx = await requireAdmin();

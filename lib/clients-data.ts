@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
 import { offerName } from "@/config/products";
 import { sendMail } from "@/lib/mail/send";
 import { clientWelcomeEmail } from "@/lib/mail/welcome";
+import { ADMIN_EVENTS, dayKey, hourKey, notifyAdmins, type AdminEventKey } from "@/lib/admin-notify";
 
 /**
  * Client accounts, their people, the activity trail, and notifications.
@@ -504,18 +505,93 @@ export async function logActivity(input: {
   visibility?: "internal" | "client";
   data?: Record<string, unknown>;
 }): Promise<void> {
-  const { error } = await db().from("client_activity").insert({
-    client_id: input.client_id,
-    actor_type: input.actor_type,
-    actor_email: input.actor_email ?? null,
-    event: input.event,
-    entity_type: input.entity_type ?? null,
-    entity_id: input.entity_id ?? null,
-    summary: input.summary ?? null,
-    visibility: input.visibility ?? "internal",
-    data: input.data ?? {},
-  });
+  const { data, error } = await db()
+    .from("client_activity")
+    .insert({
+      client_id: input.client_id,
+      actor_type: input.actor_type,
+      actor_email: input.actor_email ?? null,
+      event: input.event,
+      entity_type: input.entity_type ?? null,
+      entity_id: input.entity_id ?? null,
+      summary: input.summary ?? null,
+      visibility: input.visibility ?? "internal",
+      data: input.data ?? {},
+    })
+    .select("id")
+    .maybeSingle();
   if (error) console.error("[client_activity] insert failed", error.message);
+  await notifyFromActivity(input, (data?.id as string | undefined) ?? null);
+}
+
+/**
+ * Which client activity also belongs in the admin inbox, and from whom.
+ *
+ * Hooking the inbox here, rather than at each call site, means a new portal
+ * action that logs activity is one line in this table away from notifying
+ * staff, and nobody has to remember a second call. `actors` keeps staff from
+ * being notified about their own clicks: a task a manager ticks off is not
+ * news, the same task ticked off by the client is.
+ */
+const ACTIVITY_NOTIFICATIONS: Record<string, { event: AdminEventKey; actors: ActivityActor[]; collapseHourly?: boolean }> = {
+  // A client working through their checklist ticks several at once.
+  "task.completed": { event: "onboarding.task_completed", actors: ["client"], collapseHourly: true },
+  "intake.submitted": { event: "onboarding.intake_submitted", actors: ["client"] },
+  "access.client_marked_done": { event: "onboarding.access_marked_done", actors: ["client"] },
+  "access.not_applicable": { event: "onboarding.access_not_applicable", actors: ["client"] },
+  "approval.approved": { event: "onboarding.approval_approved", actors: ["client"] },
+  "approval.changes_requested": { event: "onboarding.approval_changes_requested", actors: ["client"] },
+  // Ten files in a minute is one piece of news, not ten.
+  "asset.uploaded": { event: "onboarding.asset_uploaded", actors: ["client"], collapseHourly: true },
+  "agreement.signed": { event: "onboarding.agreement_signed", actors: ["client"] },
+  "member.activated": { event: "portal.member_activated", actors: ["client", "system"] },
+  "checkout.started": { event: "portal.checkout_started", actors: ["client"], collapseHourly: true },
+  "care.checkout_started": { event: "portal.checkout_started", actors: ["client"], collapseHourly: true },
+  "care.started": { event: "care.started", actors: ["system"] },
+  "client.signed_up": { event: "portal.lead_signed_up", actors: ["client"] },
+  // Created by a purchase. An account a manager adds by hand is their own click, not news.
+  "client.created": { event: "client.provisioned", actors: ["system"] },
+  // "client" too: a client inviting a teammate from the portal logs it as theirs.
+  "member.invite_failed": { event: "member.invite_failed", actors: ["system", "admin", "client"] },
+  "client.live": { event: "client.live", actors: ["admin", "system"] },
+  "guarantee.met": { event: "guarantee.met", actors: ["admin", "system"] },
+};
+
+async function notifyFromActivity(input: Parameters<typeof logActivity>[0], activityId: string | null): Promise<void> {
+  const rule = ACTIVITY_NOTIFICATIONS[input.event];
+  if (!rule || !rule.actors.includes(input.actor_type)) return;
+  try {
+    const { data: client } = await db()
+      .from("clients")
+      .select("business_name,is_test")
+      .eq("id", input.client_id)
+      .maybeSingle();
+    const name = (client?.business_name as string | undefined) || "A client";
+    await notifyAdmins({
+      event: rule.event,
+      title: `${name}: ${input.summary ?? ADMIN_EVENTS[rule.event].label}`,
+      url: `/admin/clients/${input.client_id}`,
+      clientId: input.client_id,
+      entity: input.entity_type ? { type: input.entity_type, id: input.entity_id ?? null } : undefined,
+      actor: {
+        type: input.actor_type === "admin" ? "staff" : input.actor_type,
+        label: input.actor_email ?? null,
+      },
+      isTest: Boolean(client?.is_test),
+      // One key per occurrence (the activity row), never per entity: a grant the
+      // client marks done a second time, after staff sent it back, is news again,
+      // and a permanent key swallowed it. Bursts share an hour and count up.
+      dedupeKey: rule.collapseHourly
+        ? hourKey(`activity:${input.event}:${input.client_id}`)
+        : activityId
+          ? `activity:${activityId}`
+          : null,
+      collapse: Boolean(rule.collapseHourly),
+      data: { activity_event: input.event, ...(input.data ?? {}) },
+    });
+  } catch (err) {
+    console.error("[client_activity] notify failed", err instanceof Error ? err.message : String(err));
+  }
 }
 
 export async function listActivity(
@@ -604,6 +680,27 @@ async function deliverEmail(
     },
   });
   if (error) console.error("[client_notifications] email log failed", error.message);
+
+  // A client who never got their welcome or their invite thinks we went quiet.
+  if (!result.ok) {
+    const missingKey = Boolean(result.skipped);
+    // Failure path only, so the lookup costs nothing on a healthy send. A sandbox
+    // buyer's bounced invite must not sit in the live Needs action list.
+    const { data: owner } = await db().from("clients").select("is_test").eq("id", input.client_id).maybeSingle();
+    await notifyAdmins({
+      isTest: Boolean(owner?.is_test),
+      collapse: true,
+      event: missingKey ? "email.not_configured" : "email.failed",
+      title: missingKey
+        ? "Email is not configured: client emails are not going out"
+        : `An email to ${email.to} failed to send: "${subject}"`,
+      body: result.skipped ? "RESEND_API_KEY is missing, so no transactional email is being sent." : result.error,
+      url: `/admin/clients/${input.client_id}`,
+      clientId: input.client_id,
+      dedupeKey: missingKey ? dayKey("mail_not_configured") : dayKey(`mail:${input.template_key ?? "email"}:${email.to}`),
+      data: { to: email.to, template: input.template_key ?? null },
+    });
+  }
 }
 
 export async function listInAppNotifications(clientId: string, memberId: string, limit = 20): Promise<ClientNotification[]> {

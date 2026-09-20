@@ -60,15 +60,25 @@ export async function proxy(request: NextRequest) {
 
   // Admin, portal (previews / localhost without the subdomain) and auth
   // callbacks need a fresh session. Everything else is untouched.
-  if (
+  // /api/admin is polled by the notification bell from a tab that may sit open
+  // for hours. Without a refresh here its session would expire and the bell
+  // would go quiet until the next page navigation.
+  const response =
     pathname.startsWith("/admin") ||
+    pathname.startsWith("/api/admin") ||
     pathname.startsWith(portal.internalPrefix) ||
     pathname.startsWith("/auth")
-  ) {
-    return updateSession(request);
-  }
+      ? await updateSession(request)
+      : NextResponse.next();
 
-  return NextResponse.next();
+  // Every deployment is also reachable on a *.vercel.app address, and the
+  // production one (tekmadev3.vercel.app) was a complete, indexable copy of the
+  // site: duplicate content competing with www. It stays reachable, because a
+  // webhook or a rollback check may point at it, but it asks not to be indexed.
+  // Not a robots.txt block: a crawler has to fetch the page to see this header.
+  if (host?.endsWith(".vercel.app")) response.headers.set("X-Robots-Tag", "noindex, nofollow");
+
+  return response;
 }
 
 export const config = {

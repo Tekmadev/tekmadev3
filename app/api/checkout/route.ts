@@ -4,6 +4,7 @@ import { getProductMeta } from "@/config/products";
 import { NOT_CONFIGURED, prepareCheckout } from "@/lib/checkout";
 import { stripeFor } from "@/lib/stripe-mode";
 import { checkoutMode } from "@/lib/test-mode";
+import { hourKey, notifyAdmins } from "@/lib/admin-notify";
 
 // Stripe's SDK needs the Node.js runtime (not Edge).
 export const runtime = "nodejs";
@@ -66,6 +67,18 @@ export async function POST(req: NextRequest) {
       "[checkout] Stripe session creation failed",
       err instanceof Error ? err.message : String(err),
     );
+    // Someone tried to pay and could not. One row an hour per product: this
+    // route is public, so a broken price must not become a flood.
+    await notifyAdmins({
+      event: "checkout.error",
+      title: `Checkout failed to start for ${String(body.product || body.tier || "a product")}`,
+      body: `${err instanceof Error ? err.message : String(err)}. A buyer saw an error instead of the payment page.`,
+      url: "/admin/pricing",
+      needsAction: true,
+      isTest: mode === "test",
+      dedupeKey: hourKey(`checkout_err:${String(body.product || body.tier || "unknown")}`),
+      collapse: true,
+    });
     return NextResponse.json(
       { error: "Couldn't start checkout. Please try again or book a call." },
       { status: 500 },

@@ -43,6 +43,7 @@ import { inviteMember, sendPortalInvite } from "@/lib/client-provisioning";
 import { NOT_CONFIGURED, prepareCarePlan, prepareCheckout } from "@/lib/checkout";
 import { getLatestOrderForClient } from "@/lib/orders-data";
 import { getProductMeta, isProductPlan } from "@/config/products";
+import { hourKey, notifyAdmins } from "@/lib/admin-notify";
 import { business } from "@/config/site";
 import { portalUrl } from "@/lib/portal-host";
 import type { ActionResult } from "@/components/portal/PortalForm";
@@ -598,6 +599,16 @@ export async function startCheckoutAction(formData: FormData): Promise<ActionRes
     return { ok: true, redirect: checkout.url };
   } catch (err) {
     console.error("[portal checkout]", err instanceof Error ? err.message : String(err));
+    await notifyAdmins({
+      event: "checkout.error",
+      title: `${sess.client.business_name} could not start checkout in the portal`,
+      body: `${err instanceof Error ? err.message : String(err)}. They saw an error instead of the payment page.`,
+      url: `/admin/clients/${sess.client.id}`,
+      clientId: sess.client.id,
+      isTest: Boolean(sess.client.is_test),
+      dedupeKey: hourKey(`checkout_err:portal:${sess.client.id}`),
+      collapse: true,
+    });
     return { ok: false, message: "Couldn't start checkout. Please try again or book a call." };
   }
 }
@@ -654,6 +665,16 @@ export async function startCarePlanAction(): Promise<ActionResult> {
     return { ok: true, redirect: checkout.url };
   } catch (err) {
     console.error("[portal care plan]", err instanceof Error ? err.message : String(err));
+    await notifyAdmins({
+      event: "checkout.error",
+      title: `${sess.client.business_name} could not open the care plan card page`,
+      body: `${err instanceof Error ? err.message : String(err)}. Their site cannot go live until this works.`,
+      url: `/admin/clients/${sess.client.id}`,
+      clientId: sess.client.id,
+      isTest: Boolean(sess.client.is_test),
+      dedupeKey: hourKey(`checkout_err:care:${sess.client.id}`),
+      collapse: true,
+    });
     return { ok: false, message: "Couldn't open the secure card page. Please try again or email us." };
   }
 }

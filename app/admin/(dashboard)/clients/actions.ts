@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireAdmin, requireOwner } from "@/lib/admin";
 import { getProductMeta } from "@/config/products";
+import { notifyAdmins, resolveAdminNotifications } from "@/lib/admin-notify";
 import {
   careIsSetUp,
   createNotification,
@@ -159,7 +160,19 @@ export async function updateClientAction(formData: FormData) {
 export async function deleteClientAction(formData: FormData) {
   const ctx = await requireOwner();
   const id = s(formData.get("client_id"));
+  const client = await getClientById(id);
   await softDeleteClient(id, ctx.email);
+  // Until now a deleted client left no trace of who did it. Owner only.
+  await notifyAdmins({
+    event: "client.deleted",
+    title: `${client?.business_name ?? "A client"} was moved to the trash`,
+    body: `By ${ctx.email}`,
+    url: "/admin/clients",
+    entity: { type: "client", id },
+    actor: { type: "staff", label: ctx.email },
+    isTest: Boolean(client?.is_test),
+    data: { client_id: id, deleted_by: ctx.email },
+  });
   redirect("/admin/clients?deleted=1");
 }
 
@@ -368,6 +381,7 @@ export async function markIntakeReviewedAction(formData: FormData) {
   const ctx = await requireAdmin();
   const clientId = s(formData.get("client_id"));
   await markIntakeReviewed(s(formData.get("intake_id")), ctx.email);
+  await resolveAdminNotifications({ events: ["onboarding.intake_submitted"], clientId, by: ctx.email });
   await logActivity({ client_id: clientId, actor_type: "admin", actor_email: ctx.email, event: "intake.reviewed", summary: "Intake reviewed", visibility: "client" });
   redirect(back(clientId, "intake"));
 }
@@ -387,6 +401,15 @@ export async function setAccessStatusAction(formData: FormData) {
   }
   if (status === "revoked") patch.revoked_at = now;
   await updateAccessGrant(grant.id, patch);
+  // Staff have dealt with it, one way or another: the "verify it" item closes
+  // by itself instead of waiting for someone to tick it off in the inbox too.
+  if (status !== grant.status) {
+    await resolveAdminNotifications({
+      events: ["onboarding.access_marked_done", "onboarding.access_not_applicable"],
+      entityId: grant.id,
+      by: ctx.email,
+    });
+  }
   if (status === "verified" && grant.task_id) await setTaskStatus(grant.task_id, "done", ctx.email);
   if (status === "pending_client" && grant.task_id) await setTaskStatus(grant.task_id, "waiting_on_client", ctx.email);
   await logActivity({

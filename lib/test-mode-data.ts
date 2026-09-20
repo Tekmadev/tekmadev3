@@ -218,6 +218,8 @@ export async function purgeTestData(): Promise<{ clients: number; orders: number
     const { count } = await supabase.from("clients").delete({ count: "exact" }).eq("is_test", true);
     clients = count ?? 0;
   }
+  // Test notifications go with the data they were about.
+  await supabase.from("admin_notifications").delete().eq("is_test", true);
   const { count: orders } = await supabase.from("orders").delete({ count: "exact" }).eq("livemode", false);
   const { count: subscriptions } = await supabase.from("subscriptions").delete({ count: "exact" }).eq("livemode", false);
 
