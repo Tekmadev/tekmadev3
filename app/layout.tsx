@@ -52,13 +52,10 @@ export const metadata: Metadata = {
   creator: business.legalName,
   category: "Business Services",
   keywords: [...brand.keywords],
-  alternates: {
-    canonical: business.url,
-    languages: {
-      "en-US": business.url,
-      "en-CA": business.url,
-    },
-  },
+  // No canonical here on purpose. A default at the root is inherited by every
+  // page that forgets its own, which quietly told Google that the 404 page, the
+  // login page and anything new were copies of the homepage. Each page sets its
+  // own. No hreflang either: one language, one URL.
   formatDetection: { email: false, address: false, telephone: false },
   robots: {
     index: true,

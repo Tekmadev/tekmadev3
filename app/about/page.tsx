@@ -6,7 +6,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { CanadianBadge } from "@/components/CanadianBadge";
 import { business } from "@/config/site";
 import { ABOUT_PATH, about } from "@/config/about";
-import { aboutPageJsonLd, crumbsJsonLd, faqPageJsonLd } from "@/lib/seo";
+import { aboutPageJsonLd, crumbsJsonLd, faqPageJsonLd, socialMeta } from "@/lib/seo";
 
 const URL = `${business.url}${ABOUT_PATH}`;
 
@@ -14,8 +14,7 @@ export const metadata: Metadata = {
   title: { absolute: about.metaTitle },
   description: about.metaDescription,
   alternates: { canonical: URL },
-  openGraph: { title: about.metaTitle, description: about.metaDescription, url: URL, type: "website" },
-  twitter: { card: "summary_large_image", title: about.metaTitle, description: about.metaDescription },
+  ...socialMeta({ title: about.metaTitle, description: about.metaDescription, url: URL }),
 };
 
 const office = business.registeredOffice;

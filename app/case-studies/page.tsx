@@ -4,7 +4,7 @@ import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { Section } from "@/components/Section";
 import { JsonLd } from "@/components/JsonLd";
 import { business, proofWins } from "@/config/site";
-import { crumbsJsonLd } from "@/lib/seo";
+import { crumbsJsonLd, socialMeta } from "@/lib/seo";
 import { CASE_STUDIES_PATH, caseStudiesHub, publishedCaseStudies } from "@/config/case-studies";
 
 const URL = `${business.url}${CASE_STUDIES_PATH}`;
@@ -13,12 +13,7 @@ export const metadata: Metadata = {
   title: caseStudiesHub.metaTitle,
   description: caseStudiesHub.metaDescription,
   alternates: { canonical: URL },
-  openGraph: {
-    title: caseStudiesHub.metaTitle,
-    description: caseStudiesHub.metaDescription,
-    url: URL,
-    type: "website",
-  },
+  ...socialMeta({ title: caseStudiesHub.metaTitle, description: caseStudiesHub.metaDescription, url: URL }),
 };
 
 export default function CaseStudiesIndex() {

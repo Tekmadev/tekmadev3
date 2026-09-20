@@ -68,12 +68,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),
-    {
-      url: `${SITE_URL}/blog`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 0.8,
-    },
+    // Listed only once there is something to read. An empty index is thin
+    // content, and the page itself asks not to be indexed until then.
+    ...(posts.length > 0
+      ? [{ url: `${SITE_URL}/blog`, lastModified: now, changeFrequency: "daily" as const, priority: 0.8 }]
+      : []),
     ...posts.map((p) => ({
       url: `${SITE_URL}/blog/${p.slug}`,
       lastModified: p.updated_at ? new Date(p.updated_at) : now,

@@ -9,7 +9,12 @@ import { Webline } from "@/components/sections/Webline";
 import { FAQ } from "@/components/sections/FAQ";
 import { FinalCTA } from "@/components/sections/FinalCTA";
 import { JsonLd } from "@/components/JsonLd";
+import type { Metadata } from "next";
 import { faqJsonLd, howToJsonLd, offerJsonLd, serviceJsonLd } from "@/lib/seo";
+import { business } from "@/config/site";
+
+// Only the homepage may claim the root URL as its canonical.
+export const metadata: Metadata = { alternates: { canonical: business.url } };
 
 /**
  * The Webline block reads its price from the products table, so the page is

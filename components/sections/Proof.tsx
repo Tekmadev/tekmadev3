@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  animate,
   motion,
+  useInView,
   useScroll,
   useTransform,
-  useMotionValueEvent,
   type MotionValue,
 } from "motion/react";
 import { ArrowRight } from "lucide-react";
@@ -96,9 +97,25 @@ function Card({
 }) {
   const start = 0.15 + index * 0.08;
   const end = start + 0.25;
-  const counter = useTransform(progress, [start, end], [0, win.metric], { clamp: true });
-  const [val, setVal] = useState(0);
-  useMotionValueEvent(counter, "change", (latest) => setVal(latest));
+  // The server and any crawler get the real figure. It used to start at 0 and
+  // count up with the scroll position, so Google and AI engines read "+0%" for
+  // every result on this page. Now the number is in the HTML, and a person
+  // scrolling gets a one-shot count-up that starts just before the card enters
+  // view (so the reset to zero happens off screen) and always ends on the truth.
+  const numberRef = useRef<HTMLParagraphElement>(null);
+  const inView = useInView(numberRef, { once: true, margin: "0px 0px 160px 0px" });
+  const [val, setVal] = useState(win.metric);
+  useEffect(() => {
+    if (!inView) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const controls = animate(0, win.metric, {
+      duration: 1.4,
+      delay: index * 0.12,
+      ease: [0.22, 0.61, 0.36, 1],
+      onUpdate: setVal,
+    });
+    return () => controls.stop();
+  }, [inView, win.metric, index]);
 
   const opacity = useTransform(progress, [start - 0.05, start + 0.05], [0.55, 1]);
   const y = useTransform(progress, [start - 0.05, start + 0.1], [16, 0]);
@@ -130,7 +147,7 @@ function Card({
           </span>
         </div>
 
-        <p className="display-xxl number-tabular mt-10 text-6xl text-ink sm:text-7xl">
+        <p ref={numberRef} className="display-xxl number-tabular mt-10 text-6xl text-ink sm:text-7xl">
           {win.prefix}
           {formatMetric(val)}
           {win.suffix}

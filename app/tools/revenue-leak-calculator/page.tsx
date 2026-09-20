@@ -6,7 +6,7 @@ import { Reveal } from "@/components/webline/Reveal";
 import { CanadianBadge } from "@/components/CanadianBadge";
 import { RevenueLeakCalculator } from "@/components/tools/RevenueLeakCalculator";
 import { business } from "@/config/site";
-import { crumbsJsonLd, faqPageJsonLd } from "@/lib/seo";
+import { crumbsJsonLd, faqPageJsonLd, socialMeta } from "@/lib/seo";
 import {
   getLeadMagnet,
   revenueLeakCopy as c,
@@ -22,12 +22,7 @@ export const metadata: Metadata = {
   title: magnet.metaTitle,
   description: magnet.metaDescription,
   alternates: { canonical: URL },
-  openGraph: {
-    title: magnet.metaTitle,
-    description: magnet.metaDescription,
-    url: URL,
-    type: "website",
-  },
+  ...socialMeta({ title: magnet.metaTitle, description: magnet.metaDescription, url: URL }),
 };
 
 /** Static: the page is the same for everyone, and every number is computed in the browser. */

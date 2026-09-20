@@ -27,21 +27,24 @@ export function TheSystem() {
     if (idx !== active) setActive(idx);
   });
 
+  // One anchor for both layouts. The id used to sit on the mobile section, which
+  // is display:none on desktop, so "The System" in the nav and footer scrolled
+  // nowhere on a laptop.
   return (
-    <>
+    <div id="system" className="scroll-mt-20 lg:scroll-mt-0">
       <MobileSystem />
       <DesktopSystem
         ref={ref}
         active={active}
         scrollYProgress={scrollYProgress}
       />
-    </>
+    </div>
   );
 }
 
 function MobileSystem() {
   return (
-    <section id="system" className="bg-bg-2 lg:hidden">
+    <section className="bg-bg-2 lg:hidden">
       <div className="mx-auto w-full max-w-6xl px-5 py-24 sm:px-8 sm:py-28">
         <Eyebrow>The system</Eyebrow>
         <h2 className="display-xl mt-4 text-balance text-4xl sm:mt-6 sm:text-5xl">

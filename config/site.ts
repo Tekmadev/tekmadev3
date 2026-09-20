@@ -18,7 +18,11 @@ const _phoneSchema = "+1-866-966-1988";
 const _calLink = "callline/startbooking";
 const _calNamespace = "startbooking";
 const _calUrl = `https://cal.com/${_calLink}`;
-const _siteUrl = "https://tekmadev.com";
+// www, not the bare domain. tekmadev.com answers with a redirect to www, so a
+// canonical, sitemap entry or schema @id on the bare domain points search
+// engines at a URL that is never the final one. `business.domain` below stays
+// "tekmadev.com": that is how the name is written, not where pages live.
+const _siteUrl = "https://www.tekmadev.com";
 const _portalHost = "account.tekmadev.com";
 
 /**

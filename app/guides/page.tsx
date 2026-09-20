@@ -5,20 +5,18 @@ import { Section } from "@/components/Section";
 import { JsonLd } from "@/components/JsonLd";
 import { guides } from "@/lib/content";
 import { business } from "@/config/site";
-import { crumbsJsonLd } from "@/lib/seo";
+import { crumbsJsonLd, socialMeta } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Guides: how to get more clients for your service business",
   description:
     "Plain-English guides on getting more clients: responding faster, never missing a call, following up, and choosing the right kind of help. Or skip the reading and let us run it.",
   alternates: { canonical: `${business.url}/guides` },
-  openGraph: {
+  ...socialMeta({
     title: "Guides: how to get more clients for your service business",
-    description:
-      "Plain-English guides on getting more clients, and the done-for-you system behind them.",
+    description: "Plain-English guides on getting more clients, and the done-for-you system behind them.",
     url: `${business.url}/guides`,
-    type: "website",
-  },
+  }),
 };
 
 export default function GuidesIndex() {

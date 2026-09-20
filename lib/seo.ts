@@ -130,12 +130,14 @@ export const offerJsonLd = {
   "@context": "https://schema.org",
   "@type": "Offer",
   "@id": `${SITE_URL}#offer`,
-  name: "30 Booked Calls in 60 Days Guarantee",
+  name: "30 Bookings in 60 Days Guarantee",
+  // Says which plans carry the guarantee, because the page does: Convert has
+  // none. No validFrom: the old one was derived from the founding year, years
+  // before this offer existed, and an invented date is worse than no date.
   description:
-    "Performance-guaranteed engagement: if we don't deliver 30 qualified booked calls in your first 60 days, we keep working at no additional charge and pause billing until we do. Pricing is quoted on a qualification call.",
+    "On the Grow plan and above: if we don't deliver 30 qualified bookings in your first 60 days, we keep working at no additional charge and pause monthly billing until we do. The entry plan, Convert, does not carry the guarantee. Pricing is quoted on a qualification call.",
   itemOffered: { "@id": `${SITE_URL}#service` },
   availability: "https://schema.org/InStock",
-  validFrom: `${business.foundingYear}-01-01`,
   eligibleRegion: areaServedSchema,
   seller: { "@id": `${SITE_URL}#organization` },
 };
@@ -315,6 +317,35 @@ export function caseStudyJsonLd(study: CaseStudy, path: string) {
     ...(study.stats.length
       ? { citation: study.stats.map((s) => ({ "@type": "CreativeWork", name: s.source, url: s.sourceUrl })) }
       : {}),
+  };
+}
+
+/**
+ * openGraph and twitter for a page, complete.
+ *
+ * In Next a page-level `openGraph` object REPLACES the root one rather than
+ * merging with it, so a page that set only a title and url silently lost the
+ * share image, the site name and the locale, and a page that set neither
+ * shared as the homepage. Nine pages were live that way. Build these two
+ * objects here and nothing can be forgotten.
+ */
+export function socialMeta(opts: { title: string; description: string; url: string; type?: "website" | "article" }) {
+  return {
+    openGraph: {
+      title: opts.title,
+      description: opts.description,
+      url: opts.url,
+      type: opts.type ?? "website",
+      siteName: SITE_NAME,
+      locale: "en_US",
+      images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: `${SITE_NAME}: ${brand.slogan}` }],
+    },
+    twitter: {
+      card: "summary_large_image" as const,
+      title: opts.title,
+      description: opts.description,
+      images: ["/twitter-image"],
+    },
   };
 }
 

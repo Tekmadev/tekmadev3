@@ -3,11 +3,13 @@ import { LegalLayout } from "@/components/LegalLayout";
 import { LegalDocView } from "@/components/LegalDoc";
 import { privacyPolicy } from "@/config/legal";
 import { business } from "@/config/site";
+import { socialMeta } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: privacyPolicy.title,
   description: privacyPolicy.subtitle,
   alternates: { canonical: `${business.url}/privacy` },
+  ...socialMeta({ title: privacyPolicy.title, description: privacyPolicy.subtitle, url: `${business.url}/privacy` }),
 };
 
 export default function PrivacyPage() {

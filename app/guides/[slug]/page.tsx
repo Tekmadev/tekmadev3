@@ -4,7 +4,7 @@ import { GuideArticle } from "@/components/GuideArticle";
 import { JsonLd } from "@/components/JsonLd";
 import { getGuide, guides } from "@/lib/content";
 import { business } from "@/config/site";
-import { crumbsJsonLd, faqPageJsonLd, guideArticleJsonLd } from "@/lib/seo";
+import { crumbsJsonLd, faqPageJsonLd, guideArticleJsonLd, socialMeta } from "@/lib/seo";
 
 export const dynamicParams = false;
 
@@ -25,17 +25,12 @@ export async function generateMetadata({
     title: guide.metaTitle,
     description: guide.metaDescription,
     alternates: { canonical: `${business.url}${path}` },
-    openGraph: {
+    ...socialMeta({
       title: guide.metaTitle,
       description: guide.metaDescription,
       url: `${business.url}${path}`,
       type: "article",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: guide.metaTitle,
-      description: guide.metaDescription,
-    },
+    }),
   };
 }
 

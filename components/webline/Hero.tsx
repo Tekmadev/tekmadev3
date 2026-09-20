@@ -44,8 +44,8 @@ export function WeblineHero({
       <Section className="relative">
         <motion.div style={{ y, opacity }} className="origin-top">
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ y: 12 }}
+            animate={{ y: 0 }}
             transition={{ duration: 0.7, ease: [0.22, 0.61, 0.36, 1] }}
             className="inline-flex items-center gap-3"
           >
@@ -65,8 +65,8 @@ export function WeblineHero({
           </h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ y: 10 }}
+            animate={{ y: 0 }}
             transition={{ duration: 0.7, delay: 0.5 }}
             className="mt-9 max-w-2xl text-balance text-lg leading-snug text-ink-2 sm:text-xl"
           >
@@ -74,8 +74,8 @@ export function WeblineHero({
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ y: 10 }}
+            animate={{ y: 0 }}
             transition={{ duration: 0.7, delay: 0.65 }}
             className="mt-9 flex flex-col items-start gap-4 sm:flex-row sm:items-center"
           >
@@ -105,8 +105,8 @@ export function WeblineHero({
           </motion.p>
 
           <motion.dl
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ y: 10 }}
+            animate={{ y: 0 }}
             transition={{ duration: 0.7, delay: 0.95 }}
             className="mt-14 grid max-w-2xl grid-cols-3 gap-6 border-t border-line pt-6"
           >
@@ -132,8 +132,12 @@ function Pill({ children }: { children: React.ReactNode }) {
 function Line({ children, delay, accent }: { children: React.ReactNode; delay: number; accent?: boolean }) {
   return (
     <motion.span
-      initial={{ opacity: 0, y: 28 }}
-      animate={{ opacity: 1, y: 0 }}
+      // Slides in, never fades in. With opacity 0 in the server HTML the headline,
+      // which is the page's largest paint, stayed invisible until every script
+      // had loaded, and blank forever if one failed. A transform costs nothing:
+      // the text is painted at once and is not counted as layout shift.
+      initial={{ y: 28 }}
+      animate={{ y: 0 }}
       transition={{ duration: 0.85, delay, ease: [0.22, 0.61, 0.36, 1] }}
       className={`block ${accent ? "gold-gradient-text" : "text-ink"}`}
     >

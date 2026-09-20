@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { Section } from "@/components/Section";
 import { JsonLd } from "@/components/JsonLd";
 import { PostCard } from "@/components/blog/PostCard";
-import { getPublishedPosts, listCategories } from "@/lib/blog-data";
+import { getPublishedPosts, getPublishedPostSlugs, listCategories } from "@/lib/blog-data";
 import { business } from "@/config/site";
 import { crumbsJsonLd } from "@/lib/seo";
 
@@ -14,12 +14,22 @@ const TITLE = "The Tekmadev growth blog";
 const DESCRIPTION =
   "Straight, practical plays on getting more clients: answering every lead, booking more calls, following up, and using AI and automation to grow a service business. Or hand it all to us and we run it.";
 
-export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  alternates: { canonical: `${business.url}/blog` },
-  openGraph: { title: TITLE, description: DESCRIPTION, url: `${business.url}/blog`, type: "website" },
-};
+/**
+ * An empty blog index is thin content: a title, a promise and nothing under it.
+ * Until the first post is published the page asks not to be indexed (and the
+ * sitemap leaves it out), then switches itself on with no code change.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const hasPosts = (await getPublishedPostSlugs()).length > 0;
+  return {
+    title: TITLE,
+    description: DESCRIPTION,
+    alternates: { canonical: `${business.url}/blog` },
+    openGraph: { title: TITLE, description: DESCRIPTION, url: `${business.url}/blog`, type: "website", images: ["/opengraph-image"] },
+    twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION, images: ["/twitter-image"] },
+    ...(hasPosts ? {} : { robots: { index: false, follow: true } }),
+  };
+}
 
 export default async function BlogIndex({
   searchParams,

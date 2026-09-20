@@ -4,19 +4,18 @@ import { ArrowRight } from "lucide-react";
 import { Section } from "@/components/Section";
 import { JsonLd } from "@/components/JsonLd";
 import { business } from "@/config/site";
-import { crumbsJsonLd } from "@/lib/seo";
+import { crumbsJsonLd, socialMeta } from "@/lib/seo";
 import { publishedLeadMagnets, toolsHub, TOOLS_PATH } from "@/config/lead-magnets";
 
 export const metadata: Metadata = {
   title: toolsHub.metaTitle,
   description: toolsHub.metaDescription,
   alternates: { canonical: `${business.url}${TOOLS_PATH}` },
-  openGraph: {
+  ...socialMeta({
     title: toolsHub.metaTitle,
     description: toolsHub.metaDescription,
     url: `${business.url}${TOOLS_PATH}`,
-    type: "website",
-  },
+  }),
 };
 
 export default function ToolsIndex() {

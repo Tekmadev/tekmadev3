@@ -268,7 +268,7 @@ const templates = [
       lead(`Hi ${FNAME}, you have seen the leak and the system. Now the receipts.`),
       p("Down2Detail, an auto detailing shop, went from 9 booked jobs a month to 52 in 42 days. Same team, same market. The only change was the system catching and working every lead."),
       bullets([
-        "Carpet Masters: $8K to $31K monthly revenue in 5 months.",
+        "Stoneworks Interlock: $8K to $31K monthly revenue in 5 months.",
         "KeyFoby: 2 to 3 calls a week to 30+, live in 12 days.",
         "94% of clients are still running the system 12 months later.",
       ]),
