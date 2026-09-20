@@ -1,6 +1,17 @@
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
-import { getGuide, guides, guideTitle, type Guide } from "@/lib/content";
+import { getGuide, guides, guideTitle, GUIDE_PUBLISHED, type Guide } from "@/lib/content";
+import { business } from "@/config/site";
+
+/** "2026-06-14" -> "June 14, 2026". Fixed to UTC so the server and the reader agree on the day. */
+function longDate(iso: string) {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-CA", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
 
 function isUrl(s: string) {
   return /^https?:\/\//i.test(s);
@@ -18,6 +29,9 @@ export function GuideArticle({ guide }: { guide: Guide }) {
       : guides
           .filter((g) => g.slug !== guide.slug)
           .map((g) => ({ slug: g.slug, label: g.h1 }));
+
+  const published = guide.publishedAt ?? GUIDE_PUBLISHED;
+  const updated = guide.updatedAt ?? published;
 
   return (
     <article className="mx-auto w-full max-w-3xl px-5 pt-32 pb-24 sm:px-8 sm:pt-40">
@@ -44,6 +58,22 @@ export function GuideArticle({ guide }: { guide: Guide }) {
         <h1 className="display-xl text-balance text-4xl sm:text-5xl lg:text-6xl">{guide.h1}</h1>
         <p className="mt-7 text-pretty text-lg leading-relaxed text-ink-2 sm:text-xl">
           {guide.intro}
+        </p>
+        {/* Who wrote it and when: readers and AI engines both weigh this. */}
+        <p className="mt-7 text-sm text-ink-3">
+          By{" "}
+          <Link href="/about" rel="author" className="font-medium text-ink underline-offset-4 hover:underline">
+            {business.privacyOfficer.name}
+          </Link>
+          , founder of Tekmadev
+          <span aria-hidden> · </span>
+          Published <time dateTime={published}>{longDate(published)}</time>
+          {updated !== published && (
+            <>
+              <span aria-hidden> · </span>
+              Updated <time dateTime={updated}>{longDate(updated)}</time>
+            </>
+          )}
         </p>
       </header>
 
@@ -149,6 +179,20 @@ export function GuideArticle({ guide }: { guide: Guide }) {
           </dl>
         </section>
       )}
+
+      {/* About the author */}
+      <section className="mt-16 rounded-2xl border border-line p-6 sm:p-7">
+        <p className="eyebrow">About the author</p>
+        <p className="mt-4 text-base leading-relaxed text-ink-2">
+          <span className="font-medium text-ink">{business.privacyOfficer.name}</span> founded Tekmadev in{" "}
+          {business.foundingYear} and runs it from Hamilton, Ontario, building and managing the systems that get
+          service businesses more clients. Tekmadev grew its own repair shop, Fixible, on the same playbook with
+          no ad budget.{" "}
+          <Link href="/about" className="text-ink underline underline-offset-4 hover:text-gold">
+            More about Tekmadev
+          </Link>
+        </p>
+      </section>
 
       {/* Related guides */}
       {related.length > 0 && (

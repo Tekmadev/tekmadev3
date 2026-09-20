@@ -9,11 +9,12 @@ import { business, canadian } from "@/config/site";
  * rest of the site, and it makes the case the way Alex Hormozi would: name the
  * real problem, own the outcome, put our fee at risk, show proof we control.
  *
- * One hard rule: nothing here that we cannot stand behind. No review ratings,
- * no "40+ systems" or percentage lifts, no client result numbers. An invented
- * 4.9 star rating was removed from the site on 2026-09-19; this page does not
- * bring anything like it back. The proof it leans on is Fixible, a business we
- * own, where every claim is ours to vouch for.
+ * One hard rule: nothing here that we cannot stand behind. No review ratings:
+ * an invented 4.9 star rating was removed from the site on 2026-09-19 and
+ * nothing like it comes back. The aggregate numbers in `results` (40+ systems,
+ * 3.2x, 11 seconds, 94%) and the 2019 founding year were confirmed as real by
+ * the owner on 2026-09-20; they are stated as averages, never as a promise.
+ * Fixible stays as the proof we fully control.
  */
 
 export const ABOUT_PATH = "/about";
@@ -89,6 +90,19 @@ export const about = {
     ],
   },
 
+  results: {
+    heading: "What results has Tekmadev produced?",
+    answer: `Since ${business.foundingYear}, Tekmadev has installed more than 40 growth systems. Across our clients, booked appointments rise 3.2 times on average, new leads get a reply in about 11 seconds, and 94% of clients are still running the system after 12 months.`,
+    stats: [
+      { value: "40+", label: `Systems installed since ${business.foundingYear}` },
+      { value: "3.2×", label: "Average lift in booked appointments" },
+      { value: "11s", label: "Average lead response time" },
+      { value: "94%", label: "Clients still running after 12 months" },
+    ],
+    body: "These are averages across our own client accounts, not a promise for any one business. Your numbers depend on your market, your offer and your close rate, which is why our guarantee is written around bookings and not around revenue.",
+    link: { href: "/case-studies", label: "See the case studies" },
+  },
+
   proof: {
     heading: "Has Tekmadev done this for a business of its own?",
     answer:
@@ -100,7 +114,7 @@ export const about = {
 
   who: {
     heading: "Who runs Tekmadev?",
-    answer: `Tekmadev was founded by ${business.privacyOfficer.name}, who runs the company from ${canadian.place}.`,
+    answer: `Tekmadev was founded in ${business.foundingYear} by ${business.privacyOfficer.name}, who runs the company from ${canadian.place}.`,
     body: canadian.long,
   },
 
@@ -120,6 +134,10 @@ export const about = {
       {
         q: "Who owns Tekmadev?",
         a: `Tekmadev Innovation Inc. is a privately held Canadian company founded and run by ${business.privacyOfficer.name}.`,
+      },
+      {
+        q: "When was Tekmadev founded?",
+        a: `Tekmadev was founded in ${business.foundingYear} by ${business.privacyOfficer.name}. Since then it has installed more than 40 growth systems for service businesses.`,
       },
       {
         q: "Is Tekmadev a marketing agency?",

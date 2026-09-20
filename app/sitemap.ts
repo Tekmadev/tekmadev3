@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { business } from "@/config/site";
-import { guideSlugs } from "@/lib/content";
+import { GUIDE_PUBLISHED, guides } from "@/lib/content";
 import { getPublishedPostSlugs } from "@/lib/blog-data";
 import { publishedLeadMagnets } from "@/config/lead-magnets";
 import { CASE_STUDIES_PATH, publishedCaseStudies } from "@/config/case-studies";
@@ -62,9 +62,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.8,
     },
-    ...guideSlugs.map((slug) => ({
-      url: `${SITE_URL}/guides/${slug}`,
-      lastModified: now,
+    ...guides.map((g) => ({
+      url: `${SITE_URL}/guides/${g.slug}`,
+      // The guide's own date, so search engines see a real change, not every deploy.
+      lastModified: new Date(g.updatedAt ?? g.publishedAt ?? GUIDE_PUBLISHED),
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),

@@ -34,7 +34,7 @@ export const personJsonLd = {
   name: business.privacyOfficer.name,
   jobTitle: "Founder",
   worksFor: { "@id": `${SITE_URL}#organization` },
-  url: SITE_URL,
+  url: `${SITE_URL}/about`,
 };
 
 export const organizationJsonLd = {
@@ -271,9 +271,11 @@ export function guideArticleJsonLd(guide: Guide, path: string) {
     about: { "@id": `${SITE_URL}#service` },
     author: { "@id": `${SITE_URL}#founder` },
     publisher: { "@id": `${SITE_URL}#organization` },
-    datePublished: GUIDE_PUBLISHED,
-    dateModified: GUIDE_PUBLISHED,
+    datePublished: guide.publishedAt ?? GUIDE_PUBLISHED,
+    dateModified: guide.updatedAt ?? guide.publishedAt ?? GUIDE_PUBLISHED,
     mainEntityOfPage: `${SITE_URL}${path}`,
+    // Every number in the text has a visible origin.
+    citation: [...new Set((guide.stats ?? []).map((s) => s.source).filter((s) => /^https?:\/\//i.test(s)))],
   };
 }
 

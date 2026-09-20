@@ -23,6 +23,7 @@ const office = business.registeredOffice;
 const FACTS: { label: string; value: string; href?: string }[] = [
   { label: "Legal name", value: business.legalName },
   { label: "Founder", value: business.privacyOfficer.name },
+  { label: "Founded", value: String(business.foundingYear) },
   { label: "Headquarters", value: `${office.city}, ${office.province}, ${office.country}` },
   { label: "Address", value: `${office.line1}, ${office.city}, ${office.province} ${office.postalCode}` },
   { label: "Phone", value: business.phone.display, href: `tel:${business.phone.tel}` },
@@ -101,6 +102,24 @@ export default function AboutPage() {
                 </li>
               ))}
             </ol>
+          </Block>
+
+          <Block heading={about.results.heading} answer={about.results.answer}>
+            <dl className="mt-7 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line-strong bg-line sm:grid-cols-4">
+              {about.results.stats.map((s) => (
+                <div key={s.label} className="flex flex-col-reverse justify-end gap-1.5 bg-surface px-5 py-5">
+                  <dt className="text-xs leading-snug text-ink-4">{s.label}</dt>
+                  <dd className="display-m text-2xl text-ink sm:text-3xl">{s.value}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-5 text-sm leading-relaxed text-ink-4">{about.results.body}</p>
+            <Link
+              href={about.results.link.href}
+              className="mt-4 inline-flex items-center gap-1 text-sm text-gold-deep transition-colors hover:text-gold"
+            >
+              {about.results.link.label} <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </Block>
 
           <Block heading={about.proof.heading} answer={about.proof.answer}>

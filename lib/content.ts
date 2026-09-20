@@ -27,12 +27,15 @@ export type Guide = {
   faqs: GuideFAQ[];
   internalLinks?: GuideLink[];
   cta: GuideCTA;
+  /** ISO dates. updatedAt moves whenever the text or its sources are re-checked. */
+  publishedAt?: string;
+  updatedAt?: string;
 };
 
 export const guides = guidesData as Guide[];
 
-/** Date the cluster was first published (used for Article schema). */
-export const GUIDE_PUBLISHED = "2026-06-13";
+/** Fallback for a guide with no publishedAt of its own: the day the cluster went live. */
+export const GUIDE_PUBLISHED = "2026-06-14";
 
 export const guideSlugs = guides.map((g) => g.slug);
 

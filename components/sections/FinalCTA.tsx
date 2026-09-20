@@ -5,7 +5,7 @@ import { motion, useScroll, useTransform } from "motion/react";
 import { Phone, Clock, ShieldCheck, Zap } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Section } from "@/components/Section";
-import { BookingEmbed } from "@/components/BookingEmbed";
+import { LazyBookingEmbed } from "@/components/LazyBookingEmbed";
 import { business, trustSignals } from "@/config/site";
 
 const iconMap: Record<string, LucideIcon> = {
@@ -79,7 +79,7 @@ export function FinalCTA() {
           </div>
 
           <div className="lg:col-span-7">
-            <BookingEmbed />
+            <LazyBookingEmbed />
           </div>
         </div>
       </Section>
