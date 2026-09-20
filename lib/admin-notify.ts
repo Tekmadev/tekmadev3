@@ -57,6 +57,8 @@ export const ADMIN_EVENTS = {
   "portal.checkout_started": { category: "sales", severity: "info", label: "Checkout started" },
   // Owner only: it links to Pricing, which managers cannot open.
   "checkout.error": { category: "sales", severity: "warning", audience: "owner", needsAction: true, label: "Checkout error" },
+  // A registrant that sells without charging GST/HST still owes it. Owner only, like the above.
+  "checkout.tax_failed": { category: "billing", severity: "critical", audience: "owner", needsAction: true, label: "Sold without sales tax" },
 
   // Billing
   "order.refunded": { category: "billing", severity: "warning", label: "Refund issued" },
@@ -99,6 +101,8 @@ export const ADMIN_EVENTS = {
   // Team (owner only)
   "team.admin_added": { category: "team", severity: "info", audience: "owner", label: "Team member added" },
   "team.admin_removed": { category: "team", severity: "warning", audience: "owner", label: "Team member removed" },
+  // It changes what every buyer pays, so the inbox keeps a record of who flipped it and when.
+  "settings.sales_tax_changed": { category: "system", severity: "warning", audience: "owner", label: "Sales tax switched" },
 
   // System: the things that fail silently
   "email.failed": { category: "system", severity: "warning", needsAction: true, label: "Email failed to send" },

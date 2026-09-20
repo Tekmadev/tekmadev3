@@ -4,12 +4,14 @@ import { getProductMeta } from "@/config/products";
 import { requireClient } from "@/lib/portal-auth";
 import { careIsSetUp, getCareSubscriptionForClient, getLatestSubscriptionForClient, subscriptionEndsAt } from "@/lib/clients-data";
 import { getLatestOrderForClient, paymentMethodLabel } from "@/lib/orders-data";
+import { listInvoicesForClient } from "@/lib/portal-invoices";
 import { getPlan } from "@/lib/pricing-data";
 import { getDisplayProduct } from "@/lib/products-data";
 import { formatMoney } from "@/lib/money";
 import { Badge, Notice, PageHeader, Panel, Row, fmtDate, humanize, type Tone } from "@/components/portal/ui";
 import { SubmitButton } from "@/components/portal/SubmitButton";
 import { PortalForm } from "@/components/portal/PortalForm";
+import { InvoiceList } from "@/components/portal/InvoiceList";
 import { billingPortalAction, startCarePlanAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -45,12 +47,14 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
   const tier = client.plan_id ? getTierMeta(client.plan_id) : undefined;
   const canManage = member.role === "owner" || member.role === "admin";
 
-  const [sub, plan, order, care, display] = await Promise.all([
+  const [sub, plan, order, care, display, invoices] = await Promise.all([
     product ? Promise.resolve(null) : getLatestSubscriptionForClient(client),
     !product && client.plan_id ? getPlan(client.plan_id) : Promise.resolve(null),
     product ? getLatestOrderForClient(client) : Promise.resolve(null),
     product?.care ? getCareSubscriptionForClient(client.id) : Promise.resolve(null),
     product?.care ? getDisplayProduct(product.id) : Promise.resolve(null),
+    // Invoices carry a billing address, so they follow the same rule as the billing portal.
+    canManage ? listInvoicesForClient(client) : Promise.resolve([]),
   ]);
   const status = sub?.status ?? null;
   const careReady = careIsSetUp(care);
@@ -223,6 +227,24 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
           </p>
         </Panel>
       </div>
+
+      <Panel
+        id="invoices"
+        title="Invoices"
+        description="Every payment has a numbered invoice you can download for your records and your accountant."
+      >
+        {!canManage ? (
+          <p className="text-sm text-ink-3">Only account owners and admins can see invoices.</p>
+        ) : invoices === null ? (
+          <p className="text-sm text-ink-3">
+            We could not load your invoices just now. Refresh in a minute, or open the billing portal above to get them.
+          </p>
+        ) : invoices.length === 0 ? (
+          <p className="text-sm text-ink-3">No invoices yet. Your first one appears here as soon as a payment goes through.</p>
+        ) : (
+          <InvoiceList invoices={invoices} />
+        )}
+      </Panel>
     </div>
   );
 }

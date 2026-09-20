@@ -3,6 +3,7 @@ import { business } from "@/config/site";
 import { getProductMeta } from "@/config/products";
 import { NOT_CONFIGURED, prepareCheckout } from "@/lib/checkout";
 import { stripeFor } from "@/lib/stripe-mode";
+import { createCheckoutSession } from "@/lib/stripe-tax";
 import { checkoutMode } from "@/lib/test-mode";
 import { hourKey, notifyAdmins } from "@/lib/admin-notify";
 
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const session = await stripe.checkout.sessions.create(prepared.params);
+    const session = await createCheckoutSession(stripe, prepared.params, mode);
     if (!session.url) {
       return NextResponse.json({ error: NOT_CONFIGURED }, { status: 502 });
     }

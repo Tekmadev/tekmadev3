@@ -3,12 +3,15 @@ import { getAllPlans, type PlanFull } from "@/lib/pricing-data";
 import { getAllProducts, type ProductRow } from "@/lib/products-data";
 import { getProductMeta } from "@/config/products";
 import { PageHeader, Panel, Notice } from "@/components/admin/ui";
+import { SalesTaxPanel } from "@/components/admin/SalesTaxPanel";
 import { updatePlanAction, updateProductAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 const NOTICES: Record<string, { kind: "ok" | "err"; text: string }> = {
   "1": { kind: "ok", text: "Saved. The site and Stripe are updated." },
+  tax_on: { kind: "ok", text: "Sales tax is on. New checkouts add GST/HST from now." },
+  tax_off: { kind: "ok", text: "Sales tax is off. New checkouts add no tax." },
   input: { kind: "err", text: "Enter valid, non-negative numbers." },
   notfound: { kind: "err", text: "Plan or product not found." },
   config: { kind: "err", text: "Supabase is not configured." },
@@ -24,13 +27,15 @@ export default async function PricingAdmin({
   await requireOwner();
   const [plans, products] = await Promise.all([getAllPlans(), getAllProducts()]);
   const { ok, e } = await searchParams;
-  const notice = ok ? NOTICES["1"] : e ? NOTICES[e] : null;
+  const notice = ok ? (NOTICES[ok] ?? NOTICES["1"]) : e ? NOTICES[e] : null;
 
   return (
     <div className="flex max-w-3xl flex-col gap-8">
       <PageHeader title="Pricing" subtitle="Edit a price and save. The site updates instantly and Stripe stays in sync." />
 
       {notice && <Notice kind={notice.kind}>{notice.text}</Notice>}
+
+      <SalesTaxPanel />
 
       <p className="text-sm text-ink-3">
         Saving creates a new Stripe price and archives the old one (Stripe prices are immutable). Existing

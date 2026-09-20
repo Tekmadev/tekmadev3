@@ -10,6 +10,8 @@ import { getProductMeta } from "@/config/products";
 import { business } from "@/config/site";
 import { getProduct } from "@/lib/products-data";
 import { syncCarePlanToStripe, syncProductToStripe } from "@/lib/product-sync";
+import { setSalesTax } from "@/lib/site-settings";
+import { notifyAdmins } from "@/lib/admin-notify";
 
 /**
  * Updates a plan's price from the dashboard: writes the new amounts to the DB
@@ -185,4 +187,32 @@ export async function updateProductAction(formData: FormData) {
   revalidatePath("/");
   revalidatePath("/llms.txt");
   redirect("/admin/pricing?ok=1");
+}
+
+/**
+ * The owner's switch for charging GST/HST at checkout, per Stripe mode. It
+ * changes what every buyer pays, so it is owner only, it records who flipped
+ * it, and it leaves a line in the notification inbox.
+ */
+export async function setSalesTaxAction(formData: FormData) {
+  const ctx = await requireOwner();
+  const mode = formData.get("mode") === "test" ? "test" : "live";
+  const on = formData.get("on") === "1";
+
+  const ok = await setSalesTax(mode, on, ctx.email);
+  if (!ok) redirect("/admin/pricing?e=db");
+
+  await notifyAdmins({
+    event: "settings.sales_tax_changed",
+    title: `Sales tax switched ${on ? "ON" : "OFF"}${mode === "test" ? " in test mode" : ""}`,
+    body: on
+      ? "New checkouts now add GST/HST by the buyer's province. Plans already running are not changed."
+      : "New checkouts no longer add GST/HST.",
+    url: "/admin/pricing",
+    actor: { type: "staff", label: ctx.email },
+    isTest: mode === "test",
+  });
+
+  revalidatePath("/admin/pricing");
+  redirect(`/admin/pricing?ok=${on ? "tax_on" : "tax_off"}`);
 }

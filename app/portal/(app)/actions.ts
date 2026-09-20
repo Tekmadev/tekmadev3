@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { modeOfClient, stripeFor } from "@/lib/stripe-mode";
+import { createCheckoutSession } from "@/lib/stripe-tax";
 import { getPortalSession, hasRole, setActiveClientCookie, type PortalSession } from "@/lib/portal-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -584,7 +585,7 @@ export async function startCheckoutAction(formData: FormData): Promise<ActionRes
   if (!prepared.ok) return { ok: false, message: prepared.error };
 
   try {
-    const checkout = await stripe.checkout.sessions.create(prepared.params);
+    const checkout = await createCheckoutSession(stripe, prepared.params, mode);
     if (!checkout.url) return { ok: false, message: NOT_CONFIGURED };
     await logActivity({
       client_id: sess.client.id,
@@ -650,7 +651,7 @@ export async function startCarePlanAction(): Promise<ActionResult> {
   if (!prepared.ok) return { ok: false, message: prepared.error };
 
   try {
-    const checkout = await stripe.checkout.sessions.create(prepared.params);
+    const checkout = await createCheckoutSession(stripe, prepared.params, mode);
     if (!checkout.url) return { ok: false, message: NOT_CONFIGURED };
     await logActivity({
       client_id: sess.client.id,
