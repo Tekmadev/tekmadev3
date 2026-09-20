@@ -117,12 +117,18 @@ export const business = {
  * footer, llms.txt, and the JSON-LD. Incorporated in Ontario, founder and
  * team in Canada, work done in Canada: the claim is about who builds it, not
  * only where the invoice is issued, so keep it accurate if that ever changes.
+ *
+ * Owner's rule (2026-09-20): never present the business as running from one
+ * city. Hamilton is the head office; the co-founders work from Hamilton and
+ * Ottawa. The badge names no city at all, only Canada.
  */
 export const canadian = {
   short: "Proudly Canadian",
   label: "100% Canadian owned and operated",
-  place: `${_office.city}, ${_office.province}`,
-  long: `${business.legalName} is a Canadian company, 100% Canadian owned and operated. Incorporated in ${_office.province} and run from ${_office.city}, ${_office.province}. Every system we build is designed, built, and supported in Canada.`,
+  tagline: "Designed, built and supported in Canada",
+  /** Where the people are, for the few sentences that say it. The head office stays `registeredOffice`. */
+  teamPlaces: `${_office.city} and Ottawa, ${_office.province}`,
+  long: `${business.legalName} is a Canadian company, 100% Canadian owned and operated. Incorporated in ${_office.province}, with its head office in ${_office.city} and its co-founders working from ${_office.city} and Ottawa. Every system we build is designed, built, and supported in Canada.`,
 };
 
 export const brand = {

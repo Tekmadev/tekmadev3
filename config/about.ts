@@ -22,14 +22,14 @@ export const ABOUT_PATH = "/about";
 export const about = {
   metaTitle: "About Tekmadev: the growth consultancy that owns the result",
   metaDescription:
-    "Tekmadev is a performance-based growth consultancy in Hamilton, Ontario: one done-for-you system that gets service businesses more clients.",
+    "Tekmadev is a performance-based growth consultancy headquartered in Hamilton, Ontario: one done-for-you system that gets service businesses more clients.",
 
   eyebrow: "About Tekmadev",
   h1: "We build the system that brings you clients. Then we run it.",
 
   // The quotable definition. Keep it near-verbatim with llms.txt and the schema.
   definition:
-    "Tekmadev is a performance-based growth consultancy in Hamilton, Ontario. We give local and B2B service businesses one done-for-you system to get more clients: a website that gets found on Google and AI search, advertising, and 24/7 AI-powered answering, booking and follow-up, managed as a single monthly package.",
+    "Tekmadev is a performance-based growth consultancy headquartered in Hamilton, Ontario. We give local and B2B service businesses one done-for-you system to get more clients: a website that gets found on Google and AI search, advertising, and 24/7 AI-powered answering, booking and follow-up, managed as a single monthly package.",
 
   why: {
     heading: "Why does Tekmadev exist?",
@@ -114,7 +114,7 @@ export const about = {
 
   who: {
     heading: "Who runs Tekmadev?",
-    answer: `Tekmadev was founded in ${business.foundingYear} by ${business.privacyOfficer.name}, who runs the company from ${canadian.place}.`,
+    answer: `Tekmadev was founded in ${business.foundingYear} by ${business.privacyOfficer.name}, and is run today by its two co-founders from ${canadian.teamPlaces}.`,
     body: canadian.long,
   },
 
@@ -125,15 +125,15 @@ export const about = {
     items: [
       {
         q: "What is Tekmadev?",
-        a: "Tekmadev is a performance-based growth consultancy in Hamilton, Ontario. It gives local and B2B service businesses one done-for-you system to get more clients: a website that gets found, advertising, and 24/7 AI-powered answering, booking and follow-up, managed as a single monthly package.",
+        a: "Tekmadev is a performance-based growth consultancy headquartered in Hamilton, Ontario. It gives local and B2B service businesses one done-for-you system to get more clients: a website that gets found, advertising, and 24/7 AI-powered answering, booking and follow-up, managed as a single monthly package.",
       },
       {
         q: "Where is Tekmadev located?",
-        a: `Tekmadev Innovation Inc. is based at ${business.registeredOffice.line1}, ${business.registeredOffice.city}, ${business.registeredOffice.province}, Canada. It is 100% Canadian owned and operated, and works with clients remotely.`,
+        a: `Tekmadev Innovation Inc. has its head office at ${business.registeredOffice.line1}, ${business.registeredOffice.city}, ${business.registeredOffice.province}, Canada, and its co-founders work from ${canadian.teamPlaces}. It is 100% Canadian owned and operated, and works with clients remotely.`,
       },
       {
         q: "Who owns Tekmadev?",
-        a: `Tekmadev Innovation Inc. is a privately held Canadian company founded and run by ${business.privacyOfficer.name}.`,
+        a: `Tekmadev Innovation Inc. is a privately held Canadian company. It was founded by ${business.privacyOfficer.name} and is run by its two co-founders.`,
       },
       {
         q: "When was Tekmadev founded?",

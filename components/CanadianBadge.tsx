@@ -29,7 +29,8 @@ type Variant = "pill" | "inline" | "block";
  *
  * - `pill`   bordered chip, for hero and marketing rows
  * - `inline` leaf plus text with no chrome, for the footer bar
- * - `block`  leaf, headline, and the place, for a trust panel
+ * - `block`  leaf, headline, and a supporting line, for a trust panel. It names
+ *            no city on purpose: the team works from more than one.
  */
 export function CanadianBadge({
   variant = "pill",
@@ -63,7 +64,7 @@ export function CanadianBadge({
         <MapleLeaf className="h-6 w-6 shrink-0 text-canada" />
         <div>
           <p className="text-sm font-semibold text-ink">{canadian.label}</p>
-          <p className="mt-0.5 text-xs text-ink-3">Built and supported from {canadian.place}</p>
+          <p className="mt-0.5 text-xs text-ink-3">{canadian.tagline}</p>
         </div>
       </div>
     );
