@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Webline ad v2</title>
+<!-- Source for the Webline feed ad (1080 x 1350). Render to PNG with headless Chrome:
+     see docs/ads/README.md. Every claim here must stay true: see the notes there. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=block" rel="stylesheet">
+<style>
+  :root { --bg:#0e0d0b; --ink:#f4f0e8; --ink2:#d6d0c4; --ink3:#a39d8f; --ink4:#78736a; --gold:#c89c65; --gold-deep:#a17a4f; --line:rgba(244,240,232,.12); }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { width:1080px; height:1350px; }
+  body { background:var(--bg); color:var(--ink); font-family:"Geist",system-ui,sans-serif; position:relative; overflow:hidden; -webkit-font-smoothing:antialiased; }
+  body::before { content:""; position:absolute; right:-220px; top:-260px; width:900px; height:900px; border-radius:50%; background:radial-gradient(closest-side, rgba(200,156,101,.17), rgba(200,156,101,0)); }
+  .wrap { position:absolute; inset:0; padding:76px 74px 64px; display:flex; flex-direction:column; }
+  .top { display:flex; align-items:center; justify-content:space-between; }
+  .brand { display:flex; align-items:center; gap:16px; font-size:27px; font-weight:600; letter-spacing:-.4px; }
+  .brand img { width:40px; height:40px; }
+  .mono { font-family:"Geist Mono",ui-monospace,monospace; text-transform:uppercase; letter-spacing:4.5px; font-size:16px; color:var(--gold); }
+  .eyebrow { margin-top:150px; }
+  h1 { margin-top:26px; font-size:91px; line-height:.98; font-weight:800; letter-spacing:-3.6px; }
+  h1 span { display:block; color:var(--gold); }
+  .sub { margin-top:34px; font-size:33px; line-height:1.36; color:var(--ink3); max-width:900px; letter-spacing:-.3px; }
+  .sub b { color:var(--ink); font-weight:600; }
+  .proof { margin-top:40px; border:1px solid var(--line); border-left:3px solid var(--gold); border-radius:14px; padding:24px 28px; background:rgba(244,240,232,.03); }
+  .proof .mono { font-size:14px; letter-spacing:4px; }
+  .proof p { margin-top:10px; font-size:29px; line-height:1.35; color:var(--ink2); letter-spacing:-.2px; }
+  .proof b { color:var(--ink); font-weight:600; }
+  .anchor { margin-top:44px; font-size:25px; color:var(--ink4); }
+  .price { margin-top:6px; display:flex; align-items:baseline; gap:20px; }
+  .price .big { font-size:92px; font-weight:800; letter-spacing:-3.4px; color:var(--gold); line-height:1; }
+  .price .x { font-size:40px; font-weight:600; color:var(--ink2); letter-spacing:-.8px; }
+  .terms { margin-top:16px; font-size:25px; color:var(--ink3); }
+  .terms b { color:var(--ink); font-weight:600; }
+  .cta { margin-top:40px; align-self:flex-start; background:linear-gradient(135deg,#d0a46c,#a17a4f); color:#14110c; font-weight:700; font-size:32px; letter-spacing:-.4px; padding:26px 46px; border-radius:18px; }
+  .cta i { font-style:normal; font-family:"Geist Mono",monospace; letter-spacing:2px; font-weight:500; }
+  .foot { margin-top:auto; border-top:1px solid var(--line); padding-top:26px; display:flex; justify-content:space-between; align-items:flex-end; gap:24px; }
+  .foot .mono { color:var(--ink); font-size:17px; }
+  .foot small { display:block; margin-top:10px; font-size:14.5px; color:var(--ink4); letter-spacing:.1px; }
+  .foot .right { color:var(--ink4); font-size:14.5px; letter-spacing:3.4px; white-space:nowrap; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand"><img src="../../public/images/logo/TMD2_logo.svg" alt=""><span>Tekmadev</span></div>
+      <div class="mono">New · Webline</div>
+    </div>
+
+    <div class="mono eyebrow">Startup websites, done right</div>
+    <h1>Found on Google.<span>Recommended by AI.</span></h1>
+    <p class="sub">A custom website built so customers find you on <b>Google and ChatGPT</b>. <b>Live within 11 days.</b></p>
+
+    <div class="proof">
+      <div class="mono">Proof</div>
+      <p>We did it for our own repair shop. <b>Calls every day. Customers say ChatGPT sent them. $0 spent on ads.</b></p>
+    </div>
+
+    <p class="anchor">Agencies charge $5,000+ for this.</p>
+    <div class="price"><span class="big">$249.25</span><span class="x">× 4 payments, 0% interest</span></div>
+    <p class="terms">or <b>$997 once</b> · <b>love the design or full refund</b></p>
+
+    <div class="cta">Message us <i>WEBSITE</i> →</div>
+
+    <div class="foot">
+      <div>
+        <div class="mono">tekmadev.com/webline</div>
+        <small>Pay in 4 through Afterpay or Klarna at checkout, subject to their approval. Prices in CAD.</small>
+      </div>
+      <div class="mono right">$0 ads · built for organic leads</div>
+    </div>
+  </div>
+</body>
+</html>
