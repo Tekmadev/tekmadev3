@@ -9,7 +9,7 @@ import { syncPlanToStripe } from "@/lib/plan-sync";
 import { getProductMeta } from "@/config/products";
 import { business } from "@/config/site";
 import { getProduct } from "@/lib/products-data";
-import { syncCarePlanToStripe, syncProductToStripe } from "@/lib/product-sync";
+import { reconcileProductCopy, syncCarePlanToStripe, syncProductToStripe } from "@/lib/product-sync";
 import { setSalesTax } from "@/lib/site-settings";
 import { notifyAdmins } from "@/lib/admin-notify";
 
@@ -155,6 +155,17 @@ export async function updateProductAction(formData: FormData) {
     } catch (err) {
       console.error("[pricing] Stripe product sync failed", err instanceof Error ? err.message : String(err));
       redirect("/admin/pricing?e=stripe");
+    }
+  }
+
+  // Keep the wording on Stripe's payment page equal to the site's. A failure
+  // here is not worth blocking a price save over, so it is only logged.
+  const stripeProductId = (update.stripe_product_id as string | undefined) ?? row.stripe_product_id;
+  if (secret && stripeProductId) {
+    try {
+      await reconcileProductCopy({ secret, meta, productId: stripeProductId });
+    } catch (err) {
+      console.error("[pricing] Stripe product copy sync failed", err instanceof Error ? err.message : String(err));
     }
   }
 

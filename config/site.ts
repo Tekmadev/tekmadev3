@@ -1,3 +1,5 @@
+import { WEBLINE_LIVE_DAYS } from "@/config/webline-delivery";
+
 /**
  * Single source of truth for Tekmadev brand, business info, content data, and theme colors.
  *
@@ -90,7 +92,7 @@ export const business = {
   },
   legalDates: {
     effective: "2026-05-16",
-    lastUpdated: "2026-09-18",
+    lastUpdated: "2026-09-20",
   },
   phone: {
     tel: _phoneTel,
@@ -439,7 +441,7 @@ export const productNav: { label: string; blurb: string; items: NavProduct[] } =
         name: "Webline",
         href: "/webline",
         blurb:
-          "A startup website that ranks on Google and gets cited by AI. Live in 14 days, pay in 4 if you want.",
+          `A startup website that ranks on Google and gets cited by AI. Live within ${WEBLINE_LIVE_DAYS} days, pay in 4 if you want.`,
         badge: "New",
       },
       { name: "Callline", badge: "Coming soon", hidden: true },

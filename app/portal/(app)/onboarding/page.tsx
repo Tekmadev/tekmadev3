@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireClient } from "@/lib/portal-auth";
 import { derivedStage, getActiveOnboarding, listTasks, stagesInRun, taskProgress } from "@/lib/onboarding-data";
 import { isProductPlan } from "@/config/products";
+import { WEBLINE_LIVE_DAYS } from "@/config/webline-delivery";
 import { StageTracker } from "@/components/portal/StageTracker";
 import { TaskList } from "@/components/portal/TaskList";
 import { EmptyState, Notice, PageHeader, Panel, btnPrimary, fmtDate } from "@/components/portal/ui";
@@ -23,7 +24,7 @@ export default async function OnboardingPage() {
         title="Onboarding"
         subtitle={
           onboarding?.target_live_date
-            ? `Target go-live ${fmtDate(onboarding.target_live_date)}. ${oneTime ? "Live in 14 days once we have your content." : "We install in 14 days."}`
+            ? `Target go-live ${fmtDate(onboarding.target_live_date)}. ${oneTime ? `Live within ${WEBLINE_LIVE_DAYS} days once we have your content.` : "We install in 14 days."}`
             : "Everything from payment to live."
         }
       />

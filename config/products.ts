@@ -15,6 +15,7 @@
  * "grow": one string that says what the client bought.
  */
 import { tierMeta } from "@/config/pricing";
+import { WEBLINE_LIVE_DAYS } from "@/config/webline-delivery";
 
 export type ProductId = "webline";
 
@@ -77,18 +78,18 @@ export const productMeta: ProductMeta[] = [
     id: "webline",
     name: "Webline",
     path: "/webline",
-    tagline: "Startup website, built and live in 14 days. SEO, GEO, and AEO ready.",
+    tagline: `Startup website, built and live within ${WEBLINE_LIVE_DAYS} days. SEO, GEO, and AEO ready.`,
     stripe: {
       name: "Webline",
       description:
-        "Custom-designed startup website with the SEO, GEO, and AEO foundation built in. Up to 5 pages, copy written for you, live on your domain in 14 days. You own everything.",
+        `Custom-designed startup website with the SEO, GEO, and AEO foundation built in. Up to 5 pages, copy written for you, live on your domain within ${WEBLINE_LIVE_DAYS} days. You own everything.`,
       statementDescriptor: "TEKMADEV WEBLINE",
     },
     // Only shown if the products table cannot be read. Keep it equal to the live price (Admin, Pricing).
     defaultAmount: 99700,
     currency: "cad",
     guarantee: false,
-    onboarding: { kickoffCall: false, targetLiveDays: 14 },
+    onboarding: { kickoffCall: false, targetLiveDays: WEBLINE_LIVE_DAYS },
     checkout: {
       successPath: "/webline?checkout=success",
       cancelPath: "/webline?checkout=cancelled",

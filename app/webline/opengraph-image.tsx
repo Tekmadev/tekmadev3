@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { business, theme } from "@/config/site";
 import { webline, WEBLINE_ID } from "@/config/webline";
+import { WEBLINE_LIVE_DAYS } from "@/config/webline-delivery";
 import { getDisplayProduct } from "@/lib/products-data";
 import { formatMoney } from "@/lib/money";
 
@@ -62,7 +63,7 @@ export default async function Image() {
           <div style={{ fontSize: 84, fontWeight: 800, letterSpacing: -3.5, lineHeight: 0.95, display: "flex", flexDirection: "column" }}>
             <span>A startup website</span>
             <span>that gets found.</span>
-            <span style={{ color: theme.goldDeep }}>Live in 14 days.</span>
+            <span style={{ color: theme.goldDeep }}>Live within {WEBLINE_LIVE_DAYS} days.</span>
           </div>
           <div style={{ display: "flex", fontSize: 26, color: theme.ink3, lineHeight: 1.3, maxWidth: 900 }}>
             {`SEO, GEO, and AEO built in. ${price ? `${price} to build, or 4 × ${installment} with Afterpay or Klarna.${monthly ? ` Hosting and care ${monthly}/mo.` : ""}` : "Pay in 4 with Afterpay or Klarna."}`}

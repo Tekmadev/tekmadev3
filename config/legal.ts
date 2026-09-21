@@ -480,7 +480,7 @@ export const termsOfService: LegalDoc = {
         },
         {
           type: "p",
-          text: "Timeline. Tekmadev targets a homepage design concept within five business days and a live website within 14 days, in each case counted from the day Tekmadev has received the Client's completed intake, brand assets, and domain access. Delays in providing those inputs extend the timeline by the same period.",
+          text: "Timeline. Tekmadev targets a homepage design concept within five business days and a live website within 11 days, in each case counted from the day Tekmadev has received the Client's completed intake, brand assets, and domain access. Delays in providing those inputs extend the timeline by the same period.",
         },
         {
           type: "p",

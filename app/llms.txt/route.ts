@@ -2,6 +2,7 @@ import { business, brand, canadian, proofWins, systemSteps, faqs } from "@/confi
 import { CASE_STUDIES_PATH, publishedCaseStudies } from "@/config/case-studies";
 import { getDisplayProduct } from "@/lib/products-data";
 import { formatMoney } from "@/lib/money";
+import { WEBLINE_LIVE_DAYS } from "@/config/webline-delivery";
 
 // Re-rendered hourly so the Webline price tracks the products table.
 export const revalidate = 3600;
@@ -21,7 +22,7 @@ ${business.name} (legal name: ${business.legalName}) is a performance-based grow
 ## What we sell
 
 - One core productized offer: the ${business.name} Growth System (subscription)
-- One fixed-scope product for startups: Webline, a website built and live in 14 days for a one-time build fee plus a monthly hosting and care plan (see below)
+- One fixed-scope product for startups: Webline, a website built and live within ${WEBLINE_LIVE_DAYS} days for a one-time build fee plus a monthly hosting and care plan (see below)
 - Performance-guaranteed: a one-time Build & Install fee plus a monthly fee, backed by a performance guarantee (exact pricing is shared on a qualification call)
 - Hard guarantee: 30 qualified appointments in 60 days, or we keep working free and pause billing until the client hits it. An appointment is any real prospect who books through the system we built: a sales call, a quote, a consult, a site visit or a service booking
 - Cancel any month, no clawback, no long-term contract
@@ -32,7 +33,7 @@ ${business.name} (legal name: ${business.legalName}) is a performance-based grow
 - Product: Webline, a fixed-scope website for startups and new businesses. Build fee: ${weblinePrice} CAD, paid once; buyers can pay it in 4 interest-free instalments of ${weblineInstallment} with Afterpay or Klarna at checkout, or monthly with Affirm.
 - Hosting and care: Webline Care, ${weblineMonthly ? `${weblineMonthly} CAD per month` : "a monthly fee"}, required while ${business.name} hosts the site. The first charge is ${weblineTrialDays} days after purchase. No contract; cancel anytime. Covers hosting with SSL, security and software updates, uptime monitoring, backups, small content edits, and upkeep of the SEO, GEO, and AEO foundation.
 - Includes: custom modern design (not a template), up to 5 pages with the copy written by ${business.name}, an SEO foundation (metadata, schema markup, sitemap, Search Console), a GEO and AEO layer for AI search (llms.txt, FAQ markup, entity-rich copy), lead capture (contact form, click-to-call, booking link, analytics), launch on the buyer's domain with SSL, a walkthrough video, and 30 days of post-launch fixes
-- Timeline: homepage design concept by day 5, live within 14 days once the intake, logo, and domain access are in
+- Timeline: homepage design concept by day 5, live within ${WEBLINE_LIVE_DAYS} days once the intake, logo, and domain access are in
 - Guarantee: love the design concept after one free revision or get a full refund; after concept approval the fee is non-refundable
 - Ownership: the buyer owns the site, design, copy, and domain. On cancelling Webline Care, the site is moved to a hosting account in the buyer's name
 - Page: ${business.url}/webline

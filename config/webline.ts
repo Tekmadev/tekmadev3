@@ -1,3 +1,4 @@
+import { WEBLINE_LIVE_DAYS } from "@/config/webline-delivery";
 /**
  * Copy for the Webline sales page (/webline). Prices are never written here:
  * they come from the `products` table (edited in the admin). Strings use
@@ -15,22 +16,22 @@ export const WEBLINE_ID = "webline" as const;
 
 export const webline = {
   meta: {
-    title: "Webline: a startup website that gets found, live in 14 days",
+    title: `Webline: a startup website that gets found, live within ${WEBLINE_LIVE_DAYS} days`,
     description:
-      "Custom-designed startup website with SEO, GEO, and AEO built in. Up to 5 pages, copy written for you, live on your domain in 14 days. Pay in 4 with Afterpay or Klarna, and we host and maintain it after launch.",
+      `Custom-designed startup website with SEO, GEO, and AEO built in. Up to 5 pages, copy written for you, live on your domain within ${WEBLINE_LIVE_DAYS} days. Pay in 4 with Afterpay or Klarna, and we host and maintain it after launch.`,
   },
 
   hero: {
     eyebrow: "Webline · for startups",
     lines: ["A startup website", "that gets found."],
-    accent: "Live in 14 days.",
+    accent: `Live within ${WEBLINE_LIVE_DAYS} days.`,
     sub: "Modern design that does not look like a template. SEO, GEO, and AEO built in from day one, so Google ranks you and ChatGPT cites you. Then we keep it fast, secure, and up to date, so it never becomes the site nobody touches. No contract. Cancel anytime.",
     cta: "Get Webline",
     secondary: "See what's included",
     /** Shown under the buttons. */
     priceLine: "{price} to build, or 4 interest-free payments of {installment} with Afterpay or Klarna. Then {monthly}/month hosting and care, starting {days} days after you buy.",
     stats: [
-      { value: "14 days", label: "From payment to live" },
+      { value: `${WEBLINE_LIVE_DAYS} days`, label: "Or less, from payment to live" },
       { value: "5 pages", label: "Designed and written for you" },
       { value: "4 × pay", label: "0% interest, decided at checkout" },
     ],
@@ -141,7 +142,7 @@ export const webline = {
 
   process: {
     eyebrow: "How it works",
-    headline: "Pay today. Live in 14 days.",
+    headline: `Pay today. Live within ${WEBLINE_LIVE_DAYS} days.`,
     steps: [
       {
         day: "Day 0",
@@ -159,7 +160,7 @@ export const webline = {
         body: "The homepage design lands in your portal. Love it, or tell us exactly what to change. We revise once, free.",
       },
       {
-        day: "Day 14",
+        day: `By day ${WEBLINE_LIVE_DAYS}`,
         title: "You're live",
         body: "Pages built, SEO wired, submitted to Google and Bing, launched on your domain. Plus a walkthrough video so you can edit anything.",
       },
@@ -178,7 +179,7 @@ export const webline = {
     columns: ["Template builder", "Freelancer", "Agency", "Webline"],
     rows: [
       { label: "Price", values: ["$16/mo forever", "$1,500 to $3,000", "$8,000+", "{price} + {monthly}/mo"] },
-      { label: "Time to live", values: ["Your weekends", "4 to 8 weeks", "8 to 16 weeks", "14 days"] },
+      { label: "Time to live", values: ["Your weekends", "4 to 8 weeks", "8 to 16 weeks", `Within ${WEBLINE_LIVE_DAYS} days`] },
       { label: "Custom design", values: [false, "Sometimes", true, true] },
       { label: "Copy written for you", values: [false, "Extra", true, true] },
       { label: "SEO foundation", values: [false, "Extra", true, true] },
@@ -197,7 +198,7 @@ export const webline = {
       "Design concept in your portal by day 5",
       "One free revision round on the concept",
       "Full refund if the revised concept still misses",
-      "Live within 14 days once we have your content",
+      `Live within ${WEBLINE_LIVE_DAYS} days once we have your content`,
     ],
   },
 
@@ -245,7 +246,7 @@ export const webline = {
       a: "SEO is Search Engine Optimization: getting ranked on Google and Bing. GEO is Generative Engine Optimization: getting cited by AI tools like ChatGPT, Perplexity, and Google AI Overviews. AEO is Answer Engine Optimization: structuring your pages so they are the answer when someone asks a question. Webline sets up all three from day one.",
     },
     {
-      q: "Is it really live in 14 days?",
+      q: `Is it really live within ${WEBLINE_LIVE_DAYS} days?`,
       a: "Yes, once we have your intake form, your logo, and access to your domain. Most founders finish that on day one. The clock starts when we have what we need, and we tell you the exact date in your portal.",
     },
     {
@@ -279,7 +280,7 @@ export const webline = {
     headline: "Your startup, found.",
     body: "Two minutes at checkout. Fifteen minutes on the intake form. Fourteen days later, a website that ranks, gets cited, and captures leads, with a team keeping it that way for {monthly} a month.",
     cta: "Get Webline",
-    reassurance: ["Live in 14 days", "Love the design or full refund", "Pay in 4, 0% interest"],
+    reassurance: [`Live within ${WEBLINE_LIVE_DAYS} days`, "Love the design or full refund", "Pay in 4, 0% interest"],
   },
 
   /**
@@ -293,7 +294,7 @@ export const webline = {
     eyebrow: "New · Webline",
     headline: "An agency charges $8,000 for this.",
     accent: "You can start for {installment}.",
-    sub: "Webline is a custom startup website with SEO, GEO, and AEO built in, live on your domain in 14 days. Pick Afterpay or Klarna at checkout and the build fee splits into four interest-free payments. You pay one today. We start building today.",
+    sub: `Webline is a custom startup website with SEO, GEO, and AEO built in, live on your domain within ${WEBLINE_LIVE_DAYS} days. Pick Afterpay or Klarna at checkout and the build fee splits into four interest-free payments. You pay one today. We start building today.`,
     points: [
       {
         title: "Custom design, not a theme",
@@ -308,8 +309,8 @@ export const webline = {
         body: "SEO, GEO, and AEO wired in from day one, so you rank in search and get cited in AI answers.",
       },
       {
-        title: "Live in 14 days",
-        body: "Pay today, brief us today, launch in two weeks. Then 30 days of fixes on the house.",
+        title: `Live within ${WEBLINE_LIVE_DAYS} days`,
+        body: `Pay today, brief us today, launch within ${WEBLINE_LIVE_DAYS} days. Then 30 days of fixes on the house.`,
       },
     ],
     guarantee:
@@ -323,7 +324,7 @@ export const webline = {
       careLine: "Then {monthly}/month hosting and care, starting {days} days after you buy. Cancel anytime.",
       cta: "See everything you get",
       fine: "Card, Afterpay, Klarna, or Affirm. You choose on the checkout page.",
-      badges: ["14 days to live", "Love it or full refund", "You own all of it"],
+      badges: [`${WEBLINE_LIVE_DAYS} days or less to live`, "Love it or full refund", "You own all of it"],
     },
   },
 

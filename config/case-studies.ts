@@ -1,3 +1,5 @@
+import { WEBLINE_LIVE_DAYS } from "@/config/webline-delivery";
+
 /**
  * Case studies: the long-form proof pages at /case-studies.
  *
@@ -141,7 +143,7 @@ export const caseStudies: CaseStudy[] = [
           "If your website does not state the basics in a way a machine can read, you are invisible to the fastest-growing way people choose a local business.",
         body: [
           "Most local business sites were built to look good to a person and say almost nothing a machine can use. That was fine when the only path to you was a Google search and a scroll. It is not fine when nearly half of consumers ask an assistant first.",
-          "This is exactly what Webline is: a website for a small business or startup with the SEO, AEO and GEO work built in, live in 14 days. And once the calls come, the Growth System makes sure every one of them is answered and booked.",
+          `This is exactly what Webline is: a website for a small business or startup with the SEO, AEO and GEO work built in, live within ${WEBLINE_LIVE_DAYS} days. And once the calls come, the Growth System makes sure every one of them is answered and booked.`,
         ],
       },
     ],
@@ -172,7 +174,7 @@ export const caseStudies: CaseStudy[] = [
     ],
     cta: {
       heading: "Want to be the shop the assistant recommends?",
-      body: "Webline is the same build: a website with the SEO, AEO and GEO work done, live in 14 days, for a fixed price. Or book the audit and we will show you exactly what your current site is telling Google and ChatGPT about you.",
+      body: `Webline is the same build: a website with the SEO, AEO and GEO work done, live within ${WEBLINE_LIVE_DAYS} days, for a fixed price. Or book the audit and we will show you exactly what your current site is telling Google and ChatGPT about you.`,
       primary: { label: "See Webline", href: "/webline" },
       secondary: { label: "Book the 45-minute audit", href: "/#book" },
     },

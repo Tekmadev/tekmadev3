@@ -49,7 +49,7 @@ export const AGREEMENTS: Record<"service_agreement" | "webline_agreement", Agree
     summary: [
       "Webline is a fixed-scope website: custom design, up to 5 pages with the copy written for you, and the SEO, GEO, and AEO foundation, launched on your domain. The build fee is paid once at checkout.",
       "Webline Care, our hosting and maintenance plan, is required while we host your site. It is billed monthly to your card. The amount, and how many days after your purchase billing starts, are shown on the Webline page when you buy and in your Billing page. No contract: cancel anytime and it stops at the end of the month you are in. A month already started is not refunded. We switch your site on once the plan is set up.",
-      "You see your homepage design concept by day 5 and approve it before we build the rest. Once we have your content and access, your site goes live within 14 days.",
+      "You see your homepage design concept by day 5 and approve it before we build the rest. Once we have your content and access, your site goes live within 11 days.",
       "If you do not love the concept after a revision round, you can cancel for a full refund of the build fee, and Webline Care is cancelled before it ever charges. Once you approve the concept and the build proceeds, the build fee is non-refundable.",
       "You own the site, the design, and the copy the moment it is live, and your domain stays in your name. If you cancel Webline Care, we move the site to a hosting account in your name. We never store your passwords.",
       "Pay-in-4 plans cover the build fee and are agreements between you and Afterpay, Klarna, or Affirm. We receive the full build fee at checkout; your instalments are handled by them.",

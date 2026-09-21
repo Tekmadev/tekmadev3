@@ -7,6 +7,22 @@ import type { ProductMeta } from "@/config/products";
  * previous one archived. The Stripe product is created once and reused so
  * its checkout name, description, and statement descriptor stay stable.
  */
+/**
+ * Bring the Stripe product's checkout name and description in line with
+ * config/products.ts. Stripe holds its own copy, written once when the product
+ * was created, so a wording change on the site (say, a shorter delivery time)
+ * would otherwise leave the old promise on the payment page. Runs whenever the
+ * owner saves the product in Admin, Pricing. Returns true when Stripe changed.
+ */
+export async function reconcileProductCopy(opts: { secret: string; meta: ProductMeta; productId: string }): Promise<boolean> {
+  const stripe = new Stripe(opts.secret);
+  const product = await stripe.products.retrieve(opts.productId);
+  const want = { name: opts.meta.stripe.name, description: opts.meta.stripe.description };
+  if (product.name === want.name && (product.description ?? "") === want.description) return false;
+  await stripe.products.update(opts.productId, want);
+  return true;
+}
+
 export async function syncProductToStripe(opts: {
   secret: string;
   meta: ProductMeta;
