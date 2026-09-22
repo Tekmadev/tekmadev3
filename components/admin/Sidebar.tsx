@@ -22,6 +22,7 @@ import {
   X,
   FlaskConical,
   Bell,
+  Megaphone,
 } from "lucide-react";
 import { signOutAction } from "@/app/admin/actions";
 import { NotificationBell, useAdminNotifications } from "@/components/admin/NotificationBell";
@@ -42,6 +43,7 @@ const NAV: NavItem[] = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/notifications", label: "Notifications", icon: Bell, unreadBadge: true },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/ads", label: "Ads", icon: Megaphone, ownerOnly: true },
   { href: "/admin/leads", label: "Leads", icon: UserRound },
   { href: "/admin/tools", label: "Free tools", icon: Calculator },
   { href: "/admin/clients", label: "Clients", icon: Building2 },

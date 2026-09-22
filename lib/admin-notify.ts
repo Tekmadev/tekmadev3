@@ -103,6 +103,7 @@ export const ADMIN_EVENTS = {
   "team.admin_removed": { category: "team", severity: "warning", audience: "owner", label: "Team member removed" },
   // It changes what every buyer pays, so the inbox keeps a record of who flipped it and when.
   "settings.sales_tax_changed": { category: "system", severity: "warning", audience: "owner", label: "Sales tax switched" },
+  "ads.sync_failed": { category: "system", severity: "warning", audience: "owner", needsAction: true, label: "Ads report not synced" },
 
   // System: the things that fail silently
   "email.failed": { category: "system", severity: "warning", needsAction: true, label: "Email failed to send" },
