@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { CircleDollarSign, Eye, MousePointerClick, RefreshCw, ShoppingBag, UserRound, Users, CalendarCheck } from "lucide-react";
+import { CircleDollarSign, Eye, MousePointerClick, ShoppingBag, UserRound, Users, CalendarCheck } from "lucide-react";
 import { requireOwner } from "@/lib/admin";
 import { ADS_RANGES, DEFAULT_ADS_RANGE, getAdsDashboard, type AdsDashboard } from "@/lib/ads-data";
 import { PageHeader, Panel, Notice, StatCard, DataTable, fmtDateTime } from "@/components/admin/ui";
 import { AreaChart, type DayPoint } from "@/components/admin/Charts";
 import { cn } from "@/lib/cn";
+import { RefreshButton } from "@/components/admin/PendingButton";
 import { refreshMetaAdsAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -86,12 +87,7 @@ export default async function AdsPage({
                 {data.lastSync.status === "error" ? "Last sync failed" : `Synced ${fmtDateTime(data.lastSync.finished_at ?? data.lastSync.started_at)}`}
               </span>
             )}
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1.5 rounded-full border border-line-strong px-3.5 py-1.5 text-sm text-ink-2 transition-colors hover:border-gold hover:text-gold"
-            >
-              <RefreshCw className="h-3.5 w-3.5" /> Refresh from Meta
-            </button>
+            <RefreshButton>Refresh from Meta</RefreshButton>
           </form>
         )}
       </div>
