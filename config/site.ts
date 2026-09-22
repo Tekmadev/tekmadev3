@@ -17,7 +17,7 @@ const _phoneTel = "+18669661988";
 const _phoneDisplay = "1-866-966-1988";
 const _phonePretty = "+1 (866) 966-1988";
 const _phoneSchema = "+1-866-966-1988";
-const _calLink = "callline/startbooking";
+const _calLink = "tekmadev/start";
 const _calNamespace = "startbooking";
 const _calUrl = `https://cal.com/${_calLink}`;
 // www, not the bare domain. tekmadev.com answers with a redirect to www, so a
