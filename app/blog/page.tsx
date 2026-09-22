@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { Section } from "@/components/Section";
 import { JsonLd } from "@/components/JsonLd";
 import { PostCard } from "@/components/blog/PostCard";
-import { getPublishedPosts, getPublishedPostSlugs, listCategories } from "@/lib/blog-data";
+import { getPublishedPosts, getPublishedPostSlugs, type BlogCategory } from "@/lib/blog-data";
 import { business } from "@/config/site";
 import { crumbsJsonLd } from "@/lib/seo";
 
@@ -37,10 +37,13 @@ export default async function BlogIndex({
   searchParams: Promise<{ category?: string }>;
 }) {
   const { category } = await searchParams;
-  const [posts, categories] = await Promise.all([
-    getPublishedPosts({ categorySlug: category }),
-    listCategories(),
-  ]);
+  // One read, then filter in memory: the chips are only the categories that
+  // have a live post, so a category created for a draft never shows up empty.
+  const all = await getPublishedPosts();
+  const categories = [...new Map(all.flatMap((p) => (p.category ? [[p.category.id, p.category] as const] : []))).values()].sort(
+    (a: BlogCategory, b: BlogCategory) => a.name.localeCompare(b.name),
+  );
+  const posts = category ? all.filter((p) => p.category?.slug === category) : all;
 
   return (
     <Section className="pt-32 pb-24 sm:pt-40">

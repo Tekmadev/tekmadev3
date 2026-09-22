@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { requireOwner } from "@/lib/admin";
-import { listPostsAdmin, listCategories, type BlogStatus } from "@/lib/blog-data";
+import { listPostsAdmin, listCategories, countPostsByCategory, type BlogStatus } from "@/lib/blog-data";
 import { PageHeader, Panel, Notice, Badge, fmtDateTime } from "@/components/admin/ui";
+import { ConfirmButton } from "@/components/admin/PendingButton";
 import { business } from "@/config/site";
-import { createCategoryAction } from "./actions";
+import { createCategoryAction, renameCategoryAction, deleteCategoryAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,17 @@ const NOTICES: Record<string, { kind: "ok" | "err"; text: string }> = {
   status: { kind: "ok", text: "Status updated." },
   deleted: { kind: "ok", text: "Post moved to trash (soft-deleted)." },
   category: { kind: "ok", text: "Category added." },
+  category_renamed: { kind: "ok", text: "Category renamed." },
+  category_deleted: { kind: "ok", text: "Category deleted. Its posts are still there, now with no category." },
+  category_dup: { kind: "err", text: "A category with that name already exists." },
   input: { kind: "err", text: "Missing or invalid input." },
   save: { kind: "err", text: "Could not save. Check the logs." },
 };
+
+const CATEGORY_INPUT =
+  "min-w-0 flex-1 rounded-xl border border-line-strong bg-bg px-3 py-2 text-sm text-ink outline-none focus:border-gold";
+const CATEGORY_BUTTON =
+  "shrink-0 rounded-full border border-line-strong px-3.5 py-2 text-sm text-ink-2 transition-colors hover:border-gold hover:text-gold";
 
 const STATUS_TONE: Record<BlogStatus, "gold" | "neutral" | "muted"> = {
   published: "gold",
@@ -32,7 +41,7 @@ export default async function BlogAdmin({
   searchParams: Promise<{ ok?: string; e?: string }>;
 }) {
   await requireOwner();
-  const [posts, categories] = await Promise.all([listPostsAdmin(), listCategories()]);
+  const [posts, categories, postCounts] = await Promise.all([listPostsAdmin(), listCategories(), countPostsByCategory()]);
   const { ok, e } = await searchParams;
   const notice = ok ? NOTICES[ok] : e ? NOTICES[e] : null;
 
@@ -105,15 +114,44 @@ export default async function BlogAdmin({
         )}
       </Panel>
 
-      <Panel title="Categories">
-        {categories.length > 0 && (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {categories.map((c) => (
-              <span key={c.id} className="rounded-full border border-line px-3 py-1 text-xs text-ink-2">
-                {c.name}
-              </span>
-            ))}
-          </div>
+      <Panel title={`Categories (${categories.length})`}>
+        {categories.length === 0 ? (
+          <p className="mb-4 text-sm text-ink-4">No categories yet. Add one here, or with the + next to Category in the post editor.</p>
+        ) : (
+          <ul className="mb-5 divide-y divide-line">
+            {categories.map((c) => {
+              const n = postCounts[c.id] ?? 0;
+              const postsLabel = n === 1 ? "1 post" : `${n} posts`;
+              return (
+                <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-2.5">
+                  {/* Rename keeps the slug, so /blog?category=<slug> links stay valid. */}
+                  <form action={renameCategoryAction} className="flex min-w-[260px] flex-1 items-center gap-2">
+                    <input type="hidden" name="id" value={c.id} />
+                    <input name="name" defaultValue={c.name} required maxLength={60} aria-label={`Rename ${c.name}`} className={CATEGORY_INPUT} />
+                    <button type="submit" className={CATEGORY_BUTTON}>
+                      Rename
+                    </button>
+                  </form>
+                  <span className="text-xs text-ink-4">
+                    /blog?category={c.slug} · {postsLabel}
+                  </span>
+                  <form action={deleteCategoryAction}>
+                    <input type="hidden" name="id" value={c.id} />
+                    <ConfirmButton
+                      message={
+                        n > 0
+                          ? `Delete "${c.name}"? ${postsLabel} will keep everything but lose the category.`
+                          : `Delete "${c.name}"?`
+                      }
+                      className="rounded-full border border-signal/40 px-3.5 py-2 text-sm text-signal transition-colors hover:bg-signal/[0.06] disabled:opacity-60"
+                    >
+                      Delete
+                    </ConfirmButton>
+                  </form>
+                </li>
+              );
+            })}
+          </ul>
         )}
         <form action={createCategoryAction} className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1.5 text-sm text-ink-2">
@@ -121,6 +159,7 @@ export default async function BlogAdmin({
             <input
               name="name"
               required
+              maxLength={60}
               placeholder="AI Automation"
               className="rounded-xl border border-line-strong bg-bg px-3 py-2.5 text-sm text-ink outline-none focus:border-gold"
             />

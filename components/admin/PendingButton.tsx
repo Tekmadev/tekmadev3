@@ -25,3 +25,24 @@ export function RefreshButton({ children, className }: { children: React.ReactNo
     </button>
   );
 }
+
+/**
+ * A submit button that asks first. For the destructive forms (delete a
+ * category) where the server action is a plain redirecting one and the only
+ * client-side job is the confirmation.
+ */
+export function ConfirmButton({ message, children, className }: { message: string; children: React.ReactNode; className?: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className={className}
+      onClick={(e) => {
+        if (!window.confirm(message)) e.preventDefault();
+      }}
+    >
+      {children}
+    </button>
+  );
+}

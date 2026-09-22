@@ -262,17 +262,78 @@ export async function listCategories(): Promise<BlogCategory[]> {
   return (data as BlogCategory[] | null) ?? [];
 }
 
-export async function createCategory(input: { name: string; slug?: string; description?: string }) {
+/** Thrown by category writes when the name (its slug, really) is already taken. */
+export class DuplicateCategoryError extends Error {
+  constructor() {
+    super("A category with that name already exists.");
+    this.name = "DuplicateCategoryError";
+  }
+}
+
+const CATEGORY_NAME_MAX = 60;
+
+function categoryName(raw: string): string {
+  const name = raw.trim().replace(/\s+/g, " ").slice(0, CATEGORY_NAME_MAX);
+  if (!name || !slugify(name)) throw new Error("Category needs a name");
+  return name;
+}
+
+/**
+ * Same name as another category, case folded, or the same slug. The unique
+ * index only covers the slug, and a rename keeps the old slug, so a name can
+ * otherwise be taken twice. The table is small; one read is fine.
+ */
+async function assertCategoryNameFree(name: string, slug: string, exceptId?: string): Promise<void> {
+  const lower = name.toLowerCase();
+  const clash = (await listCategories()).some((c) => c.id !== exceptId && (c.slug === slug || c.name.toLowerCase() === lower));
+  if (clash) throw new DuplicateCategoryError();
+}
+
+export async function createCategory(input: { name: string; slug?: string; description?: string }): Promise<BlogCategory> {
   const supabase = getSupabaseAdmin();
-  if (!supabase) return null;
-  const slug = input.slug?.trim() || slugify(input.name);
+  if (!supabase) throw new Error("Supabase not configured");
+  const name = categoryName(input.name);
+  const slug = input.slug?.trim() || slugify(name);
+  await assertCategoryNameFree(name, slug);
   const { data, error } = await supabase
     .from("blog_categories")
-    .insert({ name: input.name.trim(), slug, description: input.description ?? null })
+    .insert({ name, slug, description: input.description ?? null })
     .select("*")
     .single();
-  if (error) throw error;
+  if (error) throw error.code === "23505" ? new DuplicateCategoryError() : error;
   return data as BlogCategory;
+}
+
+/**
+ * Rename only. The slug stays as it was so `/blog?category=<slug>` links that
+ * are already out there keep working.
+ */
+export async function renameCategory(id: string, rawName: string): Promise<BlogCategory> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) throw new Error("Supabase not configured");
+  const name = categoryName(rawName);
+  await assertCategoryNameFree(name, slugify(name), id);
+  const { data, error } = await supabase.from("blog_categories").update({ name }).eq("id", id).select("*").single();
+  if (error) throw error.code === "23505" ? new DuplicateCategoryError() : error;
+  return data as BlogCategory;
+}
+
+/** Posts in the category keep everything but the category (`on delete set null`). */
+export async function deleteCategory(id: string): Promise<void> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) throw new Error("Supabase not configured");
+  const { error } = await supabase.from("blog_categories").delete().eq("id", id);
+  if (error) throw error;
+}
+
+/** Live (not trashed) post counts by category id, for the admin list. */
+export async function countPostsByCategory(): Promise<Record<string, number>> {
+  const supabase = getSupabaseAdmin();
+  if (!supabase) return {};
+  const { data } = await supabase.from("blog_posts").select("category_id").is("deleted_at", null).not("category_id", "is", null);
+  const counts: Record<string, number> = {};
+  for (const row of (data as { category_id: string }[] | null) ?? []) counts[row.category_id] = (counts[row.category_id] ?? 0) + 1;
+  return counts;
 }
 
 // ---------------------------------------------------------------------------

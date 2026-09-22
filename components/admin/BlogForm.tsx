@@ -1,5 +1,7 @@
 import { blocksToMarkdown } from "@/lib/blog-markdown";
 import type { BlogAuthor, BlogCategory, BlogPostWithRefs, BlogStatus } from "@/lib/blog-data";
+import { quickCreateCategoryAction } from "@/app/admin/(dashboard)/blog/actions";
+import { CategoryPicker } from "@/components/admin/CategoryPicker";
 
 const INPUT =
   "w-full rounded-xl border border-line-strong bg-bg px-3 py-2.5 text-sm text-ink outline-none focus:border-gold";
@@ -83,16 +85,7 @@ export function BlogForm({
                 ))}
               </select>
             </Field>
-            <Field label="Category">
-              <select name="category_id" defaultValue={post?.category_id ?? ""} className={INPUT}>
-                <option value="">No category</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            <CategoryPicker categories={categories} defaultValue={post?.category_id} create={quickCreateCategoryAction} />
           </div>
           <Field label="Excerpt" hint="One or two sentences. Shows on the blog list and as the meta/social description fallback.">
             <textarea name="excerpt" defaultValue={post?.excerpt ?? ""} rows={2} className={INPUT} />
