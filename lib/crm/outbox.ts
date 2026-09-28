@@ -535,6 +535,25 @@ const text = (...vals: (string | null | undefined)[]): string | null => {
   return null;
 };
 
+/**
+ * A person's name as the CRM's greeting fields want it. The CRM documents
+ * `name`, `firstName` and `lastName` as separate fields and never says it
+ * derives one from another, and every email greets with the first name, so
+ * both halves are sent explicitly. A name typed all in one case ("sam smith",
+ * "SAM SMITH") is tidied to "Sam Smith"; a name with mixed case is kept
+ * exactly as typed, because "McDonald" and "DeSouza" are already right.
+ */
+export function splitPersonName(full: string): { first: string; last: string | null } | null {
+  const words = full.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return null;
+  const joined = words.join(" ");
+  const oneCase = joined === joined.toLowerCase() || joined === joined.toUpperCase();
+  const tidy = (w: string) =>
+    oneCase ? w.toLowerCase().replace(/(^|[-'’])(\p{L})/gu, (_, sep: string, ch: string) => sep + ch.toUpperCase()) : w;
+  const [first, ...rest] = words.map(tidy);
+  return { first, last: rest.length ? rest.join(" ") : null };
+}
+
 /** The utm_* trio and the lead source travel lowercase, the convention the ads matcher hard-codes in SQL. */
 const lower = (v: string | null): string | null => (v ? v.toLowerCase() : null);
 
@@ -608,7 +627,12 @@ async function buildContactProfile(
 
   const input: UpsertContactInput = { email: k };
   const name = text(subscriber?.name, lead?.name, submission?.name);
-  if (name) input.name = name;
+  const parts = name ? splitPersonName(name) : null;
+  if (parts) {
+    input.name = [parts.first, parts.last].filter(Boolean).join(" ");
+    input.firstName = parts.first;
+    if (parts.last) input.lastName = parts.last;
+  }
   const phone = text(lead?.phone, submission?.phone, client?.primary_phone);
   if (phone) input.phone = phone;
   // The /grow answers come from the newest lead that has them, not simply the
