@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   BarChart3,
@@ -79,6 +79,29 @@ export function Sidebar({
 
   const isActive = (href: string) => (href === "/admin" ? pathname === "/admin" : pathname.startsWith(href));
 
+  // The drawer is a phone thing. Close it when the page changes (back and
+  // forward included) and when the screen grows into the desktop layout, where
+  // nothing visible could close it and its scroll lock would freeze the page.
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 64rem)");
+    const onChange = () => desktop.matches && setOpen(false);
+    desktop.addEventListener("change", onChange);
+    return () => desktop.removeEventListener("change", onChange);
+  }, []);
+
+  // While the drawer is open on a phone, the page behind it must not scroll.
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+
   return (
     <>
       {/* Mobile top bar */}
@@ -110,11 +133,13 @@ export function Sidebar({
       {/* Sidebar */}
       <aside
         className={
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-line bg-bg-2 transition-transform duration-200 lg:translate-x-0 " +
+          // h-dvh, not inset-y-0: on a phone the visible height shrinks under the
+          // browser's toolbars, and the bottom of the menu (Sign out) sat behind them.
+          "fixed left-0 top-0 z-50 flex h-dvh w-64 flex-col border-r border-line bg-bg-2 transition-transform duration-200 lg:translate-x-0 " +
           (open ? "translate-x-0" : "-translate-x-full")
         }
       >
-        <div className="flex items-center justify-between px-5 py-5">
+        <div className="flex shrink-0 items-center justify-between px-5 py-5">
           <Link href="/admin" onClick={() => setOpen(false)} className="flex items-center gap-2">
             <span className="font-display text-lg font-bold text-ink">Tekmadev</span>
             <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gold-deep">
@@ -130,7 +155,8 @@ export function Sidebar({
           </div>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 px-3 py-2">
+        {/* The list scrolls on its own; the header and the account block stay put. */}
+        <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain px-3 py-2">
           {items.map((item) => {
             const active = isActive(item.href);
             const Icon = item.icon;
@@ -163,7 +189,7 @@ export function Sidebar({
           })}
         </nav>
 
-        <div className="border-t border-line p-3">
+        <div className="shrink-0 border-t border-line p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="flex items-center gap-3 rounded-xl px-3 py-2">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold/15 font-display text-sm font-bold text-gold-deep">
               {(name || email).slice(0, 1).toUpperCase()}
