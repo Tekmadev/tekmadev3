@@ -209,6 +209,18 @@
   animation: marquee 40s linear infinite;
 }
 
+/* Client rail (components/ClientRail.tsx): the viewfinder locks on, the caption follows. */
+@keyframes rail-lock {
+  0% { transform: scale(1.16); opacity: 0; }
+  55% { opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes rail-caption {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
 /* Dark-mode tweaks for effects that use hardcoded colors / blend modes. */
 html.dark .gold-gradient-text {
   background: linear-gradient(135deg, #d7b07a 0%, #a8814f 100%);

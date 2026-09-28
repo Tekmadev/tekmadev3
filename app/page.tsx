@@ -1,6 +1,7 @@
 import { Nav } from "@/components/Nav";
 import { Footer } from "@/components/Footer";
 import { Hero } from "@/components/sections/Hero";
+import { Clients } from "@/components/sections/Clients";
 import { WhatItIs } from "@/components/sections/WhatItIs";
 import { TheSystem } from "@/components/sections/TheSystem";
 import { Proof } from "@/components/sections/Proof";
@@ -32,6 +33,7 @@ export default function Home() {
 
       <Nav />
       <Hero />
+      <Clients />
       <WhatItIs />
       <TheSystem />
       <Proof />
