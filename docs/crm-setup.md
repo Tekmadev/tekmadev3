@@ -43,7 +43,7 @@ Then redeploy. Environment changes only take effect on a deploy. Everything stay
 
 ## 5. Vercel: two things to check
 
-- **Cron frequency.** The retry sweep wants to run every 10 minutes (`vercel.json`). If the plan only allows daily crons, say so and it becomes hourly instead. Nothing breaks either way, only how fast a failed push retries: the happy path drains immediately after each signup, and the nightly reconcile catches the rest.
+- **Cron frequency.** The retry sweep wants to run every 10 minutes, but this project is on the Hobby plan, which only allows crons that run once a day (anything more frequent fails the whole deploy, which is what happened on 2026-09-27). So `vercel.json` runs it daily at 21:00 UTC, twelve hours away from the 09:15 UTC reconcile. Nothing breaks, only how fast a failed push retries: the happy path drains immediately after each signup, and the nightly reconcile catches the rest. On the Pro plan, set it back to `*/10 * * * *`.
 - **`CAL_WEBHOOK_SECRET`.** Confirm it is actually set in Production. If it is blank, `app/api/webhooks/cal/route.ts` currently accepts **unsigned** booking payloads and writes them straight into the `leads` table, which with the CRM live would also let a stranger inject a contact.
 
 ## 6. Admin: verify the connection
