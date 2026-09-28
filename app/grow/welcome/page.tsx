@@ -44,7 +44,7 @@ function stat(list: readonly { label: string; value: string }[], label: string) 
 }
 
 function offers(money: WeblineMoney | null): Record<GrowPath, Offer> {
-  const stoneworks = proofWins.find((w) => w.company === "Stoneworks Interlock");
+  const keyfoby = proofWins.find((w) => w.company === "KeyFoby");
   return {
     growth: {
       eyebrow: "The Growth System",
@@ -57,7 +57,8 @@ function offers(money: WeblineMoney | null): Record<GrowPath, Offer> {
         "Google and Meta ads built and run for you",
         "Every lead, booking and review on one dashboard",
       ],
-      proof: stoneworks ? `${stoneworks.company}: ${stoneworks.before} to ${stoneworks.after}, ${stoneworks.note}.` : null,
+      // An arrow, not "to": KeyFoby's "before" already reads "2 to 3 calls / wk".
+      proof: keyfoby ? `${keyfoby.company}, ${keyfoby.industry.toLowerCase()}: ${keyfoby.before} → ${keyfoby.after}. ${keyfoby.note}.` : null,
       fine: "Our full plan is backed by a guarantee: 30 qualified appointments in your first 60 days, or we keep working free until you hit it.",
       cta: { label: "Book my strategy call", href: "#book" },
       secondary: { label: "See how the system works", href: "/#system" },
