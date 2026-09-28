@@ -67,6 +67,10 @@ const DEST = {
   proof: `${SITE}/#proof`,
   pricing: `${SITE}/#pricing`,
   guides: `${SITE}/guides`,
+  // The lead page with "A new or better website" already picked. UTMs because
+  // /grow credits the last touch, so the lead is attributed to this email. No
+  // vendor names in them: recipients can read the address.
+  growWebsite: `${SITE}/grow?need=website&utm_source=newsletter&utm_medium=email&utm_campaign=webline`,
 };
 
 // --- Content helpers (email-safe inline styles) -----------------------------
@@ -110,6 +114,9 @@ function callout(big, small) {
               </table>`;
 }
 
+/** Bold lead-in for a bullet or paragraph. */
+const b = (t) => `<strong style="color:${C.ink};">${t}</strong>`;
+
 /** A compact bullet list. */
 function bullets(items) {
   const li = items
@@ -124,10 +131,18 @@ function bullets(items) {
               </table>`;
 }
 
+/** Vertical space, for text that follows a button. */
+const gap = (px) => `<div style="height:${px}px;line-height:${px}px;font-size:${px}px;">&nbsp;</div>`;
+
 const divider = () =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top:1px solid ${C.line};font-size:0;line-height:0;height:1px;">&nbsp;</td></tr></table>`;
 
-/** Full email document. `blocks` is an array of the helper strings above. */
+/**
+ * Full email document. `blocks` is an array of the helper strings above.
+ * The card is fluid up to 600px so phones get the full width instead of a
+ * shrunk or sideways-scrolling email. Outlook on Windows ignores max-width,
+ * hence the fixed 600px table wrapped around it in [if mso] comments.
+ */
 function base({ campaignKey, subject, preheader, eyebrowText, heading, blocks }) {
   const body = blocks.join("\n");
   return `<!DOCTYPE html>
@@ -139,20 +154,27 @@ function base({ campaignKey, subject, preheader, eyebrowText, heading, blocks })
   <meta name="color-scheme" content="light only">
   <meta name="supported-color-schemes" content="light only">
   <title>${subject}</title>
+  <style>
+    /* Phones: the card keeps its look with less side padding, so lines do not wrap every few words. */
+    @media only screen and (max-width: 620px) {
+      .tmd-card { padding: 32px 22px 30px !important; }
+    }
+  </style>
 </head>
 <body style="margin:0;padding:0;background:${C.bg};">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${preheader}</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${C.bg};">
     <tr>
       <td align="center" style="padding:32px 16px;">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;">
+        <!--[if mso]><table role="presentation" width="600" align="center" cellpadding="0" cellspacing="0" border="0"><tr><td><![endif]-->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;">
           <tr>
             <td align="center" style="padding:6px 0 26px;">
               <img src="${BUSINESS.logo}" width="64" height="64" alt="${BUSINESS.name}" style="display:block;border:0;outline:none;text-decoration:none;width:64px;height:64px;">
             </td>
           </tr>
           <tr>
-            <td style="background:${C.card};border:1px solid ${C.line};border-radius:18px;padding:44px 44px 40px;">
+            <td class="tmd-card" style="background:${C.card};border:1px solid ${C.line};border-radius:18px;padding:44px 44px 40px;">
               ${eyebrow(eyebrowText)}
               <h1 style="margin:0 0 20px;font-family:${FONT};font-size:28px;font-weight:800;letter-spacing:-0.5px;line-height:1.2;color:${C.ink};">${heading}</h1>
               ${body}
@@ -170,6 +192,7 @@ function base({ campaignKey, subject, preheader, eyebrowText, heading, blocks })
             </td>
           </tr>
         </table>
+        <!--[if mso]></td></tr></table><![endif]-->
         <img src="${openPixel(campaignKey)}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0;overflow:hidden;">
       </td>
     </tr>
@@ -314,6 +337,51 @@ const templates = [
       p(`If it is not for you, no hard feelings. You can <a href="${UNSUB}" target="_blank" style="color:${C.gold};text-decoration:underline;">step off the list here</a> and we will stop emailing. Either way, thanks for being here.`),
     ],
   },
+  {
+    // Every fact here is on /webline (config/webline.ts) or the Fixible case
+    // study (config/case-studies.ts). Delivery is always "within 11 days"
+    // (config/webline-delivery.ts): change that number and this copy with it.
+    // No price on purpose: it lives in the products table and can change after
+    // this HTML is pasted into the CRM.
+    file: "webline.html",
+    key: "webline",
+    name: "Webline (for a website that brings no customers)",
+    subject: "Would you hire you from your website?",
+    preheader: "Nobody calls to say they picked someone else. Here is a one-minute test.",
+    eyebrowText: "One-minute website test",
+    heading: "Nobody calls to tell you they picked someone else.",
+    blocks: (k) => [
+      lead(`Hi ${FNAME}, here is how a job gets lost without you ever knowing. Someone hears your name, looks you up on their phone, and gives your website a few seconds.`),
+      p("If it looks dated, loads slowly or makes them hunt for your number, they tap back and call the next name on the list. You never hear about it. It just shows up as a slow month."),
+      h2("Try this right now"),
+      p("Open your website on your phone and pretend you have never heard of your business."),
+      bullets([
+        "Can you tell what you do, and where, in the first five seconds?",
+        "Can you call or book with one tap?",
+        "Does it look better than the competitor you lose jobs to?",
+        "Search Google for what you do and your city. Are you on page one?",
+        "Ask ChatGPT to recommend a business like yours in your city. Are you in the answer?",
+      ]),
+      p(b("If you hesitated on even one, your website is sending customers to someone else.")),
+      h2("Fixing it is easier than you think"),
+      p("That is what Webline is for. No big agency quote, no months of meetings, and you do not write a word."),
+      bullets([
+        `${b("Designed for you.")} Not a template.`,
+        `${b("Written for you.")} Every page, from one 15-minute form.`,
+        `${b("Built to be found.")} On Google, and in answers from AI tools like ChatGPT.`,
+        `${b("Built to bring in work.")} One tap to call, a booking link, and a contact form straight to your inbox.`,
+        `${b("Live within 11 days.")} On your domain, then hosted and looked after by us, so it never goes stale again.`,
+      ]),
+      p("We did it for our own repair shop first. Fixible gets calls every day, has spent $0 on ads, and customers tell us they found it on Google and ChatGPT."),
+      callout("Love the design, or pay nothing.", "You see your new homepage by day 5. If you still do not love it after a free revision, you get a full refund."),
+      p("The next step is easy. Answer a few quick questions and pick a time for a free 30-minute call. We look at your current site before we talk, so you get straight answers, not a pitch."),
+      button("Book my free website call", trackClick(k, "webline-grow", DEST.growWebsite)),
+      gap(12),
+      p("Rather not click? Reply with your website address and I will tell you the first thing I would fix."),
+      p(`Talk soon,<br>${b("Shajeed")}<br>Founder, ${BUSINESS.name}`),
+      p(`${b("P.S.")} Every week the old site stays up, it keeps sending customers to someone else. Within 11 days, the new one could be sending them to you.`),
+    ],
+  },
 ];
 
 // Short "when to send this" note for the admin organizer, keyed by campaign key.
@@ -325,6 +393,7 @@ const USE_WHEN = {
   "nurture-3": "Step 3, about two days later (proof plus the offer).",
   promo: "Time-boxed offer. Send to warm subscribers during a promotion.",
   reengage: "Win-back for subscribers who have gone quiet.",
+  webline: "Pitch for owners whose website is old or brings no customers. Send to subscribers only (the tmd-newsletter tag). The button opens /grow with the website answer already picked; replies with a site address need a personal answer.",
 };
 
 // --- Emit -------------------------------------------------------------------

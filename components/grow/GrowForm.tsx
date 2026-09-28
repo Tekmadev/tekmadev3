@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { business } from "@/config/site";
-import { GROW_WELCOME_PATH, growNeeds, revenueBands, type GrowPath } from "@/config/grow";
+import { GROW_NEED_PARAM, GROW_WELCOME_PATH, growNeeds, isGrowNeed, revenueBands, type GrowPath } from "@/config/grow";
 import { UTM_KEYS, getFirstTouch, getLastTouch } from "@/lib/attribution";
 import { captureEvent } from "@/lib/analytics";
 import { getMetaContextId, newEventId, trackMeta } from "@/lib/meta-pixel";
@@ -52,6 +52,16 @@ export function GrowForm() {
   useEffect(() => {
     router.prefetch(GROW_WELCOME_PATH);
   }, [router]);
+
+  // A link about one offer (/grow?need=website) arrives with that answer
+  // picked. Read from the address after mount so the page stays static; the
+  // radios are uncontrolled, so checking the input is all it takes.
+  useEffect(() => {
+    const need = new URLSearchParams(window.location.search).get(GROW_NEED_PARAM);
+    if (!isGrowNeed(need)) return;
+    const radio = formRef.current?.querySelector<HTMLInputElement>(`input[name="need"][value="${need}"]`);
+    if (radio && !formRef.current?.querySelector('input[name="need"]:checked')) radio.checked = true;
+  }, []);
 
   function fail(field: FieldError) {
     setStatus("error");

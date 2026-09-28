@@ -66,7 +66,7 @@ function offers(money: WeblineMoney | null): Record<GrowPath, Offer> {
     webline: {
       eyebrow: "Webline",
       title: "A website that gets you found",
-      lead: `Just starting? A professional website built to be found on Google and ChatGPT, live within ${WEBLINE_LIVE_DAYS} days.`,
+      lead: `New business, or a website that is not bringing in work? A professional site built to be found on Google and ChatGPT, live within ${WEBLINE_LIVE_DAYS} days.`,
       points: [
         "Designed and written for your business, not a template",
         "Search work for Google, AI answers and ChatGPT built in",

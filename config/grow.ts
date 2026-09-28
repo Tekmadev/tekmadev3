@@ -30,7 +30,7 @@ export const GROW_LEAD_SOURCE = "grow";
 
 export const growNeeds = [
   { value: "customers", label: "More customers and booked jobs" },
-  { value: "website", label: "A website for a new business" },
+  { value: "website", label: "A new or better website" },
   { value: "custom", label: "A custom build: AI, app or software" },
   { value: "content", label: "Content and motion graphics" },
   { value: "unsure", label: "Not sure yet, I want to talk it through" },
@@ -48,6 +48,14 @@ export const revenueBands = [
 ] as const;
 
 export type RevenueBand = (typeof revenueBands)[number]["value"];
+
+/**
+ * Query parameter that preselects an answer on /grow, so a link from an email
+ * or an ad about one offer lands with that offer already picked:
+ * /grow?need=website. The person can still change it. Only real need codes
+ * count; anything else is ignored.
+ */
+export const GROW_NEED_PARAM = "need";
 
 /** Which offer the welcome page leads with. */
 export type GrowPath = "growth" | "webline" | "custom";
