@@ -10,7 +10,21 @@ import { scheduleEventId } from "@/lib/meta-events";
 
 type Theme = "light" | "dark";
 
-export function BookingEmbed() {
+export type BookingEmbedProps = {
+  /**
+   * Fills Cal's booking form. Cal puts these into its iframe's address, so
+   * pass them only for someone who just gave them to us (the /grow welcome page).
+   */
+  prefill?: { name?: string | null; email?: string | null };
+  /** Opaque keys carried onto the booking and back to our webhook (e.g. lead_ref). Never personal data. */
+  metadata?: Record<string, string>;
+};
+
+/**
+ * Cal reads its config once, when its script has loaded, so props must be
+ * final by the first render: a later change does not reach the calendar.
+ */
+export function BookingEmbed({ prefill, metadata }: BookingEmbedProps = {}) {
   const [calTheme, setCalTheme] = useState<Theme>("light");
   const [utm, setUtm] = useState<Record<string, string>>({});
 
@@ -98,6 +112,10 @@ export function BookingEmbed() {
   const calUtm = Object.fromEntries(
     Object.entries(utm).filter(([k]) => k.startsWith("utm_")),
   );
+  const calPrefill: Record<string, string> = {};
+  if (prefill?.name) calPrefill.name = prefill.name;
+  if (prefill?.email) calPrefill.email = prefill.email;
+  for (const [k, v] of Object.entries(metadata ?? {})) if (v) calPrefill[`metadata[${k}]`] = v;
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-line-strong bg-surface shadow-[0_30px_80px_-50px_rgba(13,12,10,0.25)]">
@@ -105,7 +123,7 @@ export function BookingEmbed() {
         namespace={business.booking.namespace}
         calLink={business.booking.link}
         style={{ width: "100%", minHeight: "720px", height: "100%", overflow: "auto" }}
-        config={{ layout: "month_view", theme: calTheme, ...calUtm }}
+        config={{ layout: "month_view", theme: calTheme, ...calUtm, ...calPrefill }}
       />
     </div>
   );

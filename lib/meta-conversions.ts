@@ -34,6 +34,28 @@ export async function reportLead(input: {
   });
 }
 
+/** A lead form (not a lead magnet: nothing was handed over in exchange). */
+export async function reportFormLead(input: {
+  contextId: unknown;
+  eventId: string | null;
+  email: string;
+  name: string | null;
+  phone: string | null;
+  sourceUrl: string | null;
+  form: string;
+}): Promise<MetaSendResult> {
+  const context = await getAdContext(input.contextId);
+  if (!context || !input.eventId) return { status: "skipped", reason: "no_consent_context" };
+  return sendMetaEvent({
+    event: "Lead",
+    eventId: input.eventId,
+    context,
+    user: { email: input.email, phone: input.phone, ...splitName(input.name) },
+    sourceUrl: input.sourceUrl,
+    custom: { content_name: input.form, content_category: "lead_form" },
+  });
+}
+
 /**
  * A booked call. Two things must both exist before this can send: the Cal
  * webhook's lead row (who booked) and the browser's link from that booking to

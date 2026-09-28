@@ -57,9 +57,11 @@ It proves, against a throwaway test contact, that:
 - the site can look contacts up with this kind of token
 - saving a contact does **not** wipe tags your workflows added
 - your account deduplicates on email
-- the ten Tekmadev custom fields exist (it creates any that are missing and remembers their ids)
+- the twelve Tekmadev custom fields exist (it creates any that are missing and remembers their ids)
 
 Nothing can be switched on until these pass, on purpose. It takes about 20 seconds and is safe to re-run.
+
+**Press it again after any update that adds a field.** The `/grow` form added two, `tmd_need` and `tmd_revenue_band`, and they are created the next time you press Verify connection. Until you do, contacts still sync, just without those two fields.
 
 ## 7. Admin: turn ON the Outbound switch
 
@@ -114,10 +116,17 @@ All triggered on the `tmd-` tags, all standard steps with no per-execution charg
 
 | Workflow | Trigger |
 |---|---|
+| Speed to lead | `tmd-grow-form` added (branch on the `tmd_need` field) |
 | Newsletter nurture | `tmd-newsletter` added |
 | Revenue leak follow-up | `tmd-lead-magnet-revenue-leak` added (branch on the `tmd_monthly_leak` field) |
 | Booked-call reminders | `tmd-booked-call` added |
 | Client onboarding nudges | `tmd-client-live` added |
+
+**Build speed to lead first.** `tmd-grow-form` means someone just filled in the `/grow` form, the link in the ads, the bio and DMs. The contact arrives with the business name and website they typed, what they need most in `tmd_need`, and roughly what they make a month in `tmd_revenue_band`, both worded exactly as they picked them. Have the workflow text them, or alert you to call them, **within 5 minutes** of the tag landing: the first few minutes are when they are most likely to pick up and book. Branch on `tmd_need` so the first message speaks to what they asked for.
+
+The form sends them to a welcome page that asks them to book a call, and anyone who does gets `tmd-booked-call` on the same contact, often within those same few minutes. Check for that tag before the first message, so someone who already booked gets a short "see you on the call" rather than being asked to book. The booked-call reminders above cover them like every other booking, and a cancellation takes the tag off and adds `tmd-booking-cancelled`, the same as a call booked any other way.
+
+This workflow is a reply to someone who just asked, never a marketing campaign. `tmd-grow-form` is an inquiry, exactly like `tmd-lead-magnet`: do not use it as the audience for a newsletter or a promotion. Only `tmd-newsletter` means someone agreed to marketing.
 
 **Filter every marketing audience on `tmd-newsletter`.** A campaign sent to everyone tagged `tmd-lead-magnet` would mail people who asked for a report and never consented to marketing, which is a CASL violation. That tag is written by one place in the whole system, derived from the subscriber's status, so filtering on it is the one checkbox that has to be right.
 

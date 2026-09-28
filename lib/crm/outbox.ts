@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { needLabel, revenueBandLabel } from "@/config/grow";
 import { REVENUE_LEAK_SLUG } from "@/config/lead-magnets";
 import { dayKey, notifyAdmins, resolveAdminNotifications } from "@/lib/admin-notify";
 import {
@@ -443,9 +444,14 @@ async function resolveContactId(
   }
   if (!opts.create) return { ok: true, contactId: null };
 
-  // Email only. The profile push is its own job and runs at the normal
-  // priority; this exists so a suppression never waits on one.
-  const made = await upsertAndAdopt(ctx, job, { email: job.email_key });
+  // Created with everything we know, not the email alone. A tag job can be
+  // claimed before the same person's profile push (both priority 5, both
+  // stamped with one transaction's now()), and a workflow keyed on that tag,
+  // like speed-to-lead on tmd-grow-form, must not start on a contact with no
+  // name or phone. The profile read is database only; the profile push still
+  // runs as its own job afterwards and is idempotent.
+  const built = await buildContactProfile(ctx, job);
+  const made = await upsertAndAdopt(ctx, job, built.ok ? built.input : { email: job.email_key });
   if (!made.ok) return { ok: false, outcome: made.outcome };
   return { ok: true, contactId: made.contact.id };
 }
@@ -482,6 +488,11 @@ type LeadFacts = {
   phone: string | null;
   source: string | null;
   booking_start: string | null;
+  /** The /grow form's answers. Null on every other kind of lead. */
+  business_name: string | null;
+  website: string | null;
+  need: string | null;
+  revenue_band: string | null;
   utm_source: string | null;
   utm_medium: string | null;
   utm_campaign: string | null;
@@ -560,7 +571,7 @@ async function buildContactProfile(
       .maybeSingle(),
     ctx.supabase
       .from("leads")
-      .select("name,email,phone,source,booking_start,utm_source,utm_medium,utm_campaign")
+      .select("name,email,phone,source,booking_start,business_name,website,need,revenue_band,utm_source,utm_medium,utm_campaign")
       .ilike("email", k)
       .order("created_at", { ascending: false })
       .limit(25),
@@ -600,8 +611,13 @@ async function buildContactProfile(
   if (name) input.name = name;
   const phone = text(lead?.phone, submission?.phone, client?.primary_phone);
   if (phone) input.phone = phone;
-  const company = text(client?.business_name, submission?.company);
+  // The /grow answers come from the newest lead that has them, not simply the
+  // newest lead: a reschedule arrives as a fresh cal_booking row with none of
+  // them, and the push should still describe everything the site holds.
+  const company = text(client?.business_name, ...leads.map((l) => l.business_name), submission?.company);
   if (company) input.companyName = company;
+  const website = text(...leads.map((l) => plausibleWebsite(l.website)));
+  if (website) input.website = website;
 
   const leadSource = lower(text(lead?.source, subscriber?.source, submission ? "lead_magnet" : null));
   if (leadSource) input.source = leadSource;
@@ -623,6 +639,13 @@ async function buildContactProfile(
   put("utmMedium", lower(text(subscriber?.utm_medium, lead?.utm_medium, submission?.utm_medium)));
   put("utmCampaign", lower(text(subscriber?.utm_campaign, lead?.utm_campaign, submission?.utm_campaign)));
   put("monthlyLeak", monthlyLeak(submissions));
+  // The label they picked, which is what the owner reads and branches on. The
+  // raw code is the fallback, so an option later taken off the form still
+  // arrives on old leads as something rather than nothing.
+  const need = text(...leads.map((l) => l.need));
+  put("need", need ? (needLabel(need) ?? need) : null);
+  const band = text(...leads.map((l) => l.revenue_band));
+  put("revenueBand", band ? (revenueBandLabel(band) ?? band) : null);
   put("lastBookingAt", lastBookingAt(leads));
   put("consentVersion", subscriber?.consent_policy_version ?? null);
   put("consentAt", subscriber?.consented_at ?? null);
@@ -630,6 +653,18 @@ async function buildContactProfile(
 
   if (Object.keys(fields).length) input.customFields = fields;
   return { ok: true, input };
+}
+
+/**
+ * The /grow website answer, only when it could be one.
+ *
+ * The column is free text and never validated as a URL, so it can hold "n/a" or
+ * "don't have one yet". Those are a truthful answer on our side and junk in the
+ * contact's website field, so anything with a space or without a dot stays home.
+ */
+function plausibleWebsite(v: string | null): string | null {
+  const t = (v ?? "").trim();
+  return t && !/\s/.test(t) && t.includes(".") ? t : null;
 }
 
 /** Dollars a month from the revenue leak calculator, newest submission first. */

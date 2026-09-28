@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import type { BookingEmbedProps } from "@/components/BookingEmbed";
 
 /**
  * The booking calendar sits at the bottom of the homepage, but Cal.com's embed
@@ -29,7 +30,7 @@ const BookingEmbed = dynamic(() => import("@/components/BookingEmbed").then((m) 
   loading: Placeholder,
 });
 
-export function LazyBookingEmbed() {
+export function LazyBookingEmbed(props: BookingEmbedProps = {}) {
   const ref = useRef<HTMLDivElement>(null);
   const [show, setShow] = useState(false);
 
@@ -53,5 +54,5 @@ export function LazyBookingEmbed() {
     };
   }, [show]);
 
-  return <div ref={ref}>{show ? <BookingEmbed /> : <Placeholder />}</div>;
+  return <div ref={ref}>{show ? <BookingEmbed {...props} /> : <Placeholder />}</div>;
 }

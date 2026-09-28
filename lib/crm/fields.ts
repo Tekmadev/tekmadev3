@@ -5,7 +5,7 @@ import { createCustomField, getCustomFieldByKey, listCustomFields } from "@/lib/
 /**
  * The custom fields we own, and the bootstrap that gives them ids.
  *
- * Ten fields, chosen because each one either routes a workflow or answers a
+ * Twelve fields, chosen because each one either routes a workflow or answers a
  * question afterwards. Contact custom fields live on the sub-account endpoint
  * with model=contact; Custom Fields V2 covers only Custom Objects and Company
  * today, so it is a dead end for contacts however current it looks.
@@ -32,6 +32,14 @@ export const CRM_FIELDS = {
   utmCampaign: { key: "tmd_utm_campaign", name: "Tekmadev UTM Campaign", dataType: "TEXT" },
   /** Dollars a month, from the revenue leak calculator. The highest-value field we send. */
   monthlyLeak: { key: "tmd_monthly_leak", name: "Tekmadev Monthly Leak", dataType: "NUMERICAL" },
+  /**
+   * The /grow form's two qualification answers, sent as the label the person
+   * picked (config/grow.ts) rather than the stored code, because the owner
+   * reads them on the contact and branches the speed-to-lead workflow on them.
+   * Text, not a number: a revenue band is a range someone chose, not a figure.
+   */
+  need: { key: "tmd_need", name: "Tekmadev Need", dataType: "TEXT" },
+  revenueBand: { key: "tmd_revenue_band", name: "Tekmadev Revenue Band", dataType: "TEXT" },
   lastBookingAt: { key: "tmd_last_booking_at", name: "Tekmadev Last Booking", dataType: "TEXT" },
   consentVersion: { key: "tmd_consent_version", name: "Tekmadev Consent Policy", dataType: "TEXT" },
   consentAt: { key: "tmd_consent_at", name: "Tekmadev Consent Date", dataType: "TEXT" },
@@ -67,7 +75,7 @@ export async function cachedFieldIds(): Promise<Partial<Record<CrmFieldKey, stri
 /**
  * Find every field's id, creating the ones that do not exist yet.
  *
- * Idempotent by construction: one list call answers for all ten in the common
+ * Idempotent by construction: one list call answers for all twelve in the common
  * case, each remaining key is then probed on its own (the path accepts a field
  * key, so this also survives a list that paginated or filtered oddly), and
  * only a genuine miss is created. Whatever was resolved is cached even on a
@@ -119,7 +127,7 @@ export async function resolveFieldIds(
     ids[key] = hit.id;
   }
 
-  // Merge, never replace: a pass that resolved eight of ten must not throw
+  // Merge, never replace: a pass that resolved ten of twelve must not throw
   // away the two an earlier pass had already found.
   const merged = { ...(await cachedFieldIds()), ...ids };
   await writeCrmSetting("crm_fields", merged, "system");

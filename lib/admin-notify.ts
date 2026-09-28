@@ -47,6 +47,9 @@ export const ADMIN_EVENTS = {
   "lead.booking_cancelled": { category: "leads", severity: "warning", label: "Booking cancelled" },
   "lead.magnet_submitted": { category: "leads", severity: "success", label: "Free tool submitted" },
   "portal.lead_signed_up": { category: "leads", severity: "success", label: "New portal sign-up" },
+  // A /grow form lead wants a call back. It stays in Needs action until someone resolves it, or
+  // until the same lead books from the welcome page (the Cal webhook resolves it then).
+  "lead.form_submitted": { category: "leads", severity: "success", needsAction: true, label: "New lead form" },
 
   // Sales
   "order.paid": { category: "sales", severity: "success", label: "Order paid" },
@@ -133,6 +136,7 @@ export const ADMIN_EVENTS = {
   "stripe.webhook_signature_failed": { category: "system", severity: "warning", label: "Stripe signature check failed" },
   "cal.webhook_failed": { category: "system", severity: "warning", label: "Booking webhook failed" },
   "lead_magnet.store_failed": { category: "system", severity: "critical", needsAction: true, label: "A free tool submission was lost" },
+  "lead.form_store_failed": { category: "system", severity: "critical", needsAction: true, label: "A lead form submission was lost" },
 } as const satisfies Record<string, EventDef>;
 
 export type AdminEventKey = keyof typeof ADMIN_EVENTS;

@@ -15,7 +15,8 @@ import {
 } from "@/lib/meta-pixel";
 
 /** Pages where a visit itself is a buying signal worth its own event. */
-const INTENT_PATHS = [/^\/webline/, /^\/start/, /^\/case-studies\/.+/, /^\/tools\/.+/];
+// /grow counts, its welcome page does not: that visit follows a Lead already reported.
+const INTENT_PATHS = [/^\/webline/, /^\/start/, /^\/case-studies\/.+/, /^\/tools\/.+/, /^\/grow\/?$/];
 
 /**
  * Loads the Meta Pixel after consent, and only then. Renders nothing.

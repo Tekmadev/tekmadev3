@@ -117,6 +117,22 @@ export function getAttribution(): Attribution | null {
   return read(FIRST_TOUCH_KEY) ?? read(LAST_TOUCH_KEY);
 }
 
+/**
+ * The visit that brought them this time, else first touch. For a page that is
+ * itself an ad's destination (/grow): someone who found us organically last
+ * month and came back through an ad today should be credited to the ad.
+ */
+export function getLastTouch(): Attribution | null {
+  if (typeof window === "undefined") return null;
+  return read(LAST_TOUCH_KEY) ?? read(FIRST_TOUCH_KEY);
+}
+
+/** Only the first touch, for keeping alongside a last-touch credit. */
+export function getFirstTouch(): Attribution | null {
+  if (typeof window === "undefined") return null;
+  return read(FIRST_TOUCH_KEY);
+}
+
 /** Flatten attribution into string-only props for analytics / Cal config. */
 export function attributionProps(attr: Attribution | null): Record<string, string> {
   const out: Record<string, string> = {};

@@ -463,7 +463,7 @@ async function checkDedupe(cfg: CrmConfig, contactId: string, rec: Recorder): Pr
 }
 
 /**
- * Check 8: the ten custom fields exist, and a value written survives a read.
+ * Check 8: the twelve custom fields exist, and a value written survives a read.
  *
  * Fields go out as [{ id, fieldValue }] and come back as [{ id, value }].
  * A round-trip comparison written the obvious way concludes that every field
@@ -504,7 +504,7 @@ async function checkCustomFields(cfg: CrmConfig, contactId: string, rec: Recorde
   return rec.record(
     "custom_fields",
     true,
-    `all ten fields have ids${created}; write fieldValue and read value round-tripped for text and number`,
+    `all twelve fields have ids${created}; write fieldValue and read value round-tripped for text and number`,
   );
 }
 

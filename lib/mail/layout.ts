@@ -34,6 +34,11 @@ export type MailLayout = {
   note?: string;
   /** Extra footer line above the company block. */
   footerNote?: string;
+  /**
+   * Why they are getting this, the last footer line. Defaults to the account
+   * wording, which is wrong for someone who only filled in a form.
+   */
+  context?: string;
 };
 
 function paragraph(text: string): string {
@@ -113,7 +118,7 @@ export function renderMail(l: MailLayout): string {
               <a href="${business.url}" target="_blank" style="color:#a17a4f;text-decoration:none;">${esc(business.domain)}</a>
               &nbsp;·&nbsp;<a href="mailto:${esc(business.email)}" style="color:#a17a4f;text-decoration:none;">${esc(business.email)}</a>
               &nbsp;·&nbsp;<a href="tel:${esc(business.phone.tel)}" style="color:#a17a4f;text-decoration:none;">${esc(business.phone.display)}</a><br><br>
-              This is an automated message about your ${esc(business.name)} account.
+              ${esc(l.context ?? `This is an automated message about your ${business.name} account.`)}
             </td>
           </tr>
         </table>

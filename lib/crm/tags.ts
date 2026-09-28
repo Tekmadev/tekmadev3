@@ -12,7 +12,8 @@
  * tool is an inquiry, not consent: only a ticked marketing box is consent to
  * ongoing marketing, and that path calls addSubscriber separately, which is
  * what produces the tag. A calculator submitter who did not tick the box gets
- * `tmd-lead-magnet` and can never get `tmd-newsletter`.
+ * `tmd-lead-magnet` and can never get `tmd-newsletter`. The same holds for the
+ * /grow form: `tmd-grow-form` records an inquiry and nothing more.
  *
  * Every marketing audience in the CRM filters on `tmd-newsletter`. A campaign
  * sent to everyone tagged `tmd-lead-magnet` would mail people who asked for a
@@ -28,6 +29,12 @@ export const CRM_TAGS = {
   bookedCall: "tmd-booked-call",
   bookingCancelled: "tmd-booking-cancelled",
   portalSignup: "tmd-portal-signup",
+  /**
+   * Sent the /grow form. An inquiry, not consent, exactly like the lead-magnet
+   * tags. "grow-form" and not "grow", so it can never be read as the Grow
+   * plan's `tmd-plan-grow`, which means a paying client.
+   */
+  growForm: "tmd-grow-form",
   client: "tmd-client",
   clientLive: "tmd-client-live",
   erased: "tmd-erased",

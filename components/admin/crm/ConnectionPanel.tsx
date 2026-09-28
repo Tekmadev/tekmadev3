@@ -44,7 +44,7 @@ const CHECKS: Record<string, string> = {
   tags_preserved_on_upsert: "Updating a contact keeps the tags your own workflows added.",
   delete_tags_body: "The site can remove the newsletter tag when someone unsubscribes.",
   dedupe_on_email: "Your account matches contacts by email, so one person's update can never land on someone else.",
-  custom_fields: "The ten Tekmadev fields exist in your account and can be written.",
+  custom_fields: "The twelve Tekmadev fields exist in your account and can be written.",
 };
 
 type StoredCheck = { name: string; ok: boolean; detail: string };

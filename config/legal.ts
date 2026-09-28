@@ -778,7 +778,7 @@ export const cookiePolicy: LegalDoc = {
         },
         {
           type: "p",
-          text: "We store your theme preference, your cookie choice, and basic first-party marketing attribution (for example, the link or campaign that brought you here) in your browser's local storage. This is not a cookie, contains no personal information, and is never shared with third parties. If you accept advertising cookies, we also keep a random reference number in your browser for the length of your visit, so that a booking or purchase can be matched to the advertising record described above.",
+          text: "We store your theme preference, your cookie choice, and basic first-party marketing attribution (for example, the link or campaign that brought you here) in your browser's local storage. This is not a cookie, contains no personal information, and is never shared with third parties. If you accept advertising cookies, we also keep a random reference number in your browser for the length of your visit, so that a booking or purchase can be matched to the advertising record described above. If you send the form on our /grow page, we keep your name and email in that browser tab's session storage so the booking calendar on the next page can fill them in for you. They are cleared when you close the tab, and the only place they go is the calendar of Cal.com, our booking provider.",
         },
         {
           type: "h3",

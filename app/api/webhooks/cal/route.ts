@@ -3,13 +3,15 @@ import crypto from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { runCrmOutbox } from "@/lib/crm/outbox";
 import { reportBooking } from "@/lib/meta-conversions";
-import { hourKey, notifyAdmins } from "@/lib/admin-notify";
+import { hourKey, notifyAdmins, resolveAdminNotifications } from "@/lib/admin-notify";
+import { GROW_LEAD_SOURCE } from "@/config/grow";
 
 // HMAC verification needs the raw body, so this must run on Node.
 export const runtime = "nodejs";
 
 const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"] as const;
 const CLICK_KEYS = ["gclid", "fbclid", "ttclid", "msclkid", "li_fat_id"] as const;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type CalAttendee = { name?: string; email?: string; phoneNumber?: string };
 type CalPayload = {
@@ -109,8 +111,10 @@ export async function POST(req: NextRequest) {
   const referrer = s(track.referrer);
   const landingPage = s(track.landing_page) ?? s(track.landingPage);
 
+  // No `source` here on purpose. A new row gets the column default,
+  // 'cal_booking'; a row that already owns this booking keeps whatever source
+  // it has, which is how a /grow lead that booked stays a /grow lead.
   const row = {
-    source: "cal_booking",
     status: statusFor(evt.triggerEvent ?? ""),
     name: s(attendee?.name) ?? s(p.organizer?.name),
     email: s(attendee?.email),
@@ -137,14 +141,40 @@ export async function POST(req: NextRequest) {
     raw: evt as unknown as Record<string, unknown>,
   };
 
+  // Only the booking itself: a form lead's own name, phone and attribution
+  // are what it gave us and must survive every later Cal delivery.
+  const bookingOnly = {
+    status: row.status,
+    booking_uid: row.booking_uid,
+    booking_start: row.booking_start,
+    booking_end: row.booking_end,
+    event_type: row.event_type,
+    raw: row.raw,
+  };
+  let linkedLeadId: string | null = null;
+
   try {
     // supabase-js reports a failed write in `error` instead of throwing. Unchecked,
     // a booking that was never saved still returned 200 (so Cal.com did not
     // retry) and would have announced "X booked a call" for a lead that did not exist.
-    const { error } = row.booking_uid
-      ? await supabase.from("leads").upsert(row, { onConflict: "booking_uid" })
-      : await supabase.from("leads").insert(row);
-    if (error) throw new Error(error.message);
+    linkedLeadId = await attachToFormLead(supabase, s(track.lead_ref), evt.triggerEvent, row.email, bookingOnly);
+
+    if (!linkedLeadId) {
+      // A later delivery (cancel) for a booking a form lead already owns
+      // updates the booking fields on that row and nothing else.
+      const { data: owner, error: ownerError } = row.booking_uid
+        ? await supabase.from("leads").select("id,source").eq("booking_uid", row.booking_uid).maybeSingle()
+        : { data: null, error: null };
+      if (ownerError) throw new Error(ownerError.message);
+
+      const { error } =
+        owner && owner.source !== "cal_booking"
+          ? await supabase.from("leads").update(bookingOnly).eq("id", owner.id)
+          : row.booking_uid
+            ? await supabase.from("leads").upsert(row, { onConflict: "booking_uid" })
+            : await supabase.from("leads").insert(row);
+      if (error) throw new Error(error.message);
+    }
   } catch (err) {
     console.error("[cal webhook] insert error", err instanceof Error ? err.message : String(err));
     await notifyAdmins({
@@ -170,6 +200,9 @@ export async function POST(req: NextRequest) {
   // has linked this booking to a consented ad context, and never throws.
   if (row.status === "booked" && row.booking_uid) await reportBooking(row.booking_uid);
 
+  // The form lead was waiting in Needs action for a call back. They booked one.
+  if (linkedLeadId) await resolveAdminNotifications({ events: ["lead.form_submitted"], entityId: linkedLeadId });
+
   // Tell staff. The key includes the start time, so a reschedule is its own
   // notification while a retried delivery of the same event is not.
   const event =
@@ -193,7 +226,10 @@ export async function POST(req: NextRequest) {
           : event === "lead.booking_rescheduled"
             ? `${who} moved their call${when ? ` to ${when}` : ""}`
             : `${who} cancelled their call${when ? ` (${when})` : ""}`,
-      body: [row.email, row.phone, utm.utm_source ? `via ${utm.utm_source}` : null].filter(Boolean).join(" · ") || null,
+      body:
+        [row.email, row.phone, linkedLeadId ? "from the lead form" : null, utm.utm_source ? `via ${utm.utm_source}` : null]
+          .filter(Boolean)
+          .join(" · ") || null,
       url: "/admin/leads",
       entity: { type: "lead", id: row.booking_uid },
       actor: { type: "visitor", label: row.email ?? row.name ?? null },
@@ -203,4 +239,70 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ received: true });
+}
+
+/**
+ * Someone who filled in the /grow form and then booked is one lead, not two.
+ * On the first delivery of a new booking, the booking is written onto their
+ * form lead instead of a separate cal_booking row. Two ways to find it:
+ *
+ *  1. `metadata[lead_ref]`, the form lead's id, which the welcome page passes
+ *     to Cal when the booking happens in the tab that sent the form.
+ *  2. Otherwise (the reply email's "Book my call" opens a new tab with no
+ *     session), the newest form lead from the last 30 days with this email and
+ *     no booking yet. /api/grow stores emails trimmed and lowercased.
+ *
+ * Either way the lead must be a /grow lead with no booking whose email matches
+ * the booking's. Anything else returns null and the booking is recorded as its
+ * own row, as before.
+ */
+const LINK_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
+async function attachToFormLead(
+  supabase: NonNullable<ReturnType<typeof getSupabaseAdmin>>,
+  leadRef: string | null,
+  trigger: string | undefined,
+  email: string | null,
+  booking: Record<string, unknown> & { booking_uid: string | null },
+): Promise<string | null> {
+  if (trigger !== "BOOKING_CREATED" || !email || !booking.booking_uid) return null;
+  const key = email.trim().toLowerCase();
+
+  let leadId: string | null = null;
+  if (leadRef && UUID_RE.test(leadRef)) {
+    const { data: lead, error } = await supabase
+      .from("leads")
+      .select("id,email,source,booking_uid")
+      .eq("id", leadRef)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (lead && lead.source === GROW_LEAD_SOURCE && !lead.booking_uid && String(lead.email ?? "").trim().toLowerCase() === key) {
+      leadId = lead.id as string;
+    }
+  }
+  if (!leadId) {
+    const { data: lead, error } = await supabase
+      .from("leads")
+      .select("id")
+      .eq("source", GROW_LEAD_SOURCE)
+      .eq("email", key)
+      .is("booking_uid", null)
+      .gte("created_at", new Date(Date.now() - LINK_WINDOW_MS).toISOString())
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    leadId = (lead?.id as string | undefined) ?? null;
+  }
+  if (!leadId) return null;
+
+  const { data: updated, error: updateError } = await supabase
+    .from("leads")
+    .update(booking)
+    .eq("id", leadId)
+    .is("booking_uid", null)
+    .select("id")
+    .maybeSingle();
+  if (updateError) throw new Error(updateError.message);
+  return (updated?.id as string | undefined) ?? null;
 }

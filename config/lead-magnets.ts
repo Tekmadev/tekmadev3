@@ -138,7 +138,7 @@ export const revenueLeakCopy = {
     submitting: "Working it out...",
     consentLabel:
       "Send me the Growth Memo as well: one or two emails a month on the plays that fill calendars. Unsubscribe in one click.",
-    fine: "We email you the report and nothing else unless you tick the box. We never sell or share your details.",
+    fine: "We email you the report, and nothing else unless you tick the box. We never sell your details. If you accepted advertising cookies, we let Meta know you used the tool, as our privacy policy explains.",
   },
 
   breakdown: {

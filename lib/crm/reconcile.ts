@@ -787,16 +787,18 @@ export async function backfillCrmContacts(opts?: { limit?: number }): Promise<Cr
       const id = String(row.id);
       // The event, not the row: a reschedule is its own job, the same scope
       // the trigger builds.
-      const scope = (typeof row.booking_uid === "string" ? row.booking_uid.trim() : "") || id;
+      const booking = typeof row.booking_uid === "string" ? row.booking_uid.trim() : "";
+      const hasBooking = booking !== "";
+      const scope = booking || id;
       const source = typeof row.source === "string" ? row.source : "";
       const status = typeof row.status === "string" ? row.status : "";
 
       await upsertOnce(key, "lead", id);
 
-      // No DND job for a lead. Absence of consent is not a suppression
-      // instruction, and writing "inactive" would assert a consent we do not
-      // have. Only the subscribers leg touches DND.
-      if (source === "cal_booking") {
+      // The booked-call pair, shared by a Cal booking row and a /grow row a
+      // booking was attached to, because the trigger writes the same keys for
+      // both. One definition here is what keeps the two from drifting apart.
+      const bookingTags = async (): Promise<void> => {
         if (status === "booked" || status === "rescheduled") {
           bump(
             await enqueue(db, "tags.add", `tags.add:${key}:booked-call:${scope}`, key, "lead", id, {
@@ -815,6 +817,23 @@ export async function backfillCrmContacts(opts?: { limit?: number }): Promise<Cr
             }),
           );
         }
+      };
+
+      // No DND job for a lead. Absence of consent is not a suppression
+      // instruction, and writing "inactive" would assert a consent we do not
+      // have. Only the subscribers leg touches DND.
+      if (source === "cal_booking") {
+        await bookingTags();
+      } else if (source === "grow") {
+        // Scoped on the row, never on the booking, exactly as the trigger
+        // writes it: attaching a booking later lands on this same job.
+        bump(
+          await enqueue(db, "tags.add", `tags.add:${key}:grow-form:${id}`, key, "lead", id, {
+            tag: "grow-form",
+          }),
+        );
+        // A /grow row with no booking is not a booked call, whatever its status.
+        if (hasBooking) await bookingTags();
       } else if (source === "lead_magnet") {
         bump(
           await enqueue(db, "tags.add", `tags.add:${key}:lead-magnet:${scope}`, key, "lead", id, {
