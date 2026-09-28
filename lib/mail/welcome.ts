@@ -32,7 +32,7 @@ export function leadWelcomeEmail(opts: { businessName: string; firstName?: strin
           body: "Fifteen minutes in the portal. Your services, your ideal customer, and how leads reach you today. We use it to show you exactly what a booked-call system would look like for you.",
         },
         {
-          title: "Book a free 45-minute audit",
+          title: "Book a free 30-minute audit",
           body: "We map your pipeline live and show you where leads are leaking. No slide deck. If the system is not a fit for you, we will say so.",
         },
         {

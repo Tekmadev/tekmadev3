@@ -403,7 +403,7 @@ export const termsOfService: LegalDoc = {
         {
           type: "ol",
           items: [
-            "Diagnose: a 45-minute audit call where we map the Client's pipeline.",
+            "Diagnose: an initial 30-minute audit call where we map the Client's pipeline, followed by a longer working session where needed.",
             "Build: configuration of the AI voice agent, follow-up sequences, CRM integrations, and lead engine, typically completed within 7 days of kickoff.",
             "Install: go-live deployment, typically completed within 14 days of kickoff (longer for regulated or multi-location industries).",
             "Operate: ongoing monitoring, weekly optimization, and monthly reporting.",

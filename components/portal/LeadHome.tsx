@@ -49,7 +49,7 @@ export function LeadHome({
     {
       n: 2,
       icon: CalendarCheck,
-      title: "Book a free 45-minute audit",
+      title: "Book a free 30-minute audit",
       body: "We map your pipeline live and tell you where the leaks are. No pitch deck. If the system does not fit, we say so.",
       cta: "Pick a time",
       href: portal.kickoffCalUrl,

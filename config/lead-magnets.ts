@@ -182,7 +182,7 @@ export const revenueLeakCopy = {
         body: "The system puts real appointments on your calendar and shows you where each one came from.",
       },
     ],
-    cta: "Book the 45-minute audit",
+    cta: "Book the 30-minute audit",
     ctaHref: "/#book",
     ctaNote: "We map your pipeline live and show you the leak in your own numbers. If it is not a fit, we say so.",
   },

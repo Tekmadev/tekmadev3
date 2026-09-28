@@ -95,7 +95,7 @@ export function revenueLeakReportEmail(opts: {
             "None of it is a lead problem. Every dollar below comes from leads that already found you.",
           ],
       steps,
-      cta: { label: "Book the 45-minute audit", url: `${business.url}/#book` },
+      cta: { label: "Book the 30-minute audit", url: `${business.url}/#book` },
       note: `We map your pipeline live and show you the leak in your own numbers. No deck, no pressure, and if it is not a fit we say so. The figures above are estimates built from your answers and the assumptions listed on ${business.domain}/tools/revenue-leak-calculator, not a projection of results.`,
       footerNote: "You are receiving this because you asked for your Revenue Leak breakdown.",
     }),

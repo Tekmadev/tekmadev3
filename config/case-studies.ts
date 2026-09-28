@@ -176,7 +176,7 @@ export const caseStudies: CaseStudy[] = [
       heading: "Want to be the shop the assistant recommends?",
       body: `Webline is the same build: a website with the SEO, AEO and GEO work done, live within ${WEBLINE_LIVE_DAYS} days, for a fixed price. Or book the audit and we will show you exactly what your current site is telling Google and ChatGPT about you.`,
       primary: { label: "See Webline", href: "/webline" },
-      secondary: { label: "Book the 45-minute audit", href: "/#book" },
+      secondary: { label: "Book the 30-minute audit", href: "/#book" },
     },
     card: {
       title: "Fixible: calls every day in Hamilton, zero ad spend.",

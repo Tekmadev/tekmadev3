@@ -54,7 +54,7 @@ export function FinalCTA() {
             </h2>
 
             <p className="mt-7 max-w-md text-balance text-lg leading-snug text-ink-2">
-              Pick a time on the right. 45 minutes. We map your pipeline live and tell you
+              Pick a time on the right. 30 minutes. We map your pipeline live and tell you
               whether the system fits.
             </p>
 

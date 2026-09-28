@@ -23,7 +23,7 @@ export function FAQ() {
             </h2>
             <p className="mt-7 max-w-sm text-base leading-relaxed text-ink-2">
               Anything not here gets answered on the audit call. No demo. No pressure. Just a
-              45-minute look at your numbers.
+              30-minute look at your numbers.
             </p>
           </div>
 

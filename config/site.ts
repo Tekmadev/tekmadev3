@@ -315,8 +315,8 @@ export const systemSteps: SystemStep[] = [
     n: "01",
     label: "Diagnose",
     title: "We audit your pipeline live.",
-    body: "A 45-minute call where we map every leak: missed calls, slow replies, dead follow-ups. If we can't 10x your conversion, we say so.",
-    spec: "Day 0 · 45 minutes",
+    body: "A 30-minute call where we map every leak: missed calls, slow replies, dead follow-ups. If we can't 10x your conversion, we say so.",
+    spec: "Day 0 · 30 minutes",
   },
   {
     n: "02",
@@ -391,7 +391,7 @@ export type TrustSignal = {
 };
 
 export const trustSignals: TrustSignal[] = [
-  { iconName: "Clock", text: "45 minutes · zero pressure" },
+  { iconName: "Clock", text: "30 minutes · zero pressure" },
   { iconName: "ShieldCheck", text: "No retainer until appointments book" },
   { iconName: "Zap", text: "System live in 14 days if you move forward" },
 ];
