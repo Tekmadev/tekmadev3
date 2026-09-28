@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { business } from "@/config/site";
 import { getLeadMagnet, REVENUE_LEAK_SLUG } from "@/config/lead-magnets";
 import { calculateLeak, normalizeAnswers } from "@/lib/revenue-leak";
@@ -6,7 +6,7 @@ import { recordLeadMagnetSubmission, markLeadMagnetDelivery } from "@/lib/lead-m
 import { revenueLeakReportEmail } from "@/lib/mail/lead-magnet";
 import { sendMail } from "@/lib/mail/send";
 import { addSubscriber, normalizeEmail } from "@/lib/subscribers-data";
-import { pushLeadMagnetToGHL } from "@/lib/ghl";
+import { runCrmOutbox } from "@/lib/crm/outbox";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { reportLead } from "@/lib/meta-conversions";
 import { dayKey, hourKey, moneyLabel, notifyAdmins } from "@/lib/admin-notify";
@@ -21,11 +21,12 @@ const str = (v: unknown, max: number) =>
  * One endpoint for every lead magnet.
  *
  * The result is recomputed here from the submitted answers and never trusted
- * from the client, so the number we store, email and push to GHL is the number
+ * from the client, so the number we store, email and send onward is the number
  * the model produces, not one a browser made up.
  *
- * Order matters: store first-party first, then deliver. A dead Resend key or a
- * missing GHL webhook loses the email, never the lead.
+ * Order matters: store first-party first, then deliver. A dead Resend key loses
+ * the email, never the lead, and the CRM sync is a queue row a database trigger
+ * wrote inside the lead insert rather than a call made from here.
  */
 export async function POST(req: NextRequest) {
   const limit = rateLimit(`lead-magnet:${clientIp(req.headers)}`, 8, 10 * 60 * 1000);
@@ -136,31 +137,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const [ghlOk, mailResult] = await Promise.all([
-    pushLeadMagnetToGHL({
-      magnet: magnet.slug,
-      magnetName: magnet.name,
-      email,
-      name,
-      company,
-      phone,
-      score: result.monthlyLeak,
-      consentMarketing,
-      fields: {
-        leads_per_month: answers.leadsPerMonth,
-        avg_deal_value: answers.dealValue,
-        close_rate: answers.closeRate,
-        reply_band: answers.replyBand,
-        follow_up_band: answers.followUpBand,
-        missed_calls_per_week: answers.missedCallsPerWeek,
-        monthly_leak: result.monthlyLeak,
-        annual_leak: result.annualLeak,
-        recovered_close_rate: result.recoveredCloseRate,
-      },
-      utm_source: attribution.utm_source,
-      utm_medium: attribution.utm_medium,
-      utm_campaign: attribution.utm_campaign,
-    }),
+  const [mailResult] = await Promise.all([
     (async () => {
       const mail = revenueLeakReportEmail({
         firstName: name,
@@ -183,7 +160,18 @@ export async function POST(req: NextRequest) {
     }),
   ]);
 
-  await markLeadMagnetDelivery(stored.id, { ghlSynced: ghlOk, emailed: mailResult.ok });
+  // Only the email is stamped from here now. `ghl_synced_at` used to record the
+  // return value of a fire-and-forget POST made moments earlier, which is a
+  // claim this request cannot make: the CRM push is a queue row that may still
+  // be pending, and markLeadMagnetDelivery only ever writes a stamp for a true
+  // flag, so passing `false` wrote nothing anyway. The outbox owns that column
+  // now and stamps it when a contact really reaches the CRM.
+  await markLeadMagnetDelivery(stored.id, { emailed: mailResult.ok });
+
+  // Drain what the leads insert (and the newsletter opt-in, when it was ticked)
+  // enqueued, after the response so the visitor gets their report without
+  // waiting on the CRM.
+  after(() => runCrmOutbox({ trigger: "inline", maxJobs: 3, budgetMs: 4000 }));
 
   // A lead with a dollar figure attached is the warmest kind. The key collapses
   // a double submit from the same person on the same day.

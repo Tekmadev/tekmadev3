@@ -1,6 +1,6 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { addSubscriber, normalizeEmail } from "@/lib/subscribers-data";
-import { pushSubscriberToGHL } from "@/lib/ghl";
+import { runCrmOutbox } from "@/lib/crm/outbox";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { business } from "@/config/site";
 
@@ -12,8 +12,9 @@ const str = (v: unknown, max: number) =>
 
 /**
  * Newsletter signup (single opt-in + consent log). Stores the subscriber
- * first-party in Supabase, then best-effort pushes to GHL. Cookieless: coarse
- * country from the edge header and device class from the UA, no raw IP.
+ * first-party in Supabase; the CRM sync is a queue row a database trigger
+ * wrote inside that same transaction, never a call from this path. Cookieless:
+ * coarse country from the edge header and device class from the UA, no raw IP.
  */
 export async function POST(req: NextRequest) {
   // Best-effort throttle so the open endpoint can't be trivially flooded to
@@ -67,12 +68,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "server" }, { status: 500 });
   }
 
-  // Only ping GHL for a genuinely new or re-activated subscriber, never on a
-  // repeat submit of an already-active address.
-  if (result.created || result.reactivated) {
-    await pushSubscriberToGHL(result.subscriber);
-  }
+  // Drain whatever the subscribers trigger just enqueued, after the response so
+  // the visitor never waits on the CRM. Unconditional on purpose: a pass with
+  // nothing due is a cheap no-op, and gating it on what changed would make the
+  // amount of work this endpoint does depend on the state of the address.
+  after(() => runCrmOutbox({ trigger: "inline", maxJobs: 3, budgetMs: 4000 }));
 
+  // `suppressed` (a bounced or complained address, left untouched) answers
+  // exactly like an already-subscribed one. Anything else and posting strangers'
+  // addresses here would tell you which of them we cannot mail.
   return NextResponse.json({
     ok: true,
     status: result.created || result.reactivated ? "subscribed" : "already_subscribed",

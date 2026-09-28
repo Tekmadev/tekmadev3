@@ -30,7 +30,7 @@ Templates greet with `{{contact.first_name}}`. In GHL, set a **default/fallback 
 
 ## Unsubscribe
 
-The footer has an unsubscribe link marked `{{unsubscribe_link}}`. GHL adds its own unsubscribe link on send. Either keep the placeholder and let GHL manage it, or select the word **Unsubscribe** in the GHL editor and insert GHL's unsubscribe link. (GHL's exact merge tag can vary by version, so confirm it in your account rather than trusting the placeholder verbatim.)
+The footer's unsubscribe link is GHL's own merge tag, `{{unsubscribe}}`, which GHL fills in on send. Leave **Include Unsubscribe Link** on in the sending settings: the `List-Unsubscribe` header is an RFC requirement GHL always adds, so GHL's unsubscribe route is live whether the footer link is or not, and switching it off only costs you the visible link. Confirm the tag resolves to a real link in a test send before the first campaign.
 
 ## Tracking (how it works)
 

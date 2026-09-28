@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { requireOwner } from "@/lib/admin";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { normalizeSlug } from "@/lib/links-data";
+import { setSubscriberStatus } from "@/lib/subscribers-data";
+import { requestCrmErasure } from "@/lib/crm/outbox";
 
 export async function createCampaignAction(formData: FormData) {
   await requireOwner();
@@ -82,19 +84,22 @@ export async function unsubscribeSubscriberAction(formData: FormData) {
   const id = String(formData.get("id") || "").trim();
   if (!id) redirect("/admin/email?e=input");
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase) redirect("/admin/email?e=config");
-
-  const now = new Date().toISOString();
-  const { error } = await supabase
-    .from("subscribers")
-    .update({ status: "unsubscribed", status_source: "admin", unsubscribed_at: now, updated_at: now })
-    .eq("id", id)
-    // Already unsubscribed rows are left alone, so their history keeps the real source.
-    .neq("status", "unsubscribed");
-  if (error) {
-    console.error("[email] unsubscribe failed", error.message);
-    redirect("/admin/email?e=db");
+  // Through the one door in lib/subscribers-data.ts rather than writing the
+  // table here: it is what stamps status_source and updated_at in the same
+  // statement, leaves an already suppressed row alone so its history keeps the
+  // real source, and refuses to downgrade a bounce or a spam complaint to a
+  // plain unsubscribe, which would erase the only record of why we stopped.
+  const result = await setSubscriberStatus({
+    match: { by: "id", id },
+    status: "unsubscribed",
+    source: "admin",
+  });
+  if (!result.ok) {
+    // notfound, refused and stale all mean the row is no longer in the state
+    // this button was rendered for (it only renders for an active subscriber),
+    // so the page is stale and reloading it is the fix.
+    const code = result.reason === "config" || result.reason === "db" ? result.reason : "input";
+    redirect(`/admin/email?e=${code}`);
   }
 
   revalidatePath("/admin/email");
@@ -110,6 +115,17 @@ export async function deleteSubscriberAction(formData: FormData) {
 
   const supabase = getSupabaseAdmin();
   if (!supabase) redirect("/admin/email?e=config");
+
+  const { data: row, error: readError } = await supabase.from("subscribers").select("email").eq("id", id).maybeSingle();
+  if (readError) {
+    console.error("[email] subscriber read failed", readError.message);
+    redirect("/admin/email?e=db");
+  }
+  // The CRM half first. Deleting only our row would leave their contact tagged
+  // for the newsletter and mailable, and a person who asked to be forgotten
+  // would keep getting campaigns. If it cannot be queued, nothing is deleted,
+  // so the owner can try again rather than lose the only record of the address.
+  if (row?.email && !(await requestCrmErasure(String(row.email)))) redirect("/admin/email?e=crm_erase");
 
   const { error } = await supabase.from("subscribers").delete().eq("id", id);
   if (error) {

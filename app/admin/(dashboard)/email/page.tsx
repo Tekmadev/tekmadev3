@@ -30,6 +30,7 @@ const ERRORS: Record<string, string> = {
   name: "Enter a campaign name.",
   dupe: "A campaign with that key already exists. Pick another.",
   db: "Database write failed. Please try again.",
+  crm_erase: "Not deleted: the CRM erasure could not be queued, so their CRM contact would have stayed mailable. Try again.",
   input: "Something was missing. Please try again.",
 };
 
@@ -39,7 +40,7 @@ const OKS: Record<string, string> = {
   disabled: "Campaign disabled.",
   campaign_deleted: "Campaign deleted.",
   unsubscribed: "Subscriber unsubscribed.",
-  subscriber_deleted: "Subscriber deleted.",
+  subscriber_deleted: "Subscriber deleted. Their CRM contact is queued to be suppressed and tagged erased.",
 };
 
 export default async function EmailAdmin({
@@ -139,6 +140,11 @@ export default async function EmailAdmin({
         )}
       </div>
     ),
+    // "CRM" rather than the vendor, like the badge on Free tools. Only a real
+    // upsert stamps ghl_synced_at, and the inspector shows both sides in full.
+    <Link key="crm" href={`/admin/crm?email=${encodeURIComponent(s.email)}`} title="Compare with the CRM">
+      {s.ghl_synced_at ? <Badge tone="ok">CRM</Badge> : <Badge tone="muted">No CRM</Badge>}
+    </Link>,
     txt(s.country),
     <div key="act" className="flex items-center gap-2">
       {s.status === "active" && (
@@ -232,7 +238,7 @@ export default async function EmailAdmin({
 
       <Panel title={`Subscribers (${subStats.total.toLocaleString("en-US")})`}>
         <DataTable
-          head={["When", "Email", "Source", "Status", "Country", ""]}
+          head={["When", "Email", "Source", "Status", "CRM", "Country", ""]}
           rows={subscriberRows}
           empty="No subscribers yet. They appear here the moment someone signs up in the footer."
         />

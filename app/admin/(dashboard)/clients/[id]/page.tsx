@@ -32,6 +32,8 @@ import { ApprovalsPanel } from "@/components/admin/clients/ApprovalsPanel";
 import { CallsPanel } from "@/components/admin/clients/CallsPanel";
 import { TeamPanel } from "@/components/admin/clients/TeamPanel";
 import { ActivityPanel } from "@/components/admin/clients/ActivityPanel";
+import { CrmLocationPanel } from "@/components/admin/clients/CrmLocationPanel";
+import { getCrmLocationForClient } from "@/lib/crm/admin-data";
 import { deleteClientAction, goLiveAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +48,7 @@ const SECTIONS = [
   ["approvals", "Approvals"],
   ["agreements", "Agreements"],
   ["calls", "Calls"],
+  ["crm", "CRM"],
   ["team", "Team"],
   ["account", "Account"],
   ["activity", "Activity"],
@@ -64,6 +67,8 @@ export default async function ClientDetailPage({
   if (!client || client.deleted_at) notFound();
 
   const onboarding = await getActiveOnboarding(client.id);
+  // Owner only: which CRM sub-account decides what counts toward a guarantee.
+  const crmLocation = ctx.role === "owner" ? await getCrmLocationForClient(client.id) : null;
   const [tasks, intake, grants, assets, approvals, agreements, calls, members, activity, subscription, order] = await Promise.all([
     onboarding ? listTasks(onboarding.id) : Promise.resolve([]),
     getLatestIntake(client.id),
@@ -113,6 +118,17 @@ export default async function ClientDetailPage({
       {sp.invited === "1" && <Notice kind="ok">Invite sent.</Notice>}
       {sp.e === "invite" && <Notice kind="err">Invite email failed. Check the Supabase auth email settings.</Notice>}
       {sp.e === "email" && <Notice kind="err">Enter a valid email.</Notice>}
+      {sp.e?.startsWith("crm_") && (
+        <Notice kind="err">
+          {{
+            crm_location: "That does not look like a sub-account location id. It is letters and numbers only, copied from GoHighLevel.",
+            crm_calendar: "One of the calendar ids does not look right. Paste only the ids, separated by commas or new lines.",
+            crm_taken: "That sub-account is already mapped to another client, or it is our own. Unlink it there first.",
+            crm_own: "That is Tekmadev's own sub-account. Its appointments are our sales calls and never count for a client.",
+            crm_db: "The CRM account could not be saved. Try again.",
+          }[sp.e] ?? "The CRM account could not be saved."}
+        </Notice>
+      )}
       {sp.e === "care" && (
         <Notice kind="err">
           <span className="block">
@@ -147,7 +163,7 @@ export default async function ClientDetailPage({
       </section>
 
       <nav className="sticky top-0 z-20 -mx-5 flex snap-x gap-2 overflow-x-auto border-b border-line bg-bg/90 px-5 py-2 backdrop-blur sm:-mx-8 sm:px-8">
-        {SECTIONS.map(([key, label]) => (
+        {SECTIONS.filter(([key]) => key !== "crm" || ctx.role === "owner").map(([key, label]) => (
           <a key={key} href={`#${key}`} className="shrink-0 snap-start rounded-full border border-line-strong px-3 py-1.5 text-xs text-ink-3 hover:text-ink">
             {label}
           </a>
@@ -245,6 +261,14 @@ export default async function ClientDetailPage({
           <CallsPanel client={client} calls={calls} />
         </div>
       </Panel>
+
+      {ctx.role === "owner" && (
+        <Panel title="CRM account">
+          <div id="crm" className="scroll-mt-28">
+            <CrmLocationPanel clientId={client.id} location={crmLocation} />
+          </div>
+        </Panel>
+      )}
 
       <Panel title="Team">
         <div id="team" className="scroll-mt-28">

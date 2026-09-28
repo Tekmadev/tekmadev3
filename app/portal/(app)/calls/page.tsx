@@ -66,8 +66,11 @@ export default async function CallsPage() {
                     <span>Booked {fmtDateTime(c.booked_at)}</span>
                     {c.booked_for && <span>For {fmtDateTime(c.booked_for)}</span>}
                     <span>{humanize(c.source)}</span>
-                    {!c.qualified && <Badge tone="muted">Not counted: {humanize(c.disqualified_reason)}</Badge>}
-                    {c.qualified && countsTowardGuarantee(client, c, endsAtMs) && <Badge tone="ok">Counts</Badge>}
+                    {/* A new appointment is checked by us before it counts. Until then it is
+                        being reviewed, never "not counted", which would read as a refusal. */}
+                    {!c.reviewed_at && <Badge tone="neutral">Being reviewed</Badge>}
+                    {c.reviewed_at && !c.qualified && <Badge tone="muted">Not counted: {humanize(c.disqualified_reason)}</Badge>}
+                    {c.reviewed_at && c.qualified && countsTowardGuarantee(client, c, endsAtMs) && <Badge tone="ok">Counts</Badge>}
                   </div>
                 </li>
               ))}
@@ -98,7 +101,9 @@ export default async function CallsPage() {
                         <Badge tone={STATUS_TONE[c.status]}>{humanize(c.status)}</Badge>
                       </td>
                       <td className="py-2.5 pr-4">
-                        {!c.qualified ? (
+                        {!c.reviewed_at ? (
+                          <Badge tone="neutral">Being reviewed</Badge>
+                        ) : !c.qualified ? (
                           <Badge tone="muted">{humanize(c.disqualified_reason)}</Badge>
                         ) : countsTowardGuarantee(client, c, endsAtMs) ? (
                           <Badge tone="ok">Yes</Badge>

@@ -23,6 +23,7 @@ import {
   FlaskConical,
   Bell,
   Megaphone,
+  RefreshCcwDot,
 } from "lucide-react";
 import { signOutAction } from "@/app/admin/actions";
 import { NotificationBell, useAdminNotifications } from "@/components/admin/NotificationBell";
@@ -49,6 +50,7 @@ const NAV: NavItem[] = [
   { href: "/admin/clients", label: "Clients", icon: Building2 },
   { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
   { href: "/admin/email", label: "Email", icon: Mail, ownerOnly: true },
+  { href: "/admin/crm", label: "CRM sync", icon: RefreshCcwDot, ownerOnly: true },
   { href: "/admin/blog", label: "Blog", icon: FileText, ownerOnly: true },
   { href: "/admin/pricing", label: "Pricing", icon: Tag, ownerOnly: true },
   { href: "/admin/coupons", label: "Coupons", icon: BadgePercent, ownerOnly: true },

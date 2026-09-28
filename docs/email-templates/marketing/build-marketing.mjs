@@ -49,8 +49,11 @@ const SITE = BUSINESS.site;
 // --- GHL merge fields / tracking (documented in INDEX.md) -------------------
 // Set a default of "there" for first_name in GHL so an empty name still reads well.
 const FNAME = "{{contact.first_name}}";
-// GHL inserts its own unsubscribe link on send; this placeholder marks where it goes.
-const UNSUB = "{{unsubscribe_link}}";
+// GHL's own unsubscribe merge tag, which it interpolates on send. The tag is
+// {{unsubscribe}}. GHL renders a tag it does not recognise as empty text and
+// merge fields have no fallback value, so a near miss like {{unsubscribe_link}}
+// ships a footer whose unsubscribe link points nowhere instead of failing loudly.
+const UNSUB = "{{unsubscribe}}";
 
 const openPixel = (c) => `${SITE}/api/e/o?c=${c}`;
 const trackClick = (c, label, dest) =>
@@ -393,7 +396,7 @@ const index =
   "## Personalization\n\n" +
   "Templates greet with `{{contact.first_name}}`. In GHL, set a **default/fallback value of `there`** for that field so an empty name still reads well (\"You're in, there.\").\n\n" +
   "## Unsubscribe\n\n" +
-  "The footer has an unsubscribe link marked `{{unsubscribe_link}}`. GHL adds its own unsubscribe link on send. Either keep the placeholder and let GHL manage it, or select the word **Unsubscribe** in the GHL editor and insert GHL's unsubscribe link. (GHL's exact merge tag can vary by version, so confirm it in your account rather than trusting the placeholder verbatim.)\n\n" +
+  "The footer's unsubscribe link is GHL's own merge tag, `" + UNSUB + "`, which GHL fills in on send. Leave **Include Unsubscribe Link** on in the sending settings: the `List-Unsubscribe` header is an RFC requirement GHL always adds, so GHL's unsubscribe route is live whether the footer link is or not, and switching it off only costs you the visible link. Confirm the tag resolves to a real link in a test send before the first campaign.\n\n" +
   "## Tracking (how it works)\n\n" +
   "- **Opens**: the pixel `" + SITE + "/api/e/o?c=<key>` logs an open when the email is viewed.\n" +
   "- **Clicks**: each CTA points to `" + SITE + "/api/e/c?c=<key>&l=<label>&u=<destination>`, which logs the click and forwards to the destination (destinations are host-allowlisted, so the link can't be abused as an open redirect).\n" +

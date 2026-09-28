@@ -8,7 +8,16 @@ import { cn } from "@/lib/cn";
  * A form submit button with a refresh icon that spins while the server action
  * runs, then stops. Must sit inside the <form> whose action it reports on.
  */
-export function RefreshButton({ children, className }: { children: React.ReactNode; className?: string }) {
+export function RefreshButton({
+  children,
+  className,
+  pendingLabel = "Refreshing",
+}: {
+  children: React.ReactNode;
+  className?: string;
+  /** What the button says while the action runs, when "Refreshing" would be the wrong verb. */
+  pendingLabel?: string;
+}) {
   const { pending } = useFormStatus();
   return (
     <button
@@ -21,7 +30,7 @@ export function RefreshButton({ children, className }: { children: React.ReactNo
       )}
     >
       <RefreshCw className={cn("h-3.5 w-3.5", pending && "animate-spin")} />
-      {pending ? "Refreshing" : children}
+      {pending ? pendingLabel : children}
     </button>
   );
 }

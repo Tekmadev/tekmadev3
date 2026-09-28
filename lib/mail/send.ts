@@ -25,9 +25,37 @@ export type MailInput = {
   replyTo?: string;
   /** Resend tags for filtering in their dashboard. Values must be ASCII letters, numbers, _ or -. */
   tags?: { name: string; value: string }[];
-  /** Extra mail headers, e.g. List-Unsubscribe on anything that is marketing. */
+  /** Extra mail headers. For List-Unsubscribe pass `unsubscribeToken` instead, so no caller has to remember the pair. */
   headers?: Record<string, string>;
+  /**
+   * The recipient's `subscribers.unsubscribe_token`. Set it on marketing-class
+   * mail, anything a person may opt out of, and the List-Unsubscribe pair is
+   * added for them. Leave it unset on transactional mail: a receipt or a
+   * password link is not something to invite an opt-out from.
+   */
+  unsubscribeToken?: string | null;
 };
+
+/**
+ * The one-click List-Unsubscribe pair for one subscriber token. Gmail and
+ * Yahoo expect both headers on bulk mail, and a message that carries them
+ * gets the mailbox's own unsubscribe control instead of its spam button.
+ *
+ * www on purpose. The bare domain answers with a 307 to www, and a provider
+ * firing the one-click POST is not obliged to follow a redirect, so the bare
+ * host can turn a working unsubscribe into a silent failure.
+ *
+ * Never wrap this URL in /api/e/c. The click tracker writes the destination it
+ * forwards to into `email_events.url`, which would file the person's
+ * unsubscribe token in an engagement row.
+ */
+export function unsubscribeHeaders(token: string): Record<string, string> {
+  const url = `${business.url}/unsubscribe?t=${encodeURIComponent(token)}`;
+  return {
+    "List-Unsubscribe": `<${url}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+}
 
 /** The From header. Its domain must be verified in Resend before anything sends. */
 export function mailFrom(): string {
@@ -69,6 +97,10 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
   const to = input.to.trim().toLowerCase();
   if (!to.includes("@")) return { ok: false, error: "invalid recipient" };
 
+  // Caller headers go last so an explicit List-Unsubscribe still wins.
+  const token = input.unsubscribeToken?.trim();
+  const headers = { ...(token ? unsubscribeHeaders(token) : {}), ...input.headers };
+
   try {
     const resend = new Resend(key);
     const { data, error } = await resend.emails.send({
@@ -79,7 +111,7 @@ export async function sendMail(input: MailInput): Promise<MailResult> {
       text: input.text ?? toPlainText(input.html),
       replyTo: input.replyTo ?? business.email,
       ...(input.tags?.length ? { tags: input.tags } : {}),
-      ...(input.headers ? { headers: input.headers } : {}),
+      ...(Object.keys(headers).length ? { headers } : {}),
     });
 
     if (error) {

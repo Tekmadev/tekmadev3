@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { requireAdmin, requireOwner } from "@/lib/admin";
+import { getSupabaseAdmin } from "@/lib/supabase";
 import { getProductMeta } from "@/config/products";
 import { notifyAdmins, resolveAdminNotifications } from "@/lib/admin-notify";
 import {
@@ -32,9 +33,8 @@ import {
   getActiveOnboarding,
   getOnboardingById,
   getTaskById,
-  guaranteeSummary,
-  listBookedCalls,
   markIntakeReviewed,
+  refreshGuaranteeStatus,
   setOnboardingStage,
   setTaskStatus,
   updateAccessGrant,
@@ -491,18 +491,6 @@ export async function requestApprovalAction(formData: FormData) {
 // Booked calls + guarantee
 // ---------------------------------------------------------------------------
 
-async function refreshGuaranteeStatus(clientId: string, by: string) {
-  const client = await getClientById(clientId);
-  if (!client || !client.guarantee_eligible || client.guarantee_status !== "running") return;
-  const calls = await listBookedCalls(clientId, 2000);
-  const g = guaranteeSummary(client, calls);
-  if (g.counted >= g.target) {
-    await updateClient(clientId, { guarantee_status: "met", guarantee_met_at: new Date().toISOString() }, by);
-    await logActivity({ client_id: clientId, actor_type: "system", event: "guarantee.met", summary: `Guarantee met: ${g.counted} booked calls`, visibility: "client" });
-    await createNotification({ client_id: clientId, template_key: "guarantee_met", subject: "Guarantee hit", body: `${g.counted} qualified appointments. Now we keep going.`, action_url: "/calls" });
-  }
-}
-
 export async function addBookedCallAction(formData: FormData) {
   const ctx = await requireAdmin();
   const clientId = s(formData.get("client_id"));
@@ -540,7 +528,108 @@ export async function updateBookedCallAction(formData: FormData) {
     reviewed_at: new Date().toISOString(),
   });
   await refreshGuaranteeStatus(clientId, ctx.email);
+  // An appointment that came in from the CRM raised a "needs reviewing" card
+  // keyed by its external id. Reviewing it is the answer, so the card closes.
+  const externalId = opt(formData.get("external_id"), 200);
+  if (externalId) await resolveAdminNotifications({ events: ["client.appointment_booked"], entityId: externalId, by: ctx.email });
   redirect(back(clientId, "calls"));
+}
+
+// ---------------------------------------------------------------------------
+// CRM account mapping
+// ---------------------------------------------------------------------------
+
+// Their location and calendar ids are opaque alphanumeric strings. Anything
+// else is a paste mistake, and a wrong id silently maps nobody.
+const CRM_ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
+
+/**
+ * Which CRM sub-account belongs to this client, and which of its calendars
+ * count toward the guarantee.
+ *
+ * Owner only, because it decides what counts toward a commercial promise.
+ * An empty calendar list counts every appointment in the account; the owner
+ * decided only calendars we built should count, so the form asks for them.
+ */
+export async function saveCrmLocationAction(formData: FormData) {
+  const ctx = await requireOwner();
+  const clientId = s(formData.get("client_id"));
+  if (!clientId) redirect("/admin/clients");
+  const locationId = s(formData.get("location_id"), 64);
+  const calendars = [...new Set(s(formData.get("calendar_ids"), 4000).split(/[\s,]+/).filter(Boolean))];
+
+  if (locationId && !CRM_ID_RE.test(locationId)) redirect(`/admin/clients/${clientId}?e=crm_location#crm`);
+  if (calendars.some((c) => !CRM_ID_RE.test(c))) redirect(`/admin/clients/${clientId}?e=crm_calendar#crm`);
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) redirect(`/admin/clients/${clientId}?e=crm_db#crm`);
+
+  if (locationId) {
+    const { data: taken, error: takenError } = await supabase
+      .from("crm_locations")
+      .select("client_id,is_agency")
+      .eq("ghl_location_id", locationId)
+      .maybeSingle();
+    if (takenError) redirect(`/admin/clients/${clientId}?e=crm_db#crm`);
+    // Never silently moved from one client to another: the other client's
+    // appointments would start counting toward this one's guarantee.
+    if (taken && (taken.is_agency || (taken.client_id && taken.client_id !== clientId))) {
+      redirect(`/admin/clients/${clientId}?e=crm_taken#crm`);
+    }
+    if (locationId === (process.env.GHL_LOCATION_ID ?? "").trim()) redirect(`/admin/clients/${clientId}?e=crm_own#crm`);
+  }
+
+  // One sub-account per client. Unlink whatever this client pointed at before,
+  // rather than deleting it, so a mistake is one save away from undone.
+  const { error: unlinkError } = await supabase
+    .from("crm_locations")
+    .update({ client_id: null, updated_at: new Date().toISOString() })
+    .eq("client_id", clientId)
+    .neq("ghl_location_id", locationId || "__none__");
+  if (unlinkError) redirect(`/admin/clients/${clientId}?e=crm_db#crm`);
+
+  if (locationId) {
+    const client = await getClientById(clientId);
+    const { error } = await supabase.from("crm_locations").upsert(
+      {
+        ghl_location_id: locationId,
+        client_id: clientId,
+        label: client?.business_name ?? null,
+        qualifying_calendar_ids: calendars,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "ghl_location_id" },
+    );
+    if (error) {
+      console.error("[clients] crm location save failed", error.message);
+      redirect(`/admin/clients/${clientId}?e=crm_db#crm`);
+    }
+
+    // Appointments that arrived before the mapping existed were held, not
+    // dropped. Make them due now so they land on this client's next sync pass.
+    const { error: heldError } = await supabase
+      .from("crm_inbox")
+      .update({ status: "pending", next_attempt_at: new Date().toISOString() })
+      .eq("location_id", locationId)
+      .eq("status", "unmapped");
+    if (heldError) console.error("[clients] could not release held appointments", heldError.message);
+    await resolveAdminNotifications({ events: ["crm.inbound_unmapped"], entityId: locationId, by: ctx.email });
+  }
+
+  await logActivity({
+    client_id: clientId,
+    actor_type: "admin",
+    actor_email: ctx.email,
+    event: "crm.location_mapped",
+    entity_type: "client",
+    entity_id: clientId,
+    // Internal: the client's portal has no business showing CRM plumbing.
+    visibility: "internal",
+    summary: locationId
+      ? `CRM account set to ${locationId}${calendars.length ? `, ${calendars.length} qualifying calendar${calendars.length === 1 ? "" : "s"}` : ", every calendar counts"}`
+      : "CRM account unlinked",
+  });
+  redirect(`/admin/clients/${clientId}?saved=1#crm`);
 }
 
 // ---------------------------------------------------------------------------

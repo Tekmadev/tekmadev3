@@ -98,11 +98,31 @@ export const ADMIN_EVENTS = {
   "subscriber.complained": { category: "audience", severity: "warning", audience: "owner", label: "Marked as spam" },
   "subscriber.feedback": { category: "audience", severity: "info", audience: "owner", label: "Unsubscribe reason" },
 
+  // CRM sync. Kept as one block rather than scattered by category: they are
+  // one integration, and whoever is chasing a CRM alert should find all of them
+  // in one place. `needsAction` is set wherever only the owner can decide, and
+  // a disagreement between our consent record and the CRM's is never something
+  // code should resolve on its own. There is deliberately no `crm.unsubscribed`
+  // key: the subscriber_events trigger already reports every status change, so
+  // a second call would report the same unsubscribe twice.
+  "crm.auth_failed": { category: "system", severity: "critical", audience: "owner", needsAction: true, label: "CRM token rejected" },
+  "crm.sync_stuck": { category: "system", severity: "warning", audience: "owner", needsAction: true, label: "CRM sync has stuck items" },
+  "crm.not_configured": { category: "system", severity: "info", audience: "owner", label: "CRM sync is on but not connected" },
+  "crm.webhook_unverified": { category: "system", severity: "warning", audience: "owner", label: "CRM webhook failed verification" },
+  "crm.rate_limited": { category: "system", severity: "info", audience: "owner", label: "CRM daily quota reached" },
+  "crm.contact_mismatch": { category: "system", severity: "warning", audience: "owner", needsAction: true, label: "CRM matched the wrong contact" },
+  "crm.dnd_conflict": { category: "audience", severity: "warning", audience: "owner", needsAction: true, label: "Consent records disagree" },
+  "crm.resubscribe_requested": { category: "audience", severity: "info", audience: "owner", needsAction: true, label: "Resubscribe needs confirming" },
+  "crm.mass_suppression_halted": { category: "audience", severity: "critical", audience: "owner", needsAction: true, label: "Bulk unsubscribe stopped" },
+  "crm.inbound_unmapped": { category: "clients", severity: "warning", audience: "owner", needsAction: true, label: "Appointment for an unmapped account" },
+  "client.appointment_booked": { category: "clients", severity: "info", needsAction: true, label: "Appointment to review" },
+
   // Team (owner only)
   "team.admin_added": { category: "team", severity: "info", audience: "owner", label: "Team member added" },
   "team.admin_removed": { category: "team", severity: "warning", audience: "owner", label: "Team member removed" },
   // It changes what every buyer pays, so the inbox keeps a record of who flipped it and when.
   "settings.sales_tax_changed": { category: "system", severity: "warning", audience: "owner", label: "Sales tax switched" },
+  "settings.crm_changed": { category: "system", severity: "info", audience: "owner", label: "CRM sync setting changed" },
   "ads.sync_failed": { category: "system", severity: "warning", audience: "owner", needsAction: true, label: "Ads report not synced" },
 
   // System: the things that fail silently

@@ -1,6 +1,7 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import crypto from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import { runCrmOutbox } from "@/lib/crm/outbox";
 import { reportBooking } from "@/lib/meta-conversions";
 import { hourKey, notifyAdmins } from "@/lib/admin-notify";
 
@@ -105,6 +106,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
+  const referrer = s(track.referrer);
+  const landingPage = s(track.landing_page) ?? s(track.landingPage);
+
   const row = {
     source: "cal_booking",
     status: statusFor(evt.triggerEvent ?? ""),
@@ -116,9 +120,20 @@ export async function POST(req: NextRequest) {
     booking_end: s(p.endTime),
     event_type: s(p.type),
     ...utm,
-    click_ids: Object.keys(clickIds).length ? clickIds : null,
-    referrer: s(track.referrer),
-    landing_page: s(track.landing_page) ?? s(track.landingPage),
+    // Attribution is omitted when empty, exactly like utm_* above. The write is
+    // an upsert on booking_uid, so every key present here overwrites what the
+    // original booking recorded, and a later BOOKING_CANCELLED or
+    // BOOKING_RESCHEDULED delivery carries no tracking at all: writing these
+    // unconditionally nulled click_ids, referrer and landing_page and threw
+    // away the attribution of the booking they belonged to.
+    ...(Object.keys(clickIds).length ? { click_ids: clickIds } : {}),
+    ...(referrer ? { referrer } : {}),
+    ...(landingPage ? { landing_page: landingPage } : {}),
+    // raw stays unconditional on purpose: every delivery carries a full
+    // payload, and the newest one is the copy worth keeping because it is the
+    // only place a cancellation or a reschedule is described. Overwriting it
+    // costs nothing now that the tracking it used to be the last backup for
+    // survives in the columns above.
     raw: evt as unknown as Record<string, unknown>,
   };
 
@@ -143,6 +158,12 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ error: "Handler error." }, { status: 500 });
   }
+
+  // The lead row is committed, so the CRM job the trigger wrote inside that
+  // write is committed with it. Draining it here only shortens the wait for the
+  // contact to appear; the cron picks the row up either way, which is why this
+  // runs after the response and never on the path Cal.com times out.
+  after(() => runCrmOutbox({ trigger: "inline", maxJobs: 3, budgetMs: 4000 }));
 
   // A new booking is a conversion worth reporting to Meta, if the booker
   // accepted advertising cookies. reportBooking sends only once the browser

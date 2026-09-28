@@ -1,4 +1,12 @@
-import { db, type Client, type GuaranteeCountRule } from "@/lib/clients-data";
+import {
+  createNotification,
+  db,
+  getClientById,
+  logActivity,
+  updateClient,
+  type Client,
+  type GuaranteeCountRule,
+} from "@/lib/clients-data";
 import type { AccessMethod, AccessProviderKey } from "@/lib/access-providers";
 import type { AgreementKind } from "@/config/agreements";
 
@@ -919,4 +927,27 @@ export function guaranteeSummary(client: Client, calls: BookedCall[], now = Date
     onTrack: counted >= expectedByNow,
     percent: Math.min(100, Math.round((counted / Math.max(1, client.guarantee_target)) * 100)),
   };
+}
+
+/**
+ * Close the guarantee the moment the count reaches the target, and tell both
+ * sides. It lives here, next to the counter it reads, because every writer of
+ * a booked call has to call it: this used to be private to the admin actions,
+ * so a call recorded by anything else (an inbound appointment, a backfill) left
+ * `guarantee_status` on "running" for good and the client was never told they
+ * had hit the number they were promised.
+ *
+ * Safe to call after every write: it reads the client first and returns unless
+ * the guarantee is eligible, running, and actually met.
+ */
+export async function refreshGuaranteeStatus(clientId: string, by: string): Promise<void> {
+  const client = await getClientById(clientId);
+  if (!client || !client.guarantee_eligible || client.guarantee_status !== "running") return;
+  const calls = await listBookedCalls(clientId, 2000);
+  const g = guaranteeSummary(client, calls);
+  if (g.counted >= g.target) {
+    await updateClient(clientId, { guarantee_status: "met", guarantee_met_at: new Date().toISOString() }, by);
+    await logActivity({ client_id: clientId, actor_type: "system", event: "guarantee.met", summary: `Guarantee met: ${g.counted} booked calls`, visibility: "client" });
+    await createNotification({ client_id: clientId, template_key: "guarantee_met", subject: "Guarantee hit", body: `${g.counted} qualified appointments. Now we keep going.`, action_url: "/calls" });
+  }
 }

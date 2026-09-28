@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import type { User } from "@supabase/supabase-js";
 import {
   createClient,
@@ -11,6 +12,7 @@ import {
   type MembershipWithClient,
 } from "@/lib/clients-data";
 import { leadWelcomeEmail } from "@/lib/mail/welcome";
+import { runCrmOutbox } from "@/lib/crm/outbox";
 
 /**
  * Self-serve accounts. A person who signs up on the portal (email + password,
@@ -129,6 +131,15 @@ export async function ensureLeadAccount(user: User): Promise<MembershipWithClien
   });
 
   if (created) {
+    // A lead row and a client row were both just written, so both triggers
+    // enqueued their CRM jobs inside those writes. Draining here only shortens
+    // the wait; the cron picks the rows up regardless. Only on `created`,
+    // because attaching to a client staff already made writes neither table and
+    // so enqueues nothing. Every caller is a route handler or a server action,
+    // which is what `after` needs: a background caller would have no response
+    // to defer past and would throw here.
+    after(() => runCrmOutbox({ trigger: "inline", maxJobs: 3, budgetMs: 4000 }));
+
     // Their email is verified by this point (confirmed sign-up, or Google),
     // so the portal link in the welcome will work the moment they open it.
     const mail = leadWelcomeEmail({ businessName: client.business_name, firstName: (name || "").split(" ")[0] || null });

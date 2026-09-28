@@ -1,7 +1,8 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import Stripe from "stripe";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { provisionClient } from "@/lib/client-provisioning";
+import { runCrmOutbox } from "@/lib/crm/outbox";
 import { createNotification, getClientById, getClientByStripeCustomer, logActivity, updateClient } from "@/lib/clients-data";
 import { completeTaskByKey, getActiveOnboarding } from "@/lib/onboarding-data";
 import { getProductMeta } from "@/config/products";
@@ -591,6 +592,16 @@ export async function POST(req: NextRequest) {
     console.error("[stripe webhook] Supabase not configured; event acknowledged but not stored");
     return NextResponse.json({ received: true });
   }
+
+  // Drain whatever a clients write below enqueued, so a buyer reaches the CRM in
+  // seconds instead of on the next cron. Registered once, here, for two
+  // reasons: `after` runs only after the response is sent, so it cannot come
+  // between the buyer and their account or invite the way an inline call placed
+  // beside provisionClient would, and the checkout branches below return early
+  // (the care plan, and the one-time purchase that provisions most accounts),
+  // so a single line before the last return would miss them. Every job is a
+  // committed row, so a pass with nothing due is a no-op.
+  after(() => runCrmOutbox({ trigger: "inline", maxJobs: 3, budgetMs: 4000 }));
 
   try {
     if (event.type === "checkout.session.completed") {

@@ -88,6 +88,13 @@ export function CallsPanel({ client, calls }: { client: Client; calls: BookedCal
         </form>
       </details>
 
+      {calls.some((c) => !c.reviewed_at) && (
+        <p className="text-sm text-ink-2">
+          {calls.filter((c) => !c.reviewed_at).length} appointment{calls.filter((c) => !c.reviewed_at).length === 1 ? "" : "s"} from the CRM
+          waiting for your review. Nothing counts toward the guarantee until you confirm it.
+        </p>
+      )}
+
       {calls.length === 0 ? (
         <p className="text-sm text-ink-4">No booked calls recorded.</p>
       ) : (
@@ -97,7 +104,9 @@ export function CallsPanel({ client, calls }: { client: Client; calls: BookedCal
               <div className="flex flex-wrap items-center gap-2">
                 <p className="text-sm font-medium text-ink">{c.contact_name || "Unknown"}</p>
                 <Badge tone={TONE[c.status] ?? "neutral"}>{humanize(c.status)}</Badge>
-                {!c.qualified ? (
+                {!c.reviewed_at ? (
+                  <Badge tone="warn">Needs review</Badge>
+                ) : !c.qualified ? (
                   <Badge tone="muted">DQ: {humanize(c.disqualified_reason)}</Badge>
                 ) : countsTowardGuarantee(client, c, endsAtMs) ? (
                   <Badge tone="ok">Counts</Badge>
@@ -114,9 +123,36 @@ export function CallsPanel({ client, calls }: { client: Client; calls: BookedCal
                 {[c.contact_phone, c.contact_email].filter(Boolean).join(" · ")}
                 {c.notes ? ` · ${c.notes}` : ""}
               </p>
+              {!c.reviewed_at && (
+                <form action={updateBookedCallAction} className="mt-2">
+                  <input type="hidden" name="client_id" value={client.id} />
+                  <input type="hidden" name="call_id" value={c.id} />
+                  <input type="hidden" name="external_id" value={c.external_id ?? ""} />
+                  <input type="hidden" name="status" value={c.status} />
+                  <input type="hidden" name="notes" value={c.notes ?? ""} />
+                  {/* A reason already set means the sync found it on a calendar that
+                      does not count, so the one click agrees with that instead. */}
+                  {c.disqualified_reason ? (
+                    <>
+                      <input type="hidden" name="qualified" value="no" />
+                      <input type="hidden" name="disqualified_reason" value={c.disqualified_reason} />
+                      <SubmitButton variant="secondary" pendingLabel="Confirming">
+                        Agree, it does not count
+                      </SubmitButton>
+                    </>
+                  ) : (
+                    <>
+                      <input type="hidden" name="qualified" value="yes" />
+                      <SubmitButton pendingLabel="Confirming">Real prospect, count it</SubmitButton>
+                    </>
+                  )}
+                  <span className="ml-3 text-xs text-ink-4">Or decide with the full form below.</span>
+                </form>
+              )}
               <form action={updateBookedCallAction} className="mt-2 grid gap-2 sm:grid-cols-[10rem_8rem_10rem_1fr_auto]">
                 <input type="hidden" name="client_id" value={client.id} />
                 <input type="hidden" name="call_id" value={c.id} />
+                <input type="hidden" name="external_id" value={c.external_id ?? ""} />
                 <select name="status" defaultValue={c.status} className={selectCls + " py-2"}>
                   {STATUSES.map((x) => (
                     <option key={x} value={x}>
