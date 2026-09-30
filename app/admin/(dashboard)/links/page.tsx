@@ -5,6 +5,7 @@ import { LinkForm } from "@/components/admin/LinkForm";
 import { DealLink } from "@/components/admin/DealLink";
 import { business } from "@/config/site";
 import { toggleLinkAction, deleteLinkAction } from "./actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -67,21 +68,19 @@ export default async function LinksAdmin({
       <form action={toggleLinkAction}>
         <input type="hidden" name="id" value={l.id} />
         <input type="hidden" name="active" value={(!l.active).toString()} />
-        <button
-          type="submit"
+        <PendingSubmit
           className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-gold/50 hover:text-gold"
         >
           {l.active ? "Disable" : "Enable"}
-        </button>
+        </PendingSubmit>
       </form>
       <form action={deleteLinkAction}>
         <input type="hidden" name="id" value={l.id} />
-        <button
-          type="submit"
+        <PendingSubmit
           className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-signal/50 hover:text-signal"
         >
           Delete
-        </button>
+        </PendingSubmit>
       </form>
     </div>,
   ]);

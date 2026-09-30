@@ -3,6 +3,7 @@ import { Badge, DataTable, Panel, fmtDateTime, txt } from "@/components/admin/ui
 import { ConfirmButton, RefreshButton } from "@/components/admin/PendingButton";
 import { discardCrmAction, reconcileNowAction, retryCrmAction, syncNowAction } from "@/app/admin/(dashboard)/crm/actions";
 import type { CrmSyncRun } from "@/lib/crm/reconcile";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 /**
  * The queue, the dead-letter surface and the reconcile log for /admin/crm.
@@ -139,9 +140,9 @@ export async function AttentionPanel() {
               <form action={retryCrmAction}>
                 <input type="hidden" name="queue" value={r.queue} />
                 <input type="hidden" name="id" value={r.id} />
-                <button type="submit" className={small}>
+                <PendingSubmit className={small}>
                   Retry
-                </button>
+                </PendingSubmit>
               </form>
             )}
             <form action={discardCrmAction}>

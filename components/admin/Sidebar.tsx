@@ -24,10 +24,12 @@ import {
   Bell,
   Megaphone,
   RefreshCcwDot,
+  Orbit,
 } from "lucide-react";
 import { signOutAction } from "@/app/admin/actions";
 import { NotificationBell, useAdminNotifications } from "@/components/admin/NotificationBell";
 import type { AdminNotification, NotificationSummary } from "@/lib/admin-notifications-data";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 type Role = "owner" | "manager";
 
@@ -55,6 +57,7 @@ const NAV: NavItem[] = [
   { href: "/admin/pricing", label: "Pricing", icon: Tag, ownerOnly: true },
   { href: "/admin/coupons", label: "Coupons", icon: BadgePercent, ownerOnly: true },
   { href: "/admin/links", label: "Links", icon: Link2, ownerOnly: true },
+  { href: "/admin/loader", label: "Loader", icon: Orbit, ownerOnly: true },
   { href: "/admin/test-mode", label: "Test mode", icon: FlaskConical, ownerOnly: true },
   { href: "/admin/team", label: "Team", icon: Shield, ownerOnly: true },
   { href: "/admin/profile", label: "Profile", icon: Settings },
@@ -200,13 +203,12 @@ export function Sidebar({
             </div>
           </div>
           <form action={signOutAction}>
-            <button
-              type="submit"
+            <PendingSubmit
               className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-ink-3 transition-colors hover:bg-surface/60 hover:text-ink"
             >
               <LogOut className="h-[18px] w-[18px] text-ink-4" />
               Sign out
-            </button>
+            </PendingSubmit>
           </form>
         </div>
       </aside>

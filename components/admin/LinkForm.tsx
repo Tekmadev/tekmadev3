@@ -1,6 +1,7 @@
 import { cn } from "@/lib/cn";
 import { business } from "@/config/site";
 import { createLinkAction } from "@/app/admin/(dashboard)/links/actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 const inputClass =
   "rounded-xl border border-line-strong bg-bg px-3 py-2.5 text-ink outline-none focus:border-gold";
@@ -102,12 +103,11 @@ export function LinkForm() {
         booking or sale that follows, is attributed to the source. Lowercase, no spaces.
       </p>
 
-      <button
-        type="submit"
+      <PendingSubmit
         className="mt-1 self-start rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
       >
         Create link
-      </button>
+      </PendingSubmit>
     </form>
   );
 }

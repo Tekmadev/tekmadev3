@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { business } from "@/config/site";
 import { GROW_NEED_PARAM, GROW_WELCOME_PATH, growNeeds, isGrowNeed, revenueBands, type GrowPath } from "@/config/grow";
 import { UTM_KEYS, getFirstTouch, getLastTouch } from "@/lib/attribution";
@@ -10,6 +10,7 @@ import { captureEvent } from "@/lib/analytics";
 import { getMetaContextId, newEventId, trackMeta } from "@/lib/meta-pixel";
 import { cn } from "@/lib/cn";
 import { GROW_SESSION_KEY, type GrowSession } from "@/components/grow/session";
+import { BlackHole } from "@/components/BlackHole";
 
 type FieldError = "need" | "revenue_band" | "name" | "email" | "phone";
 type Status = "idle" | "sending" | "error";
@@ -302,7 +303,7 @@ export function GrowForm() {
         >
           {status === "sending" ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              <BlackHole />
               Sending
             </>
           ) : (

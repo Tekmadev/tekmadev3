@@ -1,9 +1,13 @@
+import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { JsonLd } from "@/components/JsonLd";
 import { PublicChrome } from "@/components/PublicChrome";
 import { SiteAnalytics } from "@/components/SiteAnalytics";
+import { NavProgress } from "@/components/NavProgress";
+import { getLoaderSettings } from "@/lib/site-settings";
+import { loaderCssVars } from "@/config/loader";
 import { organizationJsonLd, personJsonLd, websiteJsonLd } from "@/lib/seo";
 import { brand, business, theme, themeDark } from "@/config/site";
 
@@ -100,11 +104,14 @@ export const metadata: Metadata = {
   referrer: "origin-when-cross-origin",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // The loader's look, tuned in Admin, Loader. Cached, never a per-visit read.
+  const loader = loaderCssVars(await getLoaderSettings());
   return (
     <html
       lang="en"
       className={`${geist.variable} ${geistDisplay.variable} ${geistMono.variable}`}
+      style={loader as React.CSSProperties}
     >
       <body className="bg-bg text-ink antialiased">
         {/* Set theme before paint to avoid a flash. Default is light; only
@@ -117,6 +124,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <JsonLd data={organizationJsonLd} />
         <JsonLd data={personJsonLd} />
         <JsonLd data={websiteJsonLd} />
+        {/* useSearchParams needs a boundary, or every static page would render on the client. */}
+        <Suspense fallback={null}>
+          <NavProgress />
+        </Suspense>
         {children}
         <PublicChrome />
         <SiteAnalytics />

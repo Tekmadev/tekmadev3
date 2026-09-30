@@ -5,6 +5,7 @@ import { PageHeader, Panel, Notice } from "@/components/admin/ui";
 import { Badge, Field, inputCls, selectCls } from "@/components/portal/ui";
 import { SubmitButton } from "@/components/portal/SubmitButton";
 import { deleteTemplateAction, saveTemplateAction } from "../actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -134,9 +135,9 @@ function TemplateForm({ template }: { template?: OnboardingTaskTemplate }) {
       </div>
       {t && (
         <div className="sm:col-span-2 lg:col-span-4">
-          <button type="submit" formAction={deleteTemplateAction} name="id" value={t.id} className="text-xs text-ink-4 hover:text-signal">
+          <PendingSubmit formAction={deleteTemplateAction} name="id" value={t.id} className="text-xs text-ink-4 hover:text-signal">
             Delete this template
-          </button>
+          </PendingSubmit>
         </div>
       )}
     </form>

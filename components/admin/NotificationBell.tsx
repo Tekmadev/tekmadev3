@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertTriangle, Bell, CheckCheck } from "lucide-react";
 import type { AdminNotification, NotificationSummary } from "@/lib/admin-notifications-data";
 import { CATEGORY_ICON, SEVERITY_TONE, timeAgo } from "@/components/admin/notification-ui";
+import { startNavProgress } from "@/lib/nav-progress";
 
 /**
  * The live half of the notification center: one poller shared by the bell in
@@ -245,6 +246,7 @@ export function NotificationBell({
   function openItem(n: AdminNotification) {
     if (!n.is_read) void markRead([n.id]);
     setOpen(false);
+    startNavProgress();
     router.push(n.action_url || "/admin/notifications");
   }
 

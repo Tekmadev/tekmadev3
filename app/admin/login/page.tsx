@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signInAction } from "@/app/admin/actions";
 import { PasswordField } from "@/components/admin/PasswordField";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 const ERRORS: Record<string, string> = {
   "1": "Wrong email or password.",
@@ -33,12 +34,11 @@ export default async function AdminLogin({
           />
           <PasswordField name="password" placeholder="Password" autoComplete="current-password" required />
           {error && <p className="text-sm text-signal">{error}</p>}
-          <button
-            type="submit"
+          <PendingSubmit
             className="mt-1 rounded-full bg-ink px-6 py-3 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
           >
             Sign in
-          </button>
+          </PendingSubmit>
         </form>
 
         <Link

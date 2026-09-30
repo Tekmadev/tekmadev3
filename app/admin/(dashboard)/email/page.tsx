@@ -21,6 +21,7 @@ import {
   unsubscribeSubscriberAction,
   deleteSubscriberAction,
 } from "./actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -95,21 +96,19 @@ export default async function EmailAdmin({
       <form action={toggleCampaignAction}>
         <input type="hidden" name="id" value={c.id} />
         <input type="hidden" name="active" value={(!c.active).toString()} />
-        <button
-          type="submit"
+        <PendingSubmit
           className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-gold/50 hover:text-gold"
         >
           {c.active ? "Pause" : "Resume"}
-        </button>
+        </PendingSubmit>
       </form>
       <form action={deleteCampaignAction}>
         <input type="hidden" name="id" value={c.id} />
-        <button
-          type="submit"
+        <PendingSubmit
           className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-signal/50 hover:text-signal"
         >
           Delete
-        </button>
+        </PendingSubmit>
       </form>
     </div>,
   ]);
@@ -150,22 +149,20 @@ export default async function EmailAdmin({
       {s.status === "active" && (
         <form action={unsubscribeSubscriberAction}>
           <input type="hidden" name="id" value={s.id} />
-          <button
-            type="submit"
+          <PendingSubmit
             className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-gold/50 hover:text-gold"
           >
             Unsubscribe
-          </button>
+          </PendingSubmit>
         </form>
       )}
       <form action={deleteSubscriberAction}>
         <input type="hidden" name="id" value={s.id} />
-        <button
-          type="submit"
+        <PendingSubmit
           className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-signal/50 hover:text-signal"
         >
           Delete
-        </button>
+        </PendingSubmit>
       </form>
     </div>,
   ]);

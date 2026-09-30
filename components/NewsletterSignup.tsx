@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, type FormEvent } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { newsletterCopy } from "@/config/site";
 import { getAttribution } from "@/lib/attribution";
+import { BlackHole } from "@/components/BlackHole";
 
 type Status = "idle" | "loading" | "success" | "error";
 
@@ -159,7 +160,10 @@ export function NewsletterSignup() {
                 className="group inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-ink px-6 text-sm font-semibold text-bg transition-colors hover:bg-gold disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {status === "loading" ? (
-                  "Subscribing..."
+                  <>
+                    <BlackHole />
+                    Subscribing…
+                  </>
                 ) : (
                   <>
                     {newsletterCopy.cta}

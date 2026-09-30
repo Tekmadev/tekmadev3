@@ -3,6 +3,7 @@ import { getSalesTaxSetting } from "@/lib/site-settings";
 import { testModeConfigured, type StripeMode } from "@/lib/stripe-mode";
 import { Badge, Panel } from "@/components/admin/ui";
 import { setSalesTaxAction } from "@/app/admin/(dashboard)/pricing/actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 /**
  * Whether checkout charges GST/HST, and the owner's switch for it.
@@ -47,10 +48,10 @@ function Switch({ mode, on }: { mode: StripeMode; on: boolean }) {
     <form action={setSalesTaxAction}>
       <input type="hidden" name="mode" value={mode} />
       <input type="hidden" name="on" value={on ? "0" : "1"} />
-      <button type="submit" className={btn}>
+      <PendingSubmit className={btn}>
         {on ? "Turn off" : "Turn on"}
         {mode === "test" ? " in test mode" : ""}
-      </button>
+      </PendingSubmit>
     </form>
   );
 }

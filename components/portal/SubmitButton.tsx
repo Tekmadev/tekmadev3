@@ -1,11 +1,13 @@
 "use client";
 
-import { useFormStatus } from "react-dom";
-import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { btnPrimary, btnSecondary } from "@/components/portal/ui";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
-/** Form submit with a pending state so taps on mobile get instant feedback. */
+/**
+ * Portal form submit: the portal's button styles on the shared pending button,
+ * so taps on mobile get the black hole spinner at once.
+ */
 export function SubmitButton({
   children,
   variant = "primary",
@@ -21,17 +23,14 @@ export function SubmitButton({
   value?: string;
   pendingLabel?: string;
 }) {
-  const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
+    <PendingSubmit
       name={name}
       value={value}
-      disabled={pending}
+      pendingLabel={pendingLabel}
       className={cn(variant === "primary" ? btnPrimary : btnSecondary, className)}
     >
-      {pending && <Loader2 className="h-4 w-4 animate-spin" />}
-      {pending && pendingLabel ? pendingLabel : children}
-    </button>
+      {children}
+    </PendingSubmit>
   );
 }

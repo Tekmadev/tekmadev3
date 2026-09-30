@@ -5,6 +5,7 @@ import { PageHeader, Panel, Notice, Badge, fmtDateTime } from "@/components/admi
 import { ConfirmButton } from "@/components/admin/PendingButton";
 import { business } from "@/config/site";
 import { createCategoryAction, renameCategoryAction, deleteCategoryAction } from "./actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -128,9 +129,9 @@ export default async function BlogAdmin({
                   <form action={renameCategoryAction} className="flex min-w-[260px] flex-1 items-center gap-2">
                     <input type="hidden" name="id" value={c.id} />
                     <input name="name" defaultValue={c.name} required maxLength={60} aria-label={`Rename ${c.name}`} className={CATEGORY_INPUT} />
-                    <button type="submit" className={CATEGORY_BUTTON}>
+                    <PendingSubmit className={CATEGORY_BUTTON}>
                       Rename
-                    </button>
+                    </PendingSubmit>
                   </form>
                   <span className="text-xs text-ink-4">
                     /blog?category={c.slug} · {postsLabel}
@@ -164,12 +165,11 @@ export default async function BlogAdmin({
               className="rounded-xl border border-line-strong bg-bg px-3 py-2.5 text-sm text-ink outline-none focus:border-gold"
             />
           </label>
-          <button
-            type="submit"
+          <PendingSubmit
             className="rounded-full border border-line-strong px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:border-gold"
           >
             Add
-          </button>
+          </PendingSubmit>
         </form>
       </Panel>
     </div>

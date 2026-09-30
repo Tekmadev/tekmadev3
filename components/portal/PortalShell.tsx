@@ -28,6 +28,7 @@ import { business } from "@/config/site";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import type { ActionResult } from "@/components/portal/PortalForm";
 import { LinkPending } from "@/components/portal/LinkPending";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 /**
  * Which sections this client has. Booked appointments only make sense on growth
@@ -178,13 +179,12 @@ export function PortalShell({
         </div>
       </div>
       <form action={signOut}>
-        <button
-          type="submit"
+        <PendingSubmit
           className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-ink-3 transition-colors hover:bg-surface/60 hover:text-ink"
         >
           <LogOut className="h-[18px] w-[18px] text-ink-4" />
           Sign out
-        </button>
+        </PendingSubmit>
       </form>
     </div>
   );

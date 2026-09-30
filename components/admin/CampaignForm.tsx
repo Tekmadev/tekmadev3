@@ -1,5 +1,6 @@
 import { cn } from "@/lib/cn";
 import { createCampaignAction } from "@/app/admin/(dashboard)/email/actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 const inputClass =
   "rounded-xl border border-line-strong bg-bg px-3 py-2.5 text-ink outline-none focus:border-gold";
@@ -86,12 +87,11 @@ export function CampaignForm() {
         <strong className="text-ink-2"> newsletter-2026-07</strong>.
       </p>
 
-      <button
-        type="submit"
+      <PendingSubmit
         className="mt-1 self-start rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
       >
         Add campaign
-      </button>
+      </PendingSubmit>
     </form>
   );
 }

@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import { business, unsubscribeCopy as copy } from "@/config/site";
 import { getSubscriberByToken, type TokenSubscriber } from "@/lib/subscribers-data";
 import { confirmUnsubscribeAction, resubscribeAction, unsubscribeReasonAction } from "./actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -92,9 +93,9 @@ export default async function UnsubscribePage({ searchParams }: { searchParams: 
               </Link>
               <form action={confirmUnsubscribeAction}>
                 <input type="hidden" name="t" value={t} />
-                <button type="submit" className={secondary}>
+                <PendingSubmit className={secondary}>
                   {copy.confirm.leave}
-                </button>
+                </PendingSubmit>
               </form>
             </div>
 
@@ -132,15 +133,14 @@ export default async function UnsubscribePage({ searchParams }: { searchParams: 
                   <p className="text-sm text-ink-3">{copy.done.reasonPrompt}</p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {copy.reasons.map((r) => (
-                      <button
+                      <PendingSubmit
                         key={r.key}
-                        type="submit"
                         name="reason"
                         value={r.key}
                         className={`rounded-full border border-line-strong px-3.5 py-2 text-xs font-medium text-ink-2 transition-colors hover:border-gold/60 hover:text-gold ${focusRing}`}
                       >
                         {r.label}
-                      </button>
+                      </PendingSubmit>
                     ))}
                   </div>
                 </form>
@@ -151,9 +151,9 @@ export default async function UnsubscribePage({ searchParams }: { searchParams: 
               <p className="text-sm text-ink-3">{copy.done.mistake}</p>
               <form action={resubscribeAction} className="mt-3">
                 <input type="hidden" name="t" value={t} />
-                <button type="submit" className={secondary}>
+                <PendingSubmit className={secondary}>
                   {copy.done.resubscribe}
-                </button>
+                </PendingSubmit>
               </form>
             </div>
 

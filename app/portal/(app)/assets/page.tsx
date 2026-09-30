@@ -5,6 +5,7 @@ import { AssetUploader } from "@/components/portal/AssetUploader";
 import { PortalForm } from "@/components/portal/PortalForm";
 import { Badge, EmptyState, PageHeader, Panel, fmtBytes, fmtDate, humanize } from "@/components/portal/ui";
 import { deleteAssetAction, recordUploadAction, requestUploadAction } from "../actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -56,9 +57,9 @@ export default async function AssetsPage() {
                     <span>{fmtDate(a.created_at)}</span>
                     <PortalForm action={deleteAssetAction}>
                       <input type="hidden" name="asset_id" value={a.id} />
-                      <button type="submit" aria-label={`Remove ${a.file_name}`} className="rounded p-1.5 text-ink-4 hover:text-signal">
+                      <PendingSubmit aria-label={`Remove ${a.file_name}`} className="rounded p-1.5 text-ink-4 hover:text-signal">
                         <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      </PendingSubmit>
                     </PortalForm>
                   </div>
                 </div>

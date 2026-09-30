@@ -5,6 +5,7 @@ import { getPostByIdAdmin, listAuthors, listCategories } from "@/lib/blog-data";
 import { PageHeader, Notice, Badge } from "@/components/admin/ui";
 import { BlogForm } from "@/components/admin/BlogForm";
 import { business } from "@/config/site";
+import { PendingSubmit } from "@/components/PendingSubmit";
 import { updatePostAction, publishPostAction, setStatusAction, deletePostAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -63,31 +64,31 @@ export default async function EditPostPage({
         {post.status !== "published" ? (
           <form action={publishPostAction}>
             <input type="hidden" name="id" value={post.id} />
-            <button className="rounded-full bg-gold px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90">
+            <PendingSubmit className="rounded-full bg-gold px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90">
               Publish
-            </button>
+            </PendingSubmit>
           </form>
         ) : (
           <form action={setStatusAction}>
             <input type="hidden" name="id" value={post.id} />
             <input type="hidden" name="status" value="draft" />
-            <button className="rounded-full border border-line-strong px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-gold">
+            <PendingSubmit className="rounded-full border border-line-strong px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-gold">
               Unpublish
-            </button>
+            </PendingSubmit>
           </form>
         )}
         <form action={setStatusAction}>
           <input type="hidden" name="id" value={post.id} />
           <input type="hidden" name="status" value="archived" />
-          <button className="rounded-full border border-line-strong px-4 py-2 text-sm text-ink-2 transition-colors hover:border-gold">
+          <PendingSubmit className="rounded-full border border-line-strong px-4 py-2 text-sm text-ink-2 transition-colors hover:border-gold">
             Archive
-          </button>
+          </PendingSubmit>
         </form>
         <form action={deletePostAction} className="ml-auto">
           <input type="hidden" name="id" value={post.id} />
-          <button className="rounded-full border border-signal/40 px-4 py-2 text-sm text-signal transition-colors hover:bg-signal/[0.06]">
+          <PendingSubmit className="rounded-full border border-signal/40 px-4 py-2 text-sm text-signal transition-colors hover:bg-signal/[0.06]">
             Move to trash
-          </button>
+          </PendingSubmit>
         </form>
       </div>
 

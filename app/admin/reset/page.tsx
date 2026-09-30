@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PasswordField } from "@/components/admin/PasswordField";
 import { updatePasswordAction } from "./actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -37,12 +38,11 @@ export default async function ResetPasswordPage({
           <PasswordField name="password" placeholder="New password" autoComplete="new-password" required minLength={8} />
           <PasswordField name="confirm" placeholder="Confirm new password" autoComplete="new-password" required minLength={8} />
           {error && <p className="text-sm text-signal">{error}</p>}
-          <button
-            type="submit"
+          <PendingSubmit
             className="mt-1 rounded-full bg-ink px-6 py-3 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
           >
             Update password
-          </button>
+          </PendingSubmit>
         </form>
       </div>
     </main>

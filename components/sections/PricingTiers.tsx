@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Check, ChevronDown, Loader2, ShieldCheck, X } from "lucide-react";
+import { Check, ChevronDown, ShieldCheck, X } from "lucide-react";
 import { Section, Eyebrow } from "@/components/Section";
 import { cn } from "@/lib/cn";
 import { INSTALL_NAME, PROMO } from "@/config/pricing";
@@ -10,6 +10,7 @@ import type { DisplayTier } from "@/lib/pricing-data";
 import { attributionProps, getAttribution } from "@/lib/attribution";
 import { captureEvent } from "@/lib/analytics";
 import { getMetaContextId, trackMeta } from "@/lib/meta-pixel";
+import { BlackHole } from "@/components/BlackHole";
 
 function money(cents: number, currency: string) {
   return new Intl.NumberFormat("en-CA", {
@@ -294,7 +295,7 @@ function TierCard({
           >
             {loading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <BlackHole />
                 Starting checkout…
               </>
             ) : (

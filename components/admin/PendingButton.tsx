@@ -3,10 +3,13 @@
 import { useFormStatus } from "react-dom";
 import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { BlackHole } from "@/components/BlackHole";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 /**
- * A form submit button with a refresh icon that spins while the server action
- * runs, then stops. Must sit inside the <form> whose action it reports on.
+ * A form submit button with a refresh icon that turns into the black hole
+ * spinner while the server action runs. Must sit inside the <form> whose
+ * action it reports on.
  */
 export function RefreshButton({
   children,
@@ -29,7 +32,7 @@ export function RefreshButton({
         className,
       )}
     >
-      <RefreshCw className={cn("h-3.5 w-3.5", pending && "animate-spin")} />
+      {pending ? <BlackHole size={14} /> : <RefreshCw className="h-3.5 w-3.5" />}
       {pending ? pendingLabel : children}
     </button>
   );
@@ -41,17 +44,9 @@ export function RefreshButton({
  * client-side job is the confirmation.
  */
 export function ConfirmButton({ message, children, className }: { message: string; children: React.ReactNode; className?: string }) {
-  const { pending } = useFormStatus();
   return (
-    <button
-      type="submit"
-      disabled={pending}
-      className={className}
-      onClick={(e) => {
-        if (!window.confirm(message)) e.preventDefault();
-      }}
-    >
+    <PendingSubmit confirm={message} className={className}>
       {children}
-    </button>
+    </PendingSubmit>
   );
 }

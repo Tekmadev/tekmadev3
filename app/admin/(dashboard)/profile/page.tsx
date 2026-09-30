@@ -2,6 +2,7 @@ import { requireAdmin } from "@/lib/admin";
 import { PageHeader, Panel, Notice, Badge } from "@/components/admin/ui";
 import { PasswordField } from "@/components/admin/PasswordField";
 import { updateProfileAction } from "./actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -71,12 +72,11 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
             </div>
           </div>
 
-          <button
-            type="submit"
+          <PendingSubmit
             className="mt-1 self-start rounded-full bg-ink px-6 py-3 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
           >
             Save changes
-          </button>
+          </PendingSubmit>
         </form>
       </Panel>
     </div>

@@ -5,6 +5,7 @@ import { getProductMeta } from "@/config/products";
 import { PageHeader, Panel, Notice } from "@/components/admin/ui";
 import { SalesTaxPanel } from "@/components/admin/SalesTaxPanel";
 import { updatePlanAction, updateProductAction } from "./actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -153,12 +154,11 @@ function ProductForm({ product }: { product: ProductRow }) {
             Public page: <a href={meta.path} className="underline hover:text-ink">{meta.path}</a>
           </p>
         )}
-        <button
-          type="submit"
+        <PendingSubmit
           className="mt-5 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
         >
           Save {product.name}
-        </button>
+        </PendingSubmit>
       </form>
     </Panel>
   );
@@ -204,12 +204,11 @@ function PlanForm({ plan }: { plan: PlanFull }) {
           </label>
         </div>
 
-        <button
-          type="submit"
+        <PendingSubmit
           className="mt-5 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
         >
           Save {plan.name}
-        </button>
+        </PendingSubmit>
       </form>
     </Panel>
   );

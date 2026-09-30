@@ -1,8 +1,7 @@
 "use client";
 
 import { useLinkStatus } from "next/link";
-import { Loader2 } from "lucide-react";
-import { cn } from "@/lib/cn";
+import { BlackHole } from "@/components/BlackHole";
 
 /**
  * Drop inside a <Link>. Shows a spinner from the tap until the next page's
@@ -11,6 +10,6 @@ import { cn } from "@/lib/cn";
  */
 export function LinkPending({ idle, className }: { idle?: React.ReactNode; className?: string }) {
   const { pending } = useLinkStatus();
-  if (pending) return <Loader2 className={cn("h-3.5 w-3.5 animate-spin", className)} aria-label="Loading" />;
+  if (pending) return <BlackHole size={14} className={className} label="Loading" />;
   return <>{idle ?? null}</>;
 }

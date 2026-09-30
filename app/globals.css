@@ -233,11 +233,68 @@ html.dark .grain {
   opacity: 0.05;
 }
 
+/* The black hole loader (components/BlackHole.tsx, config/loader.ts). Inner
+   hooks turn a full turn clockwise while the outer arcs turn a half turn the
+   other way, all pulled toward the centre at the peak. The logo looks the same
+   after a half turn, so each beat ends on the exact logo. The variables are
+   the owner's settings from Admin, Loader, set on <html> by the root layout;
+   these are the defaults. */
+:root {
+  --bh-beat: 1600ms;
+  --bh-btn-beat: 1100ms;
+  --bh-in-scale: 0.72;
+  --bh-out-scale: 0.9;
+  --bh-in-fade: 0.7;
+  --bh-delay: 300ms;
+}
+.bh path {
+  transform-box: view-box;
+  transform-origin: 1500px 1500px;
+  will-change: transform;
+}
+.bh .bh-o { animation: bh-outer var(--bh-dur, var(--bh-beat)) cubic-bezier(0.55, 0, 0.2, 1) infinite; }
+.bh .bh-i { animation: bh-inner var(--bh-dur, var(--bh-beat)) cubic-bezier(0.55, 0, 0.2, 1) infinite; }
+.bh-btn { --bh-dur: var(--bh-btn-beat); }
+@keyframes bh-outer {
+  0% { transform: rotate(0deg) scale(1); }
+  32% { transform: rotate(-80deg) scale(var(--bh-out-scale)); }
+  62%, 100% { transform: rotate(-180deg) scale(1); }
+}
+@keyframes bh-inner {
+  0% { transform: rotate(0deg) scale(1); opacity: 1; }
+  32% { transform: rotate(200deg) scale(var(--bh-in-scale)); opacity: var(--bh-in-fade); }
+  62%, 100% { transform: rotate(360deg) scale(1); opacity: 1; }
+}
+/* A loading screen that waits before it shows, so fast pages never flash it. */
+.bh-appear {
+  opacity: 0;
+  animation: bh-appear 250ms ease-out var(--bh-delay) forwards;
+}
+@keyframes bh-appear { to { opacity: 1; } }
+@keyframes bh-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Top-of-page navigation bar (components/NavProgress.tsx). */
+.nav-progress {
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  transition: transform 8s cubic-bezier(0.1, 0.6, 0.2, 1), opacity 300ms ease;
+}
+.nav-progress[data-state="idle"] { opacity: 0; transition: none; }
+.nav-progress[data-state="loading"] { transform: scaleX(0.85); }
+.nav-progress[data-state="done"] { transform: scaleX(1); opacity: 0; transition: transform 200ms ease-out, opacity 300ms ease 150ms; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  /* Still say "working", without the spin: a slow fade in place. */
+  .bh .bh-o, .bh .bh-i {
+    animation: bh-pulse 1.6s ease-in-out infinite !important;
   }
 }

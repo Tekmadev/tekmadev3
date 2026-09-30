@@ -15,6 +15,7 @@ import {
 } from "@/lib/revenue-leak";
 import { getAttribution } from "@/lib/attribution";
 import { getMetaContextId, newEventId, trackMeta } from "@/lib/meta-pixel";
+import { BlackHole } from "@/components/BlackHole";
 
 type Status = "idle" | "loading" | "done" | "error";
 
@@ -377,7 +378,10 @@ export function RevenueLeakCalculator() {
                   className="group inline-flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-ink px-6 text-sm font-medium text-bg transition-colors hover:bg-ink-2 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {status === "loading" ? (
-                    c.gate.submitting
+                    <>
+                      <BlackHole />
+                      {c.gate.submitting}
+                    </>
                   ) : (
                     <>
                       {c.gate.submit}

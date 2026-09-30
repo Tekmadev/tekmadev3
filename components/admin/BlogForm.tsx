@@ -2,6 +2,7 @@ import { blocksToMarkdown } from "@/lib/blog-markdown";
 import type { BlogAuthor, BlogCategory, BlogPostWithRefs, BlogStatus } from "@/lib/blog-data";
 import { quickCreateCategoryAction } from "@/app/admin/(dashboard)/blog/actions";
 import { CategoryPicker } from "@/components/admin/CategoryPicker";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 const INPUT =
   "w-full rounded-xl border border-line-strong bg-bg px-3 py-2.5 text-sm text-ink outline-none focus:border-gold";
@@ -173,12 +174,11 @@ export function BlogForm({
       </div>
 
       <div className="flex items-center gap-3">
-        <button
-          type="submit"
+        <PendingSubmit
           className="rounded-full bg-ink px-6 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
         >
           {post ? "Save changes" : "Create post"}
-        </button>
+        </PendingSubmit>
         <span className="text-xs text-ink-4">
           Saving keeps a version snapshot. Set status to Published to make it live.
         </span>

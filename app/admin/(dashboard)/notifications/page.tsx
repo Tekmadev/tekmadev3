@@ -18,6 +18,7 @@ import { CATEGORY_ICON, SEVERITY_TONE } from "@/components/admin/notification-ui
 import { DesktopAlertsToggle } from "@/components/admin/DesktopAlertsToggle";
 import { cn } from "@/lib/cn";
 import { markAllReadAction, markReadAction, muteCategoryAction, openNotificationAction, resolveAction } from "./actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -108,9 +109,9 @@ export default async function NotificationsPage({ searchParams }: { searchParams
           <form action={markAllReadAction}>
             <input type="hidden" name="back" value={here} />
             <input type="hidden" name="seen" value={newestShown ?? ""} />
-            <button type="submit" className={smallBtn + " px-4 py-2 text-sm"}>
+            <PendingSubmit className={smallBtn + " px-4 py-2 text-sm"}>
               Mark all read
-            </button>
+            </PendingSubmit>
           </form>
         )}
       </PageHeader>
@@ -200,9 +201,9 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                           <form action={openNotificationAction}>
                             <input type="hidden" name="id" value={n.id} />
                             <input type="hidden" name="to" value={n.action_url} />
-                            <button type="submit" className={smallBtn + " inline-flex items-center gap-1"}>
+                            <PendingSubmit className={smallBtn + " inline-flex items-center gap-1"}>
                               Open <ArrowUpRight className="h-3 w-3" />
-                            </button>
+                            </PendingSubmit>
                           </form>
                         )}
                         {n.needs_action && (
@@ -210,18 +211,18 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                             <input type="hidden" name="id" value={n.id} />
                             <input type="hidden" name="resolved" value={String(!n.resolved_at)} />
                             <input type="hidden" name="back" value={here} />
-                            <button type="submit" className={smallBtn}>
+                            <PendingSubmit className={smallBtn}>
                               {n.resolved_at ? "Reopen" : "Mark as handled"}
-                            </button>
+                            </PendingSubmit>
                           </form>
                         )}
                         {!n.is_read && (
                           <form action={markReadAction}>
                             <input type="hidden" name="id" value={n.id} />
                             <input type="hidden" name="back" value={here} />
-                            <button type="submit" className={smallBtn}>
+                            <PendingSubmit className={smallBtn}>
                               Mark read
-                            </button>
+                            </PendingSubmit>
                           </form>
                         )}
                       </div>
@@ -262,9 +263,9 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                     <input type="hidden" name="category" value={p.category} />
                     <input type="hidden" name="muted" value={String(!p.muted)} />
                     <input type="hidden" name="back" value={here} />
-                    <button type="submit" className={smallBtn}>
+                    <PendingSubmit className={smallBtn}>
                       {p.muted ? "Count it again" : "Make quiet"}
-                    </button>
+                    </PendingSubmit>
                   </form>
                 </li>
               ))}

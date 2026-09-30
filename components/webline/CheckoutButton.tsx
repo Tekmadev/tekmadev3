@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { attributionProps, getAttribution } from "@/lib/attribution";
 import { captureEvent } from "@/lib/analytics";
 import { getMetaContextId, trackMeta } from "@/lib/meta-pixel";
+import { BlackHole } from "@/components/BlackHole";
 
 const VARIANT = {
   primary: "bg-ink text-bg hover:bg-ink-2",
@@ -95,7 +95,7 @@ export function CheckoutButton({
       <button type="button" onClick={go} disabled={loading} className={base}>
         {loading ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <BlackHole />
             Opening secure checkout
           </>
         ) : (

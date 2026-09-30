@@ -4,6 +4,7 @@ import { Badge, Field, PageHeader, Panel, inputCls, selectCls, fmtDate, type Ton
 import { SubmitButton } from "@/components/portal/SubmitButton";
 import { PortalForm } from "@/components/portal/PortalForm";
 import { disableMemberAction, inviteTeamMemberAction, resendMemberInviteAction } from "../actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -44,17 +45,17 @@ export default async function TeamPage() {
                 {canManage && m.status === "invited" && (
                   <PortalForm action={resendMemberInviteAction}>
                     <input type="hidden" name="member_id" value={m.id} />
-                    <button type="submit" className="min-h-9 rounded-full px-3 text-xs text-ink-3 hover:text-ink">
+                    <PendingSubmit className="min-h-9 rounded-full px-3 text-xs text-ink-3 hover:text-ink">
                       Resend invite
-                    </button>
+                    </PendingSubmit>
                   </PortalForm>
                 )}
                 {canManage && m.id !== member.id && m.status !== "disabled" && (
                   <PortalForm action={disableMemberAction}>
                     <input type="hidden" name="member_id" value={m.id} />
-                    <button type="submit" className="min-h-9 rounded-full px-3 text-xs text-ink-3 hover:text-signal">
+                    <PendingSubmit className="min-h-9 rounded-full px-3 text-xs text-ink-3 hover:text-signal">
                       Remove
-                    </button>
+                    </PendingSubmit>
                   </PortalForm>
                 )}
               </div>

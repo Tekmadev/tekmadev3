@@ -3,10 +3,11 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import { Loader2, UploadCloud } from "lucide-react";
+import { UploadCloud } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { selectCls } from "@/components/portal/ui";
 import type { AssetKind } from "@/lib/onboarding-data";
+import { BlackHole } from "@/components/BlackHole";
 
 export type UploadTicket = { ok: true; path: string; token: string; bucket: string } | { ok: false; error: string };
 
@@ -103,7 +104,7 @@ export function AssetUploader({
             busy && "pointer-events-none opacity-60",
           )}
         >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4 text-gold" />}
+          {busy ? <BlackHole /> : <UploadCloud className="h-4 w-4 text-gold" />}
           <span>{busy ? progress : "Tap to choose files (or drop them here)"}</span>
           <input
             ref={inputRef}

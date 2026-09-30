@@ -4,6 +4,7 @@ import { CRM_FIELDS, cachedFieldKeys, type CrmFieldKey } from "@/lib/crm/fields"
 import { Badge, Panel, fmtDateTime } from "@/components/admin/ui";
 import { RefreshButton } from "@/components/admin/PendingButton";
 import { setCrmSwitchAction, verifyConnectionAction } from "@/app/admin/(dashboard)/crm/actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 /**
  * Whether the CRM is connected, whether the connection is proven, and the three
@@ -152,9 +153,9 @@ export async function ConnectionPanel() {
               <form action={setCrmSwitchAction} className="mt-3">
                 <input type="hidden" name="surface" value={s.key} />
                 <input type="hidden" name="on" value={on ? "0" : "1"} />
-                <button type="submit" className={btn} disabled={!on && !verified}>
+                <PendingSubmit className={btn} disabled={!on && !verified}>
                   {on ? "Turn off" : "Turn on"}
-                </button>
+                </PendingSubmit>
               </form>
             </div>
           );

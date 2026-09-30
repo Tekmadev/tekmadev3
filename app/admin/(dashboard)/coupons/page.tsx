@@ -7,6 +7,7 @@ import { CouponForm } from "@/components/admin/CouponForm";
 import { DealLink } from "@/components/admin/DealLink";
 import { business } from "@/config/site";
 import { deactivateCouponAction } from "./actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -86,12 +87,11 @@ export default async function CouponsAdmin({
     c.active ? (
       <form key="a" action={deactivateCouponAction}>
         <input type="hidden" name="id" value={c.id} />
-        <button
-          type="submit"
+        <PendingSubmit
           className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-signal/50 hover:text-signal"
         >
           Disable
-        </button>
+        </PendingSubmit>
       </form>
     ) : (
       <span key="a" className="text-ink-4">

@@ -4,6 +4,7 @@ import { testModeSwitchedOn } from "@/lib/test-mode";
 import { getTestModeStatus, listTestOrders } from "@/lib/test-mode-data";
 import { PageHeader, Panel, DataTable, Badge, Notice, fmtDateTime, fmtMoney, txt } from "@/components/admin/ui";
 import { purgeTestDataAction, setupTestCatalogAction, switchTestModeAction } from "./actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -75,9 +76,9 @@ export default async function TestModePage({
         </p>
         <form action={switchTestModeAction} className="mt-5 flex flex-wrap items-center gap-3">
           <input type="hidden" name="on" value={active ? "0" : "1"} />
-          <button type="submit" className={active ? secondary : primary}>
+          <PendingSubmit className={active ? secondary : primary}>
             {active ? "Switch test mode off" : "Switch test mode on"}
-          </button>
+          </PendingSubmit>
           {active && (
             <a href="/webline" className={primary}>
               Go buy Webline
@@ -115,9 +116,9 @@ export default async function TestModePage({
           </Step>
         </ol>
         <form action={setupTestCatalogAction} className="mt-5">
-          <button type="submit" className={status.catalogReady ? secondary : primary} disabled={!status.configured}>
+          <PendingSubmit className={status.catalogReady ? secondary : primary} disabled={!status.configured}>
             {status.catalogReady ? "Rebuild test catalog" : "Set up test catalog"}
-          </button>
+          </PendingSubmit>
           <p className="mt-3 text-xs text-ink-4">
             Run it again after changing a price in Pricing, or after clearing the sandbox&apos;s data in Stripe. It only rebuilds what no longer matches.
           </p>
@@ -155,9 +156,9 @@ export default async function TestModePage({
             <input type="checkbox" name="confirm" className="h-4 w-4" />
             Delete all test data
           </label>
-          <button type="submit" className={secondary}>
+          <PendingSubmit className={secondary}>
             Delete
-          </button>
+          </PendingSubmit>
         </form>
       </Panel>
     </div>

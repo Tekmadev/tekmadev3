@@ -4,6 +4,7 @@ import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { createCouponAction } from "@/app/admin/(dashboard)/coupons/actions";
 import { isOneTimeScope, scopeOptions, type CouponScope } from "@/lib/coupon-scopes";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 const inputClass =
   "rounded-xl border border-line-strong bg-bg px-3 py-2.5 text-ink outline-none focus:border-gold";
@@ -159,12 +160,11 @@ export function CouponForm({ currency }: { currency: string }) {
         </label>
       </div>
 
-      <button
-        type="submit"
+      <PendingSubmit
         className="mt-1 self-start rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
       >
         Create coupon
-      </button>
+      </PendingSubmit>
     </form>
   );
 }

@@ -3,6 +3,7 @@
 import { useId, useRef, useState, useTransition } from "react";
 import { Check, Plus, X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { BlackHole } from "@/components/BlackHole";
 import type { BlogCategory } from "@/lib/blog-data";
 import type { QuickCategoryResult } from "@/app/admin/(dashboard)/blog/actions";
 
@@ -125,7 +126,7 @@ export function CategoryPicker({
               className={cn(INPUT, error && "border-signal")}
             />
             <button type="button" onClick={submit} disabled={pending} aria-label="Save category" title="Save" className={ICON_BUTTON}>
-              <Check className="h-4 w-4" />
+              {pending ? <BlackHole size={16} /> : <Check className="h-4 w-4" />}
             </button>
             <button type="button" onClick={close} disabled={pending} aria-label="Cancel" title="Cancel" className={ICON_BUTTON}>
               <X className="h-4 w-4" />

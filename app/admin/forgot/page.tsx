@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { sendResetAction } from "./actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -31,12 +32,11 @@ export default async function ForgotPassword({
               className="rounded-xl border border-line-strong bg-surface px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-gold"
             />
             {e && <p className="text-sm text-signal">Enter a valid email address.</p>}
-            <button
-              type="submit"
+            <PendingSubmit
               className="mt-1 rounded-full bg-ink px-6 py-3 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
             >
               Send reset link
-            </button>
+            </PendingSubmit>
           </form>
         )}
 

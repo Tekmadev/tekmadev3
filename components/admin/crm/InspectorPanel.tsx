@@ -1,6 +1,7 @@
 import { inspectCrmContact, type CrmInspection, type TheirSide } from "@/lib/crm/admin-data";
 import { Badge, DataTable, Panel, fmtDateTime, txt } from "@/components/admin/ui";
 import { confirmResubscribeAction } from "@/app/admin/(dashboard)/crm/actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 /**
  * One address, ours beside theirs, plus its consent history.
@@ -125,12 +126,11 @@ function Result({ r }: { r: CrmInspection }) {
           </p>
           <form action={confirmResubscribeAction} className="mt-3">
             <input type="hidden" name="email" value={r.email} />
-            <button
-              type="submit"
+            <PendingSubmit
               className="rounded-full border border-line-strong px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-gold hover:text-gold"
             >
               They asked to come back, resubscribe them
-            </button>
+            </PendingSubmit>
           </form>
         </div>
       )}
@@ -166,12 +166,11 @@ export async function InspectorPanel({ email }: { email?: string }) {
           required
           className="min-w-0 flex-1 rounded-full border border-line-strong bg-bg px-4 py-2 text-sm text-ink placeholder:text-ink-4 focus:border-gold focus:outline-none"
         />
-        <button
-          type="submit"
+        <PendingSubmit
           className="rounded-full border border-line-strong px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-gold hover:text-gold"
         >
           Look up
-        </button>
+        </PendingSubmit>
       </form>
       <p className="mt-2 text-xs text-ink-4">Shows what this site holds beside what GoHighLevel holds right now, and the full consent history.</p>
       {email && !result && <p className="mt-4 text-sm text-ink-3">That is not a valid email address.</p>}

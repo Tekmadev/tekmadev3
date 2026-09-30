@@ -3,6 +3,7 @@ import { listAdmins } from "@/lib/admin-users";
 import { PageHeader, Panel, DataTable, Notice, Badge, fmtDateTime, txt } from "@/components/admin/ui";
 import { PasswordField } from "@/components/admin/PasswordField";
 import { addManagerAction, removeAdminAction } from "./actions";
+import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -65,12 +66,11 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
               <option value="owner">Owner (full access, can manage team)</option>
             </select>
           </label>
-          <button
-            type="submit"
+          <PendingSubmit
             className="self-start rounded-full bg-ink px-6 py-3 text-sm font-medium text-bg transition-colors hover:bg-ink-2 sm:col-span-2"
           >
             Add team member
-          </button>
+          </PendingSubmit>
         </form>
       </Panel>
 
@@ -90,12 +90,11 @@ export default async function TeamPage({ searchParams }: { searchParams: Promise
             ) : (
               <form action={removeAdminAction}>
                 <input type="hidden" name="email" value={a.email} />
-                <button
-                  type="submit"
+                <PendingSubmit
                   className="rounded-full border border-line-strong px-3 py-1.5 text-xs text-ink-3 transition-colors hover:border-signal hover:text-signal"
                 >
                   Remove
-                </button>
+                </PendingSubmit>
               </form>
             ),
           ])}
