@@ -61,7 +61,7 @@ export function LeadHome({
       n: 3,
       icon: Sparkles,
       title: "Pick your plan",
-      body: "Convert, Grow, or a Webline website. Pay and your onboarding starts the same minute: agreement, kickoff, build, live in 14 days.",
+      body: "Convert, Grow, or a Webline website. Pay and your onboarding starts the same minute, and we move fast from there.",
       cta: "See plans",
       href: "/plans",
       done: false,
@@ -141,9 +141,9 @@ export function LeadHome({
         <Panel title="What happens when you pay" className="lg:col-span-3">
           <ul className="flex flex-col gap-3 text-sm text-ink-2">
             {[
-              "Your onboarding checklist appears here the same minute, with dates.",
+              "Your onboarding checklist appears here the same minute, step by step.",
               "You accept the agreement and book the kickoff (growth plans) or approve your design concept (Webline).",
-              "We build. You approve. We go live within 14 days of having what we need.",
+              "We build. You approve. We go live fast once we have what we need.",
               "On Grow, the 30-booked-calls-in-60-days guarantee clock starts the day you go live.",
             ].map((line) => (
               <li key={line} className="flex items-start gap-3">

@@ -234,10 +234,9 @@ export const faqJsonLd = {
 export const howToJsonLd = {
   "@context": "https://schema.org",
   "@type": "HowTo",
-  name: `How ${SITE_NAME} installs the Growth System in 14 days`,
+  name: `How ${SITE_NAME} installs the Growth System`,
   description:
     "The Tekmadev process for installing a complete AI appointment conversion and lead automation system: audit, build, install, scale.",
-  totalTime: "P14D",
   step: systemSteps.map((s, i) => ({
     "@type": "HowToStep",
     position: i + 1,

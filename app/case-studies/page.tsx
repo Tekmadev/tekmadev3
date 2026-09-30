@@ -91,7 +91,7 @@ export default function CaseStudiesIndex() {
                     {w.metric.toLocaleString("en-US")}
                     {w.suffix}
                   </span>{" "}
-                  {w.framing.toLowerCase()}: {w.before} to {w.after}. {w.note}.
+                  {w.framing.toLowerCase()}: {w.before} to {w.after}.{w.note ? ` ${w.note}.` : ""}
                 </p>
               </li>
             ))}

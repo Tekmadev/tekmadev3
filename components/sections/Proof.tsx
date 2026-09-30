@@ -72,7 +72,7 @@ export function Proof() {
           </a>
         )}
 
-        <div className="mt-16 grid grid-cols-2 gap-x-8 gap-y-10 border-t border-line pt-10 md:grid-cols-4">
+        <div className="mt-16 grid grid-cols-3 gap-x-6 gap-y-10 border-t border-line pt-10 sm:gap-x-8">
           {aggregateStats.map((s) => (
             <Agg key={s.label} label={s.label} value={s.value} />
           ))}

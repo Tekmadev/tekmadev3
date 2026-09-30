@@ -56,7 +56,6 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
         subtitle={
           <>
             {planLabel}
-            {onboarding?.target_live_date ? ` · target go-live ${fmtDate(onboarding.target_live_date)}` : ""}
             {client.live_at ? ` · live since ${fmtDate(client.live_at)}` : ""}
           </>
         }
@@ -74,7 +73,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
 
       {onboarding ? (
         <Panel>
-          <StageTracker current={stage} percent={progress.percent} stages={stagesInRun(tasks)} />
+          <StageTracker current={stage} percent={progress.percent} stages={stagesInRun(tasks)} showTiming={false} />
         </Panel>
       ) : (
         <Panel title="Onboarding">
@@ -101,7 +100,7 @@ export default async function PortalHome({ searchParams }: { searchParams: Promi
             ) : (
               <ul>
                 {needFromYou.map((t) => (
-                  <TaskItem key={t.id} task={t} completeAction={completeTaskAction} />
+                  <TaskItem key={t.id} task={t} completeAction={completeTaskAction} showTiming={false} />
                 ))}
               </ul>
             )}

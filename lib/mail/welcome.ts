@@ -37,7 +37,7 @@ export function leadWelcomeEmail(opts: { businessName: string; firstName?: strin
         },
         {
           title: "Pick a plan when you are ready",
-          body: "The moment you do, your onboarding starts: agreement, kickoff, build, live in 14 days. Everything you already filled in carries over.",
+          body: "The moment you do, your onboarding starts, and we move fast from there. Everything you already filled in carries over.",
         },
       ],
       cta: { label: "Open your portal", url: portalUrl("/") },
@@ -115,12 +115,12 @@ export function clientWelcomeEmail(opts: {
  * The steps mirror the Webline checklist in the portal. If that checklist
  * changes (onboarding_task_templates), change this with it. The care plan's
  * price and first-charge delay are passed in from the products table, never
- * written here, because both are editable in the admin.
+ * written here, because both are editable in the admin. It never gives a
+ * number of days to launch (config/webline-delivery.ts).
  */
 export function weblineWelcomeEmail(opts: {
   businessName: string;
   firstName?: string | null;
-  liveInDays: number;
   /**
    * How they reach the portal: `invited` got a separate set-password email,
    * `self_serve` did not (or it failed) and uses the reset link, `signed_in`
@@ -153,7 +153,7 @@ export function weblineWelcomeEmail(opts: {
       : []),
     {
       title: "Approve the design, then the site",
-      body: "We send your homepage design for approval within the first week, with one round of revisions included. Then we build the rest, and you approve the finished site before anything goes live. The copy, the SEO, GEO and AEO foundation, the launch on your domain, and submitting you to Google and Bing are all on us.",
+      body: "We send your homepage design for approval first, with one round of revisions included. Then we build the rest, and you approve the finished site before anything goes live. The copy, the SEO, GEO and AEO foundation, the launch on your domain, and submitting you to Google and Bing are all on us.",
     },
   ];
 
@@ -161,11 +161,11 @@ export function weblineWelcomeEmail(opts: {
     subject: "Your Webline site is underway: what happens next",
     tags: [{ name: "template", value: "welcome-webline" }],
     html: renderMail({
-      preheader: `Payment received. A few things we need from you this week, and your site is live in ${opts.liveInDays} days.`,
+      preheader: "Payment received. A few things we need from you this week, and your site will be ready before you are.",
       heading: opts.firstName ? `${opts.firstName}, your site is underway` : "Your site is underway",
       paragraphs: [
-        `Thank you for choosing Webline. Your payment is confirmed and the build for ${opts.businessName} has started. The plan from here is simple: you give us what we need this week, we design and build, and your site is live in ${opts.liveInDays} days.`,
-        "Everything below lives in your client portal, with dates, so you never have to guess what is next.",
+        `Thank you for choosing Webline. Your payment is confirmed and the build for ${opts.businessName} has started. The plan from here is simple: you give us what we need this week, we design and build fast, and your site is ready before you are.`,
+        "Everything below lives in your client portal, step by step, so you never have to guess what is next.",
       ],
       steps,
       cta: { label: "Open your portal", url: portalUrl("/onboarding") },

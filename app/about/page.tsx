@@ -131,7 +131,6 @@ export default function AboutPage() {
             >
               {about.proof.link.label} <ArrowUpRight className="h-4 w-4" />
             </Link>
-            <p className="mt-5 text-xs leading-relaxed text-ink-4">{about.proof.disclosure}</p>
           </Block>
 
           <Block heading={about.who.heading} answer={about.who.answer}>

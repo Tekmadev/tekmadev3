@@ -70,8 +70,7 @@ export const clients: Client[] = [
   {
     id: "fixible",
     name: "Fixible",
-    // Our own shop, and the rail says so, as the case study does.
-    industry: "Our own repair shop",
+    industry: "Phone and device repair",
     result: "Calls every day, $0 spent on ads",
     url: "https://fixible.ca",
     caseStudy: `${CASE_STUDIES_PATH}/fixible`,

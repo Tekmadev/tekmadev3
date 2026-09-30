@@ -148,7 +148,7 @@ export function Process() {
           <Reveal key={s.title} delay={i * 0.08}>
             <li className="relative border-t-2 border-line-strong pt-6 md:border-t md:pt-7">
               <span className="absolute -top-[2px] left-0 h-[2px] w-12 bg-gold md:-top-px md:h-px" />
-              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">{s.day}</p>
+              <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-gold">{s.when}</p>
               <h3 className="display-m mt-3 text-2xl text-ink">{s.title}</h3>
               <p className="mt-3 text-base leading-relaxed text-ink-2">{s.body}</p>
             </li>
@@ -224,7 +224,7 @@ export function Proof() {
           <h2 className="display-xl mt-6 text-balance text-4xl sm:text-5xl">{p.headline}</h2>
           <p className="mt-6 text-base leading-relaxed text-ink-2">{p.body}</p>
           <CanadianBadge variant="block" className="mt-7" />
-          <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-8">
+          <dl className="mt-10 grid grid-cols-3 gap-x-6 gap-y-8">
             {aggregateStats.map((s) => (
               <div key={s.label}>
                 <dd className="display-m number-tabular text-3xl text-ink">{s.value}</dd>
@@ -253,7 +253,7 @@ export function Proof() {
                     <p className="mt-2 text-xl font-semibold text-ink">{w.company}</p>
                   )}
                   <p className="mt-1 text-sm text-ink-3">
-                    {w.framing}: {w.before} to {w.after}. {w.note}.
+                    {w.framing}: {w.before} to {w.after}.{w.note ? ` ${w.note}.` : ""}
                   </p>
                 </div>
                 <p className="display-l number-tabular text-4xl text-ink sm:text-right">
@@ -346,8 +346,8 @@ export function Guarantee() {
         <Reveal delay={0.1} className="lg:col-span-5">
           <div className="rounded-3xl border border-line-strong bg-surface p-8 sm:p-10">
             <p className="eyebrow">Risk, reversed</p>
-            <p className="display-xxl mt-6 text-7xl text-ink">Day 5</p>
-            <p className="mt-2 text-sm text-ink-3">you see your homepage design</p>
+            <p className="display-xxl mt-6 text-7xl text-ink">{g.display.value}</p>
+            <p className="mt-2 text-sm text-ink-3">{g.display.label}</p>
             <div className="my-8 h-px w-full bg-line" />
             <ul className="flex flex-col gap-3.5">
               {g.points.map((pt) => (

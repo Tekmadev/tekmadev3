@@ -404,8 +404,8 @@ export const termsOfService: LegalDoc = {
           type: "ol",
           items: [
             "Diagnose: an initial 30-minute audit call where we map the Client's pipeline, followed by a longer working session where needed.",
-            "Build: configuration of the AI voice agent, follow-up sequences, CRM integrations, and lead engine, typically completed within 7 days of kickoff.",
-            "Install: go-live deployment, typically completed within 14 days of kickoff (longer for regulated or multi-location industries).",
+            "Build: configuration of the AI voice agent, follow-up sequences, CRM integrations, and lead engine, after kickoff.",
+            "Install: go-live deployment. How long the build and install take depends on the Client's business, systems, and industry, so Tekmadev does not commit to a fixed go-live date unless an Order Form states one.",
             "Operate: ongoing monitoring, weekly optimization, and monthly reporting.",
           ],
         },
@@ -480,7 +480,7 @@ export const termsOfService: LegalDoc = {
         },
         {
           type: "p",
-          text: "Timeline. Tekmadev targets a homepage design concept within five business days and a live website within 11 days, in each case counted from the day Tekmadev has received the Client's completed intake, brand assets, and domain access. Delays in providing those inputs extend the timeline by the same period.",
+          text: "Timeline. Tekmadev begins work once it has received the Client's completed intake, brand assets, and domain access, delivers the homepage design concept first, and launches the website as promptly as the work reasonably allows. Tekmadev does not commit to a fixed delivery date unless an Order Form states one. Delays in providing those inputs, or in reviewing the concept, delay delivery by the same period.",
         },
         {
           type: "p",

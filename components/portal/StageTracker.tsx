@@ -8,15 +8,21 @@ import { ProgressBar } from "@/components/portal/ui";
  * progress bar and a scrollable row of steps; on wider screens the full row.
  * `stages` limits the row to the stages this run actually has (a website-only
  * checklist skips kickoff and optimizing); omit it to show the full pipeline.
+ * `showTiming={false}` drops the day ranges under each step. The client portal
+ * always passes it: clients never see a delivery time, because how long a
+ * build takes depends on the business (config/webline-delivery.ts). The admin
+ * keeps the ranges as internal targets.
  */
 export function StageTracker({
   current,
   percent,
   stages,
+  showTiming = true,
 }: {
   current: OnboardingStage;
   percent: number;
   stages?: OnboardingStage[];
+  showTiming?: boolean;
 }) {
   const steps = STAGES.filter((s) => s.key !== "complete" && (!stages || stages.includes(s.key) || s.key === current));
   const idx = current === "complete" ? steps.length : Math.max(0, steps.findIndex((s) => s.key === current));
@@ -62,7 +68,7 @@ export function StageTracker({
                 <span className={cn("ml-2 hidden h-px flex-1 sm:block", i < idx ? "bg-gold" : "bg-line-strong")} />
               </div>
               <p className={cn("mt-2 text-xs font-medium", active ? "text-ink" : done ? "text-ink-2" : "text-ink-4")}>{s.label}</p>
-              <p className="text-[11px] text-ink-4">{s.days}</p>
+              {showTiming && <p className="text-[11px] text-ink-4">{s.days}</p>}
             </li>
           );
         })}

@@ -190,7 +190,7 @@ export function GuideArticle({ guide }: { guide: Guide }) {
         <p className="mt-4 text-base leading-relaxed text-ink-2">
           <span className="font-medium text-ink">{business.privacyOfficer.name}</span> founded Tekmadev in{" "}
           {business.foundingYear} and builds and manages the systems that get service businesses more clients.
-          Tekmadev grew its own repair shop, Fixible, on the same playbook with no ad budget.{" "}
+          Tekmadev grew Fixible, a Hamilton repair shop, on the same playbook with no ad budget.{" "}
           <Link href="/about" className="text-ink underline underline-offset-4 hover:text-gold">
             More about Tekmadev
           </Link>

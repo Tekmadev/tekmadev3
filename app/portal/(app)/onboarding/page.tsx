@@ -2,7 +2,6 @@ import Link from "next/link";
 import { requireClient } from "@/lib/portal-auth";
 import { derivedStage, getActiveOnboarding, listTasks, stagesInRun, taskProgress } from "@/lib/onboarding-data";
 import { isProductPlan } from "@/config/products";
-import { WEBLINE_LIVE_DAYS } from "@/config/webline-delivery";
 import { StageTracker } from "@/components/portal/StageTracker";
 import { TaskList } from "@/components/portal/TaskList";
 import { EmptyState, Notice, PageHeader, Panel, btnPrimary, fmtDate } from "@/components/portal/ui";
@@ -22,11 +21,9 @@ export default async function OnboardingPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Onboarding"
-        subtitle={
-          onboarding?.target_live_date
-            ? `Target go-live ${fmtDate(onboarding.target_live_date)}. ${oneTime ? `Live within ${WEBLINE_LIVE_DAYS} days once we have your content.` : "We install in 14 days."}`
-            : "Everything from payment to live."
-        }
+        // Never a date or a number of days: how long it takes depends on the
+        // business (config/webline-delivery.ts).
+        subtitle="Every step from payment to live. We move fast, so the sooner the items marked You are done, the sooner you launch."
       />
 
       {client.status === "lead" ? (
@@ -48,10 +45,10 @@ export default async function OnboardingPage() {
             </Notice>
           )}
           <Panel>
-            <StageTracker current={stage} percent={progress.percent} stages={stagesInRun(tasks)} />
+            <StageTracker current={stage} percent={progress.percent} stages={stagesInRun(tasks)} showTiming={false} />
           </Panel>
           <Panel title="Checklist" description="Items marked You are yours. The rest is on us, shown so you always know where things stand.">
-            <TaskList tasks={tasks} completeAction={completeTaskAction} />
+            <TaskList tasks={tasks} completeAction={completeTaskAction} showTiming={false} />
           </Panel>
         </>
       )}

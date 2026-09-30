@@ -14,7 +14,8 @@ import { business, canadian } from "@/config/site";
  * nothing like it comes back. The aggregate numbers in `results` (40+ systems,
  * 3.2x, 11 seconds, 94%) and the 2019 founding year were confirmed as real by
  * the owner on 2026-09-20; they are stated as averages, never as a promise.
- * Fixible stays as the proof we fully control.
+ * Fixible stays as the proof we can vouch for. Owner rule 2026-09-29: the
+ * site shows that we grew Fixible and never says that it is ours.
  */
 
 export const ABOUT_PATH = "/about";
@@ -104,12 +105,11 @@ export const about = {
   },
 
   proof: {
-    heading: "Has Tekmadev done this for a business of its own?",
+    heading: "Can you show it working for a local business?",
     answer:
-      "Yes. We own a phone and device repair shop in Hamilton called Fixible, and we grew it with the same work we sell: no ad budget, all organic.",
-    body: "We built its website and the search work behind it. It gets calls every day, and customers tell the shop that ChatGPT and Gemini recommended it, not only Google. We show Fixible because it is the business whose results are entirely ours to vouch for.",
+      "Yes. Fixible, a phone and device repair shop in Hamilton, grew with the same work we sell: no ad budget, all organic.",
+    body: "We built its website and the search work behind it. It gets calls every day, and customers tell the shop that ChatGPT and Gemini recommended it, not only Google.",
     link: { href: "/case-studies/fixible", label: "Read the Fixible case study" },
-    disclosure: "Fixible is owned by Tekmadev and operates under Tekmadev Innovation Inc. It was founded by, and is run by, its own founder.",
   },
 
   who: {

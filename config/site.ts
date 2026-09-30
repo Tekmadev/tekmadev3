@@ -1,4 +1,3 @@
-import { WEBLINE_LIVE_DAYS } from "@/config/webline-delivery";
 
 /**
  * Single source of truth for Tekmadev brand, business info, content data, and theme colors.
@@ -92,7 +91,7 @@ export const business = {
   },
   legalDates: {
     effective: "2026-05-16",
-    lastUpdated: "2026-09-28",
+    lastUpdated: "2026-09-29",
   },
   phone: {
     tel: _phoneTel,
@@ -240,12 +239,11 @@ export const themeDark: typeof theme = {
 export const heroStats = [
   { label: "Systems installed", value: "40+" },
   { label: "Avg response time", value: "11s" },
-  { label: "Live in", value: "14 days" },
+  { label: "Avg lift in bookings", value: "3.2×" },
 ];
 
 export const aggregateStats = [
   { label: "Avg lift in booked appointments", value: "3.2×" },
-  { label: "Avg time to live", value: "13 days" },
   { label: "Avg lead response time", value: "11s" },
   { label: "Clients running 12+ months", value: "94%" },
 ];
@@ -260,7 +258,8 @@ export type ProofWin = {
   framing: string;
   before: string;
   after: string;
-  note: string;
+  /** A short result fact. Never an install or delivery time: that depends on the business. */
+  note?: string;
 };
 
 export const proofWins: ProofWin[] = [
@@ -298,7 +297,6 @@ export const proofWins: ProofWin[] = [
     framing: "Weekly call volume",
     before: "2 to 3 calls / wk",
     after: "30+ calls / wk",
-    note: "Live in 12 days",
   },
 ];
 
@@ -316,28 +314,28 @@ export const systemSteps: SystemStep[] = [
     label: "Diagnose",
     title: "We audit your pipeline live.",
     body: "A 30-minute call where we map every leak: missed calls, slow replies, dead follow-ups. If we can't 10x your conversion, we say so.",
-    spec: "Day 0 · 30 minutes",
+    spec: "30 minutes",
   },
   {
     n: "02",
     label: "Build",
     title: "We build the system in our lab.",
     body: "AI voice agent trained on your offer. 12-touch follow-up written for your industry. CRM wired to your existing tools.",
-    spec: "Day 1 to 7",
+    spec: "Custom to your business",
   },
   {
     n: "03",
     label: "Install",
     title: "Phones forward. System goes live.",
     body: "Calls answered 24/7. Leads replied in 11 seconds. Appointments hitting your calendar from day one.",
-    spec: "Day 8 to 14",
+    spec: "Live 24/7",
   },
   {
     n: "04",
     label: "Scale",
     title: "We tune. Your calendar fills.",
     body: "Daily monitoring. Weekly optimization. Goal: 30 qualified appointments a month on autopilot.",
-    spec: "Day 15+",
+    spec: "Ongoing",
   },
 ];
 
@@ -351,7 +349,7 @@ export const whatItIs = {
   isYes: [
     "A done-for-you booking system",
     "Tied to outcomes, not activity",
-    "Live in 14 days, owned by you",
+    "Built around your business, owned by you",
     "One team, one dashboard, one number",
   ],
 };
@@ -373,7 +371,7 @@ export const faqs: FAQ[] = [
   },
   {
     q: "How long until the system is live?",
-    a: "14 days from kickoff in 90% of cases. Regulated or multi-location industries can take up to 21. We’ll tell you on the audit call.",
+    a: "It depends on your business: how many locations you run, the tools you already use, and your industry. We move fast, you see every step in your portal, and we walk you through what your build involves on the audit call.",
   },
   {
     q: "Who runs the system after install?",
@@ -393,7 +391,7 @@ export type TrustSignal = {
 export const trustSignals: TrustSignal[] = [
   { iconName: "Clock", text: "30 minutes · zero pressure" },
   { iconName: "ShieldCheck", text: "No retainer until appointments book" },
-  { iconName: "Zap", text: "System live in 14 days if you move forward" },
+  { iconName: "Zap", text: "Done for you, start to finish" },
 ];
 
 /**
@@ -441,7 +439,7 @@ export const productNav: { label: string; blurb: string; items: NavProduct[] } =
         name: "Webline",
         href: "/webline",
         blurb:
-          `A startup website that ranks on Google and gets cited by AI. Live within ${WEBLINE_LIVE_DAYS} days, pay in 4 if you want.`,
+          "A startup website that ranks on Google and gets cited by AI. Ready before you are, pay in 4 if you want.",
         badge: "New",
       },
       { name: "Callline", badge: "Coming soon", hidden: true },

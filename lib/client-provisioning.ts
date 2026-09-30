@@ -256,7 +256,6 @@ export async function provisionClient(input: ProvisionInput): Promise<ProvisionR
         welcome = weblineWelcomeEmail({
           businessName: client.business_name,
           firstName: (input.name || "").trim().split(/\s+/)[0] || null,
-          liveInDays: product.onboarding.targetLiveDays,
           access: member.status !== "invited" ? "signed_in" : invite?.ok ? "invited" : "self_serve",
           care:
             product.care && display?.monthly

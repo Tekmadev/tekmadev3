@@ -278,7 +278,7 @@ const templates = [
       p("Qualified prospects land on your calendar automatically, with the context you need to close them."),
       h2("4. Tune weekly"),
       p("We watch the dashboard daily and tighten the scripts weekly, so the number climbs instead of plateauing."),
-      callout("Live in 14 days.", "That is the typical time from kickoff to a system that is booking calls."),
+      callout("Built around your business.", "Every system is set up for how your business already runs, then we run it for you."),
       button("See the full system", trackClick(k, "nurture2-system", DEST.system)),
     ],
   },
@@ -295,7 +295,7 @@ const templates = [
       p("Down2Detail, an auto detailing shop, went from 9 booked jobs a month to 52 in 42 days. Same team, same market. The only change was the system catching and working every lead."),
       bullets([
         "Stoneworks Interlock: $8K to $31K monthly revenue in 5 months.",
-        "KeyFoby: 2 to 3 calls a week to 30+, live in 12 days.",
+        "KeyFoby: 2 to 3 calls a week to 30+.",
         "94% of clients are still running the system 12 months later.",
       ]),
       callout("30 booked calls in 60 days, or we work free until you hit it.", "If the system stops booking, we stop billing. Cancel any month, no long-term contract."),
@@ -339,8 +339,8 @@ const templates = [
   },
   {
     // Every fact here is on /webline (config/webline.ts) or the Fixible case
-    // study (config/case-studies.ts). Delivery is always "within 11 days"
-    // (config/webline-delivery.ts): change that number and this copy with it.
+    // study (config/case-studies.ts). Delivery is never a number of days, only
+    // words like "ready before you are" (config/webline-delivery.ts).
     // No price on purpose: it lives in the products table and can change after
     // this HTML is pasted into the CRM.
     file: "webline.html",
@@ -370,16 +370,16 @@ const templates = [
         `${b("Written for you.")} Every page, from one 15-minute form.`,
         `${b("Built to be found.")} On Google, and in answers from AI tools like ChatGPT.`,
         `${b("Built to bring in work.")} One tap to call, a booking link, and a contact form straight to your inbox.`,
-        `${b("Live within 11 days.")} On your domain, then hosted and looked after by us, so it never goes stale again.`,
+        `${b("Ready before you are.")} Launched on your domain, then hosted and looked after by us, so it never goes stale again.`,
       ]),
-      p("We did it for our own repair shop first. Fixible gets calls every day, has spent $0 on ads, and customers tell us they found it on Google and ChatGPT."),
-      callout("Love the design, or pay nothing.", "You see your new homepage by day 5. If you still do not love it after a free revision, you get a full refund."),
+      p("We did it for Fixible, a repair shop in Hamilton. It gets calls every day, has spent $0 on ads, and its customers say they found it on Google and ChatGPT."),
+      callout("Love the design, or pay nothing.", "You see your new homepage first. If you still do not love it after a free revision, you get a full refund."),
       p("The next step is easy. Answer a few quick questions and pick a time for a free 30-minute call. We look at your current site before we talk, so you get straight answers, not a pitch."),
       button("Book my free website call", trackClick(k, "webline-grow", DEST.growWebsite)),
       gap(12),
       p("Rather not click? Reply with your website address and I will tell you the first thing I would fix."),
       p(`Talk soon,<br>${b("Shajeed")}<br>Founder, ${BUSINESS.name}`),
-      p(`${b("P.S.")} Every week the old site stays up, it keeps sending customers to someone else. Within 11 days, the new one could be sending them to you.`),
+      p(`${b("P.S.")} Every week the old site stays up, it keeps sending customers to someone else. Before you know it, the new one could be sending them to you.`),
     ],
   },
 ];

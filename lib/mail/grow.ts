@@ -1,6 +1,5 @@
 import { business } from "@/config/site";
 import { CALL_MINUTES, GROW_WELCOME_PATH, type GrowPath } from "@/config/grow";
-import { WEBLINE_LIVE_DAYS } from "@/config/webline-delivery";
 import { renderMail } from "@/lib/mail/layout";
 
 /**
@@ -19,7 +18,8 @@ export type GrowEmail = {
 const OPENERS: Record<GrowPath, string> = {
   growth:
     "You told us you want more customers. That is exactly what we build: a system that answers every call, follows up on every lead and fills your calendar, and we run it for you.",
-  webline: `You want a website that brings in customers, whether you are just starting out or your current one is not pulling its weight. Webline gets you a professional website built to be found on Google and ChatGPT, live within ${WEBLINE_LIVE_DAYS} days.`,
+  webline:
+    "You want a website that brings in customers, whether you are just starting out or your current one is not pulling its weight. Webline gets you a professional website built to be found on Google and ChatGPT, ready before you are.",
   custom:
     "You have something specific in mind. AI tools and automations, apps and software, content and motion graphics: we build all of it, and the call is where we scope yours.",
 };

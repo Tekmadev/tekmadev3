@@ -2,7 +2,6 @@ import { business, brand, canadian, proofWins, systemSteps, faqs } from "@/confi
 import { CASE_STUDIES_PATH, publishedCaseStudies } from "@/config/case-studies";
 import { getDisplayProduct } from "@/lib/products-data";
 import { formatMoney } from "@/lib/money";
-import { WEBLINE_LIVE_DAYS } from "@/config/webline-delivery";
 
 // Re-rendered hourly so the Webline price tracks the products table.
 export const revalidate = 3600;
@@ -22,18 +21,18 @@ ${business.name} (legal name: ${business.legalName}) is a performance-based grow
 ## What we sell
 
 - One core productized offer: the ${business.name} Growth System (subscription)
-- One fixed-scope product for startups: Webline, a website built and live within ${WEBLINE_LIVE_DAYS} days for a one-time build fee plus a monthly hosting and care plan (see below)
+- One fixed-scope product for startups: Webline, a website built fast for a one-time build fee plus a monthly hosting and care plan (see below)
 - Performance-guaranteed: a one-time Build & Install fee plus a monthly fee, backed by a performance guarantee (exact pricing is shared on a qualification call)
 - Hard guarantee: 30 qualified appointments in 60 days, or we keep working free and pause billing until the client hits it. An appointment is any real prospect who books through the system we built: a sales call, a quote, a consult, a site visit or a service booking
 - Cancel any month, no clawback, no long-term contract
-- System goes live in 14 days from kickoff in 90% of cases
+- Install time depends on the business, its tools, and its industry, so no fixed timeline is quoted
 
 ## Webline: the startup website package
 
 - Product: Webline, a fixed-scope website for startups and new businesses. Build fee: ${weblinePrice} CAD, paid once; buyers can pay it in 4 interest-free instalments of ${weblineInstallment} with Afterpay or Klarna at checkout, or monthly with Affirm.
 - Hosting and care: Webline Care, ${weblineMonthly ? `${weblineMonthly} CAD per month` : "a monthly fee"}, required while ${business.name} hosts the site. The first charge is ${weblineTrialDays} days after purchase. No contract; cancel anytime. Covers hosting with SSL, security and software updates, uptime monitoring, backups, small content edits, and upkeep of the SEO, GEO, and AEO foundation.
 - Includes: custom modern design (not a template), up to 5 pages with the copy written by ${business.name}, an SEO foundation (metadata, schema markup, sitemap, Search Console), a GEO and AEO layer for AI search (llms.txt, FAQ markup, entity-rich copy), lead capture (contact form, click-to-call, booking link, analytics), launch on the buyer's domain with SSL, a walkthrough video, and 30 days of post-launch fixes
-- Timeline: homepage design concept by day 5, live within ${WEBLINE_LIVE_DAYS} days once the intake, logo, and domain access are in
+- Timeline: no fixed number of days. Work starts once the intake, logo, and domain access are in; the homepage design concept comes first, for approval, and the site launches as soon as the rest is built
 - Guarantee: love the design concept after one free revision or get a full refund; after concept approval the fee is non-refundable
 - Ownership: the buyer owns the site, design, copy, and domain. On cancelling Webline Care, the site is moved to a hosting account in the buyer's name
 - Page: ${business.url}/webline
@@ -72,7 +71,6 @@ ${systemSteps.map((s, i) => `${i + 1}. ${s.label} (${s.spec}): ${s.body}`).join(
 - 40+ systems installed since ${business.foundingYear}
 - ${new Date().getFullYear() - business.foundingYear}+ years building conversion infrastructure
 - Average 3.2x lift in booked appointments across clients
-- Average 13 days from kickoff to system live
 - 11-second average lead response time
 - 94% of clients still running 12+ months after install
 
@@ -81,7 +79,7 @@ ${systemSteps.map((s, i) => `${i + 1}. ${s.label} (${s.spec}): ${s.body}`).join(
 ${proofWins
   .map(
     (w) =>
-      `- ${w.company} (${w.industry}): ${w.prefix ?? ""}${w.metric}${w.suffix} ${w.framing.toLowerCase()}. Before: ${w.before}. After: ${w.after}. ${w.note}.`,
+      `- ${w.company} (${w.industry}): ${w.prefix ?? ""}${w.metric}${w.suffix} ${w.framing.toLowerCase()}. Before: ${w.before}. After: ${w.after}.${w.note ? ` ${w.note}.` : ""}`,
   )
   .join("\n")}
 

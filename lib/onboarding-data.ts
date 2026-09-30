@@ -24,6 +24,10 @@ export type TaskOwner = "client" | "tekmadev";
 export type TaskKind = "form" | "upload" | "access_grant" | "approval" | "esign" | "call" | "internal" | "checklist" | "billing";
 export type TaskStatus = "todo" | "in_progress" | "waiting_on_client" | "done" | "skipped" | "blocked";
 
+/**
+ * `days` are internal targets for the admin. The client portal never shows them:
+ * how long a build takes depends on the business (config/webline-delivery.ts).
+ */
 export const STAGES: { key: OnboardingStage; label: string; short: string; blurb: string; days: string }[] = [
   { key: "welcome", label: "Welcome", short: "Welcome", blurb: "Accept your agreement and book the kickoff.", days: "Day 0" },
   { key: "intake", label: "Intake", short: "Intake", blurb: "Tell us about your business and grant access.", days: "Day 0 to 1" },

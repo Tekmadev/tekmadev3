@@ -43,13 +43,21 @@ export function TaskItem({
   task,
   completeAction,
   compact = false,
+  showTiming = true,
 }: {
   task: OnboardingTask;
   /** Server action to mark a client-owned checklist/call task done. */
   completeAction?: (formData: FormData) => Promise<ActionResult>;
   compact?: boolean;
+  /**
+   * False in the client portal, which never states a delivery time
+   * (config/webline-delivery.ts): due dates on our tasks, and on approvals that
+   * wait for our work, would say one. The client's own to-dos keep theirs.
+   */
+  showTiming?: boolean;
 }) {
   const open = isTaskOpen(task);
+  const showDue = showTiming || (task.owner === "client" && task.kind !== "approval");
   const href = taskHref(task);
   const isKickoff = task.key === "welcome.book_kickoff";
   const isBookable = task.owner === "client" && task.kind === "call";
@@ -66,7 +74,7 @@ export function TaskItem({
         </div>
         {task.description && !compact && <p className="mt-1 text-sm text-ink-3">{task.description}</p>}
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-ink-4">
-          {task.due_at && open && <span>Due {fmtDate(task.due_at)}</span>}
+          {task.due_at && open && showDue && <span>Due {fmtDate(task.due_at)}</span>}
           {task.completed_at && <span>Done {fmtDate(task.completed_at)}</span>}
         </div>
         {open && task.owner === "client" && (
@@ -102,9 +110,12 @@ export function TaskItem({
 export function TaskList({
   tasks,
   completeAction,
+  showTiming = true,
 }: {
   tasks: OnboardingTask[];
   completeAction?: (formData: FormData) => Promise<ActionResult>;
+  /** False in the client portal: no stage day ranges, no due dates on our tasks. See TaskItem. */
+  showTiming?: boolean;
 }) {
   const groups = STAGES.filter((s) => s.key !== "complete").map((s) => ({
     stage: s,
@@ -122,7 +133,7 @@ export function TaskList({
               <div className="flex items-baseline justify-between gap-3">
                 <h3 className="text-sm font-semibold text-ink">
                   {g.stage.label}
-                  <span className="ml-2 text-xs font-normal text-ink-4">{g.stage.days}</span>
+                  {showTiming && <span className="ml-2 text-xs font-normal text-ink-4">{g.stage.days}</span>}
                 </h3>
                 <span className="text-xs text-ink-4">
                   {done}/{g.items.length}
@@ -130,7 +141,7 @@ export function TaskList({
               </div>
               <ul className="mt-1">
                 {g.items.map((t) => (
-                  <TaskItem key={t.id} task={t} completeAction={completeAction} />
+                  <TaskItem key={t.id} task={t} completeAction={completeAction} showTiming={showTiming} />
                 ))}
               </ul>
             </section>

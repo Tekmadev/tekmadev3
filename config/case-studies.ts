@@ -1,4 +1,3 @@
-import { WEBLINE_LIVE_DAYS } from "@/config/webline-delivery";
 
 /**
  * Case studies: the long-form proof pages at /case-studies.
@@ -81,26 +80,23 @@ export const caseStudies: CaseStudy[] = [
     h1: "Calls every day in Hamilton.",
     h1Accent: "Not a dollar on ads.",
     intro:
-      "Fixible fixes phones, tablets and consoles in Hamilton, Ontario. It is our own shop: Tekmadev owns it, and its founder runs it day to day. We built the website and did the search work behind it: SEO for Google, AEO so its answers get quoted, GEO so AI assistants can recommend it. Fixible has never run an ad. Every lead is organic, and the founder now hears the same thing from walk-ins: they found it on Google, or ChatGPT or Gemini told them to go there.",
-    disclosure:
-      "Disclosure: Fixible is owned by Tekmadev and operates under Tekmadev Innovation Inc. It was founded by, and is run by, its own founder. We show it because it is the shop whose numbers we can vouch for.",
+      "Fixible fixes phones, tablets and consoles in Hamilton, Ontario. We built the website and did the search work behind it: SEO for Google, AEO so its answers get quoted, GEO so AI assistants can recommend it. Fixible has never run an ad. Every lead is organic, and the shop now hears the same thing from walk-ins: they found it on Google, or ChatGPT or Gemini told them to go there.",
     facts: [
       { label: "Business", value: "Fixible" },
       { label: "Where", value: "Hamilton, Ontario" },
-      { label: "Relationship", value: "Tekmadev-owned, run by its founder" },
       { label: "Work", value: "Website, SEO, AEO, GEO" },
       { label: "Ad spend", value: "$0" },
       { label: "Live at", value: "fixible.ca", href: "https://fixible.ca" },
     ],
     summary:
-      "Fixible is a phone and device repair shop in Hamilton, Ontario, owned by Tekmadev and run by its founder. Tekmadev built its website and did the SEO, AEO and GEO work. With no advertising, Fixible gets repair calls every day, and customers report finding it through Google search and through recommendations from ChatGPT and Gemini.",
+      "Fixible is a phone and device repair shop in Hamilton, Ontario. Tekmadev built its website and did the SEO, AEO and GEO work. With no advertising, Fixible gets repair calls every day, and customers report finding it through Google search and through recommendations from ChatGPT and Gemini.",
     sections: [
       {
         heading: "What Fixible was up against",
         answer:
           "A new independent shop in a category owned by chains, franchise pages and directories, with customers who need an answer today and no budget for ads.",
         body: [
-          "Fixible opened in 2024, founded and run by its own operator with more than a decade of repair experience behind the counter, and owned by Tekmadev, in a Hamilton market where the first page of Google belongs to national chains, franchise locations and directory listings. Someone with a cracked screen is not browsing. They search once, call the first place that looks real, and go.",
+          "Fixible opened in 2024, founded and run by an operator with more than a decade of repair experience behind the counter, in a Hamilton market where the first page of Google belongs to national chains, franchise locations and directory listings. Someone with a cracked screen is not browsing. They search once, call the first place that looks real, and go.",
           "There was no ad budget, and there was not going to be one. The site had to do the whole job: be found, answer the questions, and get the call.",
         ],
       },
@@ -143,7 +139,7 @@ export const caseStudies: CaseStudy[] = [
           "If your website does not state the basics in a way a machine can read, you are invisible to the fastest-growing way people choose a local business.",
         body: [
           "Most local business sites were built to look good to a person and say almost nothing a machine can use. That was fine when the only path to you was a Google search and a scroll. It is not fine when nearly half of consumers ask an assistant first.",
-          `This is exactly what Webline is: a website for a small business or startup with the SEO, AEO and GEO work built in, live within ${WEBLINE_LIVE_DAYS} days. And once the calls come, the Growth System makes sure every one of them is answered and booked.`,
+          "This is exactly what Webline is: a website for a small business or startup with the SEO, AEO and GEO work built in, ready before you are. And once the calls come, the Growth System makes sure every one of them is answered and booked.",
         ],
       },
     ],
@@ -168,20 +164,20 @@ export const caseStudies: CaseStudy[] = [
         a: "Every market and category is different, and nobody can promise a ranking or a recommendation from a system they do not control. What we can promise is the work: a site built so that search engines and AI assistants have no reason to overlook you. Fixible shows what that looks like in a competitive local category with no ad budget.",
       },
       {
-        q: "Is Fixible a Tekmadev client?",
-        a: "No, and we say so up front: Fixible is owned by Tekmadev and operates under Tekmadev Innovation Inc. It was founded by, and is run by, its own founder, who handles the repairs and the customers. Tekmadev built the website and did the SEO, the AEO (answer engine optimization, so its FAQ answers can be quoted directly) and the GEO (generative engine optimization, so AI assistants can identify and recommend it). We show our own shop because it is the one whose numbers we can vouch for completely.",
+        q: "What did Tekmadev do for Fixible?",
+        a: "Tekmadev built the website and did the SEO, the AEO (answer engine optimization, so its FAQ answers can be quoted directly) and the GEO (generative engine optimization, so AI assistants can identify and recommend it). No ads were involved at any point: every call Fixible gets is organic.",
       },
     ],
     cta: {
       heading: "Want to be the shop the assistant recommends?",
-      body: `Webline is the same build: a website with the SEO, AEO and GEO work done, live within ${WEBLINE_LIVE_DAYS} days, for a fixed price. Or book the audit and we will show you exactly what your current site is telling Google and ChatGPT about you.`,
+      body: "Webline is the same build: a website with the SEO, AEO and GEO work done, ready before you are, for a fixed price. Or book the audit and we will show you exactly what your current site is telling Google and ChatGPT about you.",
       primary: { label: "See Webline", href: "/webline" },
       secondary: { label: "Book the 30-minute audit", href: "/#book" },
     },
     card: {
       title: "Fixible: calls every day in Hamilton, zero ad spend.",
       blurb:
-        "Our own repair shop, run by its founder. We built the website and the search work behind it. No ads, all organic, and customers who say ChatGPT and Gemini sent them.",
+        "A Hamilton repair shop. We built the website and the search work behind it. No ads, all organic, and customers who say ChatGPT and Gemini sent them.",
       highlights: ["$0 ad spend", "100% organic", "Google, ChatGPT and Gemini"],
     },
     og: {
@@ -195,7 +191,8 @@ export const caseStudies: CaseStudy[] = [
       locality: "Hamilton",
       region: "ON",
       country: "CA",
-      ownedByUs: true,
+      // Owner rule 2026-09-29: the site never says Fixible is ours.
+      ownedByUs: false,
     },
   },
 ];

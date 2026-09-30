@@ -49,7 +49,7 @@ function MobileSystem() {
         <Eyebrow>The system</Eyebrow>
         <h2 className="display-xl mt-4 text-balance text-4xl sm:mt-6 sm:text-5xl">
           Four steps.{" "}
-          <span className="gold-gradient-text">Fourteen days.</span>{" "}
+          <span className="gold-gradient-text">Done for you.</span>{" "}
           Then it runs itself.
         </h2>
         <p className="mt-5 max-w-md text-base leading-relaxed text-ink-2 sm:mt-7">
@@ -110,7 +110,7 @@ function DesktopSystem({ ref, active, scrollYProgress }: DesktopProps) {
               <Eyebrow>The system</Eyebrow>
               <h2 className="display-xl mt-6 text-balance text-7xl">
                 Four steps.{" "}
-                <span className="gold-gradient-text">Fourteen days.</span>{" "}
+                <span className="gold-gradient-text">Done for you.</span>{" "}
                 Then it runs itself.
               </h2>
               <p className="mt-7 max-w-md text-base leading-relaxed text-ink-2">

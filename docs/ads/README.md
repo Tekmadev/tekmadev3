@@ -13,8 +13,8 @@ Edit `webline-ad-v2.html`, then render it to a PNG:
 ## Every claim has to stay true
 
 - **Price and instalments**: read the live price in Admin, Pricing first. The four payments are the price divided by 4.
-- **Delivery time**: must equal `WEBLINE_LIVE_DAYS` in `config/webline-delivery.ts`, and always says "within".
+- **Delivery time**: never a number of days. Say it in words, "Ready before you are." (owner rule since 2026-09-29, see `config/webline-delivery.ts`).
 - **No crossed-out price.** A strikethrough says we used to charge it. "Agencies charge $5,000+" compares with the market instead, and has to stay a fair picture of what agencies charge.
-- **Proof line**: it is about Fixible, our own shop, and matches the About page and the Fixible case study. Do not add client numbers we cannot back.
+- **Proof line**: it is about Fixible and matches the About page and the Fixible case study. Never say Fixible is ours (owner rule since 2026-09-29), and never call it a client either: we built it and grew it. Do not add client numbers we cannot back.
 - **Scarcity**: only print "N builds a month" if the business will really stop at N.
 - **Pay in 4** is Afterpay or Klarna's decision, so the small print says "subject to their approval".

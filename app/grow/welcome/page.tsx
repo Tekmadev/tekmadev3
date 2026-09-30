@@ -6,7 +6,6 @@ import { WelcomeBooking, WelcomeGreeting } from "@/components/grow/WelcomeClient
 import { aggregateStats, business, heroStats, proofWins } from "@/config/site";
 import { CASE_STUDIES_PATH, publishedCaseStudies } from "@/config/case-studies";
 import { fillWebline, webline, WEBLINE_ID, type WeblineMoney } from "@/config/webline";
-import { WEBLINE_LIVE_DAYS } from "@/config/webline-delivery";
 import { CALL_MINUTES, isGrowPath, pathOrder, type GrowPath } from "@/config/grow";
 import { getDisplayProduct } from "@/lib/products-data";
 import { formatMoney } from "@/lib/money";
@@ -58,7 +57,7 @@ function offers(money: WeblineMoney | null): Record<GrowPath, Offer> {
         "Every lead, booking and review on one dashboard",
       ],
       // An arrow, not "to": KeyFoby's "before" already reads "2 to 3 calls / wk".
-      proof: keyfoby ? `${keyfoby.company}, ${keyfoby.industry.toLowerCase()}: ${keyfoby.before} → ${keyfoby.after}. ${keyfoby.note}.` : null,
+      proof: keyfoby ? `${keyfoby.company}, ${keyfoby.industry.toLowerCase()}: ${keyfoby.before} → ${keyfoby.after}.${keyfoby.note ? ` ${keyfoby.note}.` : ""}` : null,
       fine: "Our full plan is backed by a guarantee: 30 qualified appointments in your first 60 days, or we keep working free until you hit it.",
       cta: { label: "Book my strategy call", href: "#book" },
       secondary: { label: "See how the system works", href: "/#system" },
@@ -66,14 +65,14 @@ function offers(money: WeblineMoney | null): Record<GrowPath, Offer> {
     webline: {
       eyebrow: "Webline",
       title: "A website that gets you found",
-      lead: `New business, or a website that is not bringing in work? A professional site built to be found on Google and ChatGPT, live within ${WEBLINE_LIVE_DAYS} days.`,
+      lead: "New business, or a website that is not bringing in work? A professional site built to be found on Google and ChatGPT, ready before you are.",
       points: [
         "Designed and written for your business, not a template",
         "Search work for Google, AI answers and ChatGPT built in",
         "Contact form, click-to-call and booking so visits turn into conversations",
         "Launched on your domain, and looked after once it is live",
       ],
-      proof: "We built it for our own repair shop, Fixible: calls every day, $0 spent on ads.",
+      proof: "We built it for Fixible, a Hamilton repair shop: calls every day, $0 spent on ads.",
       fine: money
         ? `${money.price} ${fillWebline(webline.stack.priceNote, money)} ${fillWebline(webline.stack.careNote, money)}`
         : null,
@@ -115,7 +114,6 @@ export default async function GrowWelcome({ searchParams }: { searchParams: Prom
   const all = offers(money);
 
   const installed = stat(heroStats, "Systems installed");
-  const stats = aggregateStats.slice(0, 4);
   const fixible = publishedCaseStudies().find((c) => c.slug === "fixible");
 
   return (
@@ -170,8 +168,7 @@ export default async function GrowWelcome({ searchParams }: { searchParams: Prom
             <h2 className="display-l mt-5 max-w-2xl text-balance text-3xl sm:text-5xl">Real businesses. Real numbers.</h2>
           </div>
           <p className="max-w-sm text-base leading-relaxed text-ink-2">
-            {installed ? `${installed} systems installed since ${business.foundingYear}. ` : ""}Here are three of them, and
-            our own shop.
+            {installed ? `${installed} systems installed since ${business.foundingYear}. ` : ""}Here are four of them.
           </p>
         </div>
 
@@ -204,7 +201,7 @@ export default async function GrowWelcome({ searchParams }: { searchParams: Prom
                 <p className="mt-1 text-ink">
                   {w.before} <span className="text-ink-4">to</span> {w.after}
                 </p>
-                <p className="mt-1 text-xs text-ink-4">{w.note}</p>
+                {w.note && <p className="mt-1 text-xs text-ink-4">{w.note}</p>}
               </div>
             </article>
           ))}
@@ -216,7 +213,7 @@ export default async function GrowWelcome({ searchParams }: { searchParams: Prom
             className="group mt-5 flex flex-col gap-4 rounded-3xl border border-line bg-surface p-7 transition-colors hover:border-gold/60 sm:flex-row sm:items-center sm:justify-between sm:p-8"
           >
             <div className="max-w-2xl">
-              <p className="eyebrow">Case study · our own shop</p>
+              <p className="eyebrow">Case study · Device repair</p>
               <p className="display-m mt-3 text-balance text-xl text-ink sm:text-2xl">{fixible.card.title}</p>
               <p className="mt-2 text-sm leading-relaxed text-ink-3">{fixible.card.blurb}</p>
             </div>
@@ -227,8 +224,8 @@ export default async function GrowWelcome({ searchParams }: { searchParams: Prom
           </a>
         )}
 
-        <div className="mt-12 grid grid-cols-2 gap-x-8 gap-y-8 border-t border-line pt-10 md:grid-cols-4">
-          {stats.map((s) => (
+        <div className="mt-12 grid grid-cols-3 gap-x-6 gap-y-8 border-t border-line pt-10 sm:gap-x-8">
+          {aggregateStats.map((s) => (
             <div key={s.label}>
               <p className="display-m number-tabular text-3xl text-ink">{s.value}</p>
               <p className="mt-1 text-xs text-ink-3">{s.label}</p>
