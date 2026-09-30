@@ -50,6 +50,38 @@ export function crmConfigured(): boolean {
 }
 
 /**
+ * The private webhook app's client key, used once per install to trade the
+ * install code for a token. Separate from the token above on purpose: this
+ * app only RECEIVES webhooks, and the site never calls the API as the app.
+ */
+export type CrmAppConfig = { clientId: string; clientSecret: string };
+
+export function crmAppConfig(): CrmAppConfig | null {
+  const clientId = process.env.GHL_APP_CLIENT_ID?.trim() ?? "";
+  const clientSecret = process.env.GHL_APP_CLIENT_SECRET?.trim() ?? "";
+  if (clientId.length < 8 || clientSecret.length < 8 || /\s/.test(clientId + clientSecret)) return null;
+  return { clientId, clientSecret };
+}
+
+/**
+ * What the last completed app install told us, in `site_settings.crm_app`.
+ * Facts only: the token the install returns is discarded, never stored.
+ */
+export type CrmAppInstall = {
+  installedAt?: string;
+  userType?: string | null;
+  locationId?: string | null;
+  companyId?: string | null;
+  /** The install landed on the sub-account in GHL_LOCATION_ID. */
+  ours?: boolean;
+};
+
+export async function getCrmAppInstall(): Promise<CrmAppInstall> {
+  const v = await readCrmSetting<CrmAppInstall>("crm_app", {});
+  return v && typeof v === "object" ? v : {};
+}
+
+/**
  * GoHighLevel's documented Ed25519 public key for the `X-GHL-Signature`
  * header: the base64 body of the SPKI PEM block in their webhook guide, with
  * the armour removed, which is what `createPublicKey` wants for format "der".

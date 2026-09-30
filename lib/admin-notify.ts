@@ -118,6 +118,7 @@ export const ADMIN_EVENTS = {
   "crm.resubscribe_requested": { category: "audience", severity: "info", audience: "owner", needsAction: true, label: "Resubscribe needs confirming" },
   "crm.mass_suppression_halted": { category: "audience", severity: "critical", audience: "owner", needsAction: true, label: "Bulk unsubscribe stopped" },
   "crm.inbound_unmapped": { category: "clients", severity: "warning", audience: "owner", needsAction: true, label: "Appointment for an unmapped account" },
+  "crm.app_install": { category: "system", severity: "info", audience: "owner", label: "CRM webhook app installed or removed" },
   "client.appointment_booked": { category: "clients", severity: "info", needsAction: true, label: "Appointment to review" },
 
   // Team (owner only)

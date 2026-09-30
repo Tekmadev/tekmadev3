@@ -132,7 +132,7 @@ This workflow is a reply to someone who just asked, never a marketing campaign. 
 
 ## 13. Pick one sender per message
 
-Cal.com already sends booking reminders and Resend already sends the newsletter welcome. If GoHighLevel also sends them, people get two of everything. Keep the instant ones where they are and let GoHighLevel own the multi-step sequences, or move them wholesale, but decide per message.
+Cal.com already sends booking reminders, so a GoHighLevel reminder workflow on `tmd-booked-call` would send a second copy: turn one of them off. Resend sends the portal, client and Webline welcomes and the calculator report, and nothing else. It sends newsletter subscribers nothing at all, so GoHighLevel owns the whole newsletter sequence, the welcome included. The step-by-step for that is in `docs/email-campaigns-setup.md`.
 
 ---
 

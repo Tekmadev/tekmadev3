@@ -75,6 +75,11 @@ export type CrmInboundEvent = (typeof CRM_INBOUND_EVENTS)[number];
 
 const KNOWN_EVENTS: ReadonlySet<string> = new Set(CRM_INBOUND_EVENTS);
 
+// Sent by the platform itself once a webhook URL is set, whether or not we
+// subscribed: the app was installed on, or removed from, an account. Known, so
+// they never raise the "nothing handles this" notice.
+const APP_EVENTS: ReadonlySet<string> = new Set(["INSTALL", "UNINSTALL"]);
+
 /**
  * Exactly what getSupabaseAdmin() hands back, so the helpers below take the
  * client this module already checked for null rather than importing the vendor
@@ -905,7 +910,7 @@ async function reportUnknownEvent(supabase: Supa, eventType: string): Promise<vo
   const names = new Set<string>([eventType]);
   for (const r of data ?? []) {
     const name = str((r as { event_type?: unknown }).event_type);
-    if (name && !KNOWN_EVENTS.has(name)) names.add(name);
+    if (name && !KNOWN_EVENTS.has(name) && !APP_EVENTS.has(name)) names.add(name);
   }
 
   await notifyAdmins({
@@ -919,8 +924,56 @@ async function reportUnknownEvent(supabase: Supa, eventType: string): Promise<vo
   });
 }
 
+/**
+ * The app arriving on, or leaving, an account. Only our own sub-account
+ * matters to consent: while the app is off it, an unsubscribe made in the CRM
+ * never reaches the site, so a removal there is said out loud. A client
+ * install or removal only changes whose appointments can come in.
+ */
+async function handleAppEvent(row: InboxRow, cfg: CrmConfig): Promise<InboxOutcome> {
+  const ours = row.location_id === cfg.locationId;
+  const removed = row.event_type === "UNINSTALL";
+  await notifyAdmins({
+    event: "crm.app_install",
+    title: removed
+      ? ours
+        ? "The CRM webhook app was removed from your own sub-account"
+        : `The CRM webhook app was removed from sub-account ${row.location_id ?? "(unknown)"}`
+      : ours
+        ? "The CRM webhook app is installed on your own sub-account"
+        : `The CRM webhook app was installed on sub-account ${row.location_id ?? "(unknown)"}`,
+    body: removed && ours
+      ? "Unsubscribes made inside GoHighLevel no longer reach the site until it is installed again. The nightly reconcile still catches them, a day late."
+      : removed
+        ? "Appointments from that account stop coming in."
+        : ours
+          ? "Consent changes made in GoHighLevel now reach the site."
+          : "If that account is a client, map it on the client's page so its appointments count. If you do not recognise it, remove the app from it.",
+    url: "/admin/crm",
+    severity: removed && ours ? "critical" : "info",
+    needsAction: removed && ours,
+    entity: { type: "crm_location", id: row.location_id ?? "unknown" },
+    dedupeKey: `crm_app:${row.event_type}:${row.location_id ?? "unknown"}:${row.occurred_at ?? row.id}`,
+  });
+  return { status: "ignored", detail: `app ${removed ? "removed from" : "installed on"} ${ours ? "our sub-account" : `sub-account ${row.location_id ?? "(unknown)"}`}` };
+}
+
 async function dispatch(supabase: Supa, row: InboxRow, cfg: CrmConfig): Promise<InboxOutcome> {
+  // Contact events count only from OUR sub-account. The app is also installed
+  // on client sub-accounts for their appointments, and every install sends
+  // every subscribed event, so their contacts' DND, tag and email changes
+  // arrive here too. Their contacts are not our consent record: matched by
+  // email, a client's contact that shares an address with one of our
+  // subscribers would overwrite that subscriber's mirror or worse. Appointment
+  // events are the opposite, and are routed by the location mapping below.
+  if (row.event_type.startsWith("Contact") && row.location_id !== cfg.locationId) {
+    return { status: "ignored", detail: `contact event from sub-account ${row.location_id ?? "(none given)"}, which is not ours` };
+  }
+
   switch (row.event_type) {
+    case "INSTALL":
+    case "UNINSTALL":
+      return handleAppEvent(row, cfg);
     case "ContactDndUpdate":
       return handleDndUpdate(supabase, row, cfg);
     case "ContactUpdate":

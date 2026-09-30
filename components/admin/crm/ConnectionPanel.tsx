@@ -1,5 +1,6 @@
 import { Check, X } from "lucide-react";
-import { crmConfigured, getCrmProbeSetting, getCrmSyncSetting, type CrmSyncSetting } from "@/lib/crm/config";
+import { crmAppConfig, crmConfigured, getCrmAppInstall, getCrmProbeSetting, getCrmSyncSetting, type CrmSyncSetting } from "@/lib/crm/config";
+import { CRM_FIELDS, cachedFieldKeys, type CrmFieldKey } from "@/lib/crm/fields";
 import { Badge, Panel, fmtDateTime } from "@/components/admin/ui";
 import { RefreshButton } from "@/components/admin/PendingButton";
 import { setCrmSwitchAction, verifyConnectionAction } from "@/app/admin/(dashboard)/crm/actions";
@@ -62,7 +63,17 @@ const btn =
 
 export async function ConnectionPanel() {
   const configured = crmConfigured();
-  const [setting, probe] = await Promise.all([getCrmSyncSetting(), getCrmProbeSetting()]);
+  const [setting, probe, app, fieldKeys] = await Promise.all([
+    getCrmSyncSetting(),
+    getCrmProbeSetting(),
+    getCrmAppInstall(),
+    cachedFieldKeys(),
+  ]);
+  const appKeysSet = crmAppConfig() !== null;
+  const mergeTags = (Object.keys(fieldKeys) as CrmFieldKey[]).map((k) => {
+    const key = fieldKeys[k] ?? "";
+    return { name: CRM_FIELDS[k].name, tag: `{{${key.startsWith("contact.") ? key : `contact.${key}`}}}` };
+  });
   const checks = storedChecks(probe.checks);
   const verified = configured && setting.health === "ok";
 
@@ -149,6 +160,40 @@ export async function ConnectionPanel() {
           );
         })}
       </div>
+
+      <div className="mt-6 rounded-xl border border-line p-4">
+        <h3 className="text-sm font-semibold text-ink">Webhook app</h3>
+        <p className="mt-1 text-xs text-ink-3">
+          {app.installedAt
+            ? app.ours
+              ? `Installed on your own sub-account on ${fmtDateTime(app.installedAt)}. Unsubscribes and appointments made in GoHighLevel can reach the site.`
+              : `The last install, on ${fmtDateTime(app.installedAt)}, went to sub-account ${app.locationId ?? "(unknown)"}, not yours. Install it on your own sub-account too.`
+            : "Not installed yet. The Inbound switch needs it: unsubscribes made inside GoHighLevel and client appointments arrive through it (step 8 of the setup guide)."}
+        </p>
+        {!appKeysSet && (
+          <p className="mt-2 text-xs text-signal">
+            GHL_APP_CLIENT_ID and GHL_APP_CLIENT_SECRET are not set in Vercel, so an install cannot finish yet.
+          </p>
+        )}
+      </div>
+
+      {mergeTags.length > 0 && (
+        <div className="mt-4 rounded-xl border border-line p-4">
+          <h3 className="text-sm font-semibold text-ink">Merge fields for emails and workflows</h3>
+          <p className="mt-1 text-xs text-ink-3">
+            The exact tags GoHighLevel gave the fields this site fills in. Paste one into an email to personalise it, or pick the field by
+            name when a workflow branches.
+          </p>
+          <ul className="mt-3 grid gap-1.5 text-xs sm:grid-cols-2">
+            {mergeTags.map((m) => (
+              <li key={m.name} className="flex flex-wrap gap-x-2">
+                <span className="text-ink-2">{m.name}</span>
+                <code className="text-ink-4">{m.tag}</code>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </Panel>
   );
 }

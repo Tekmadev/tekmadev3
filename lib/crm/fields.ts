@@ -73,6 +73,23 @@ export async function cachedFieldIds(): Promise<Partial<Record<CrmFieldKey, stri
 }
 
 /**
+ * The merge keys the CRM assigned to our fields, as last seen by Verify, for
+ * example { monthlyLeak: "contact.tekmadev_monthly_leak" }. Shown on
+ * /admin/crm so the owner can personalise emails and branch workflows.
+ */
+export async function cachedFieldKeys(): Promise<Partial<Record<CrmFieldKey, string>>> {
+  const raw = await readCrmSetting<Record<string, unknown>>("crm_fields", {});
+  const bag = raw && typeof raw === "object" ? (raw._fieldKeys as Record<string, unknown> | undefined) : undefined;
+  const out: Partial<Record<CrmFieldKey, string>> = {};
+  if (!bag || typeof bag !== "object") return out;
+  for (const key of FIELD_KEYS) {
+    const v = bag[key];
+    if (typeof v === "string" && v.trim() !== "") out[key] = v.trim();
+  }
+  return out;
+}
+
+/**
  * Find every field's id, creating the ones that do not exist yet.
  *
  * Idempotent by construction: one list call answers for all twelve in the common
@@ -91,29 +108,42 @@ export async function resolveFieldIds(
   const listed = await listCustomFields(cfg);
   if (!listed.ok) return { ok: false, error: `could not list custom fields: ${listed.error.message}` };
 
-  const byKey = new Map<string, { id: string; dataType: string | null }>();
+  // Matched by key AND by name. The create endpoint takes no key: the CRM
+  // derives one from the display name (for example "Tekmadev Need" may become
+  // contact.tekmadev_need), so a field this code created itself never carries
+  // our tmd_* key. Keyed lookup alone would miss every one of them, and each
+  // Verify would try to create all twelve again: duplicates, or a refused
+  // create that fails the probe and keeps the integration from arming. The
+  // names are ours and prefixed "Tekmadev", so matching on them is safe.
+  type Found = { id: string; dataType: string | null; fieldKey: string | null };
+  const byKey = new Map<string, Found>();
+  const byName = new Map<string, Found>();
   for (const f of listed.data) {
+    const found: Found = { id: f.id, dataType: f.dataType, fieldKey: f.fieldKey };
     const key = bareKey(f.fieldKey);
-    if (key) byKey.set(key, { id: f.id, dataType: f.dataType });
+    if (key) byKey.set(key, found);
+    const name = (f.name ?? "").trim().toLowerCase();
+    if (name && !byName.has(name)) byName.set(name, found);
   }
 
   const ids: Partial<Record<CrmFieldKey, string>> = {};
+  const mergeKeys: Partial<Record<CrmFieldKey, string>> = {};
   const created: CrmFieldKey[] = [];
 
   for (const key of FIELD_KEYS) {
     const def = CRM_FIELDS[key];
-    let hit = byKey.get(def.key) ?? null;
+    let hit: Found | null = byKey.get(def.key) ?? byName.get(def.name.toLowerCase()) ?? null;
 
     if (!hit) {
       const probed = await getCustomFieldByKey(cfg, def.key);
       if (!probed.ok) return { ok: false, error: `could not read ${def.key}: ${probed.error.message}` };
-      if (probed.data) hit = { id: probed.data.id, dataType: probed.data.dataType };
+      if (probed.data) hit = { id: probed.data.id, dataType: probed.data.dataType, fieldKey: probed.data.fieldKey };
     }
 
     if (!hit && opts?.create) {
       const made = await createCustomField(cfg, { name: def.name, dataType: def.dataType });
       if (!made.ok) return { ok: false, error: `could not create ${def.key}: ${made.error.message}` };
-      hit = { id: made.data.id, dataType: made.data.dataType };
+      hit = { id: made.data.id, dataType: made.data.dataType, fieldKey: made.data.fieldKey };
       created.push(key);
     }
 
@@ -125,12 +155,16 @@ export async function resolveFieldIds(
       console.error(`[crm] field ${def.key} is ${hit.dataType} in the CRM, expected ${def.dataType}`);
     }
     ids[key] = hit.id;
+    if (hit.fieldKey) mergeKeys[key] = hit.fieldKey;
   }
 
   // Merge, never replace: a pass that resolved ten of twelve must not throw
-  // away the two an earlier pass had already found.
+  // away the two an earlier pass had already found. The real keys ride along
+  // under _fieldKeys, because they are what an email or a workflow needs
+  // ({{contact.<key>}}) and only the CRM knows them.
   const merged = { ...(await cachedFieldIds()), ...ids };
-  await writeCrmSetting("crm_fields", merged, "system");
+  const keys = { ...(await cachedFieldKeys()), ...mergeKeys };
+  await writeCrmSetting("crm_fields", { ...merged, _fieldKeys: keys }, "system");
 
   const missing = FIELD_KEYS.filter((k) => !merged[k]);
   if (missing.length) {

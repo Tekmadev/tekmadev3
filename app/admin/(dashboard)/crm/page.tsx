@@ -29,6 +29,7 @@ const OK: Record<string, string> = {
   discarded: "Stopped for good. It stays on record.",
   resubscribed: "Resubscribed, stamped with the current privacy policy version.",
   already_active: "They were already subscribed. Nothing changed.",
+  app_connected: "Webhook app installed. Once the Inbound switch is on, unsubscribes made in GoHighLevel reach the site.",
 };
 
 const ERR: Record<string, string> = {
@@ -46,17 +47,25 @@ const ERR: Record<string, string> = {
   resub_stale: "The subscriber changed while you were looking. Look it up again.",
   resub_db: "The change could not be saved. Try again.",
   resub_config: "The database is not configured.",
+  app_denied: "The app install was cancelled in GoHighLevel. Nothing was changed.",
+  app_nocode: "GoHighLevel came back without an install code. Start the install again from the app's install link.",
+  app_not_configured: "GHL_APP_CLIENT_ID and GHL_APP_CLIENT_SECRET are not set in Vercel, so the install could not be finished. Add them, redeploy, then install again.",
+  app_exchange: "GoHighLevel refused to finish the install. Check the app's Client ID, Client Secret and Redirect URL, then install again.",
+  app_rate: "Too many install attempts in a short time. Wait ten minutes and try again.",
 };
 
 export default async function CrmPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ok?: string; e?: string; n?: string; queued?: string; halted?: string; email?: string }>;
+  searchParams: Promise<{ ok?: string; e?: string; n?: string; queued?: string; halted?: string; email?: string; where?: string }>;
 }) {
   await requireOwner();
-  const { ok, e, n, queued, halted, email } = await searchParams;
+  const { ok, e, n, queued, halted, email, where } = await searchParams;
 
   let okText = ok ? OK[ok] : null;
+  if (ok === "app_connected" && where === "other") {
+    okText = "Webhook app installed, but on a different sub-account from the one in GHL_LOCATION_ID. That is right for a client account. For your own, install it again and pick your own sub-account.";
+  }
   if (okText && queued) okText += ` ${queued} existing contact${queued === "1" ? "" : "s"} queued for their first push.`;
   if (ok === "synced" && n) okText = `Sync ran: ${n} item${n === "1" ? "" : "s"} handled.`;
   if (ok === "reconciled" && n) {
