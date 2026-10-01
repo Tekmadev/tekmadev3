@@ -44,7 +44,7 @@
     color-scheme: light;
   }
 
-  /* DARK THEME TOKENS — single source of truth for dark-mode colors.
+  /* DARK THEME TOKENS: single source of truth for dark-mode colors.
      Mirrors the light @theme block above (same variable names, dark values).
      The TS mirror for non-CSS contexts (Cal embed, OG image, theme-color)
      lives in config/site.ts as `themeDark`. Edit both together. */

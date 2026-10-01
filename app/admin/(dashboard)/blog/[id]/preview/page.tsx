@@ -18,7 +18,7 @@ export default async function PreviewPostPage({ params }: { params: Promise<{ id
     <div className="-mx-4 -my-6 sm:-mx-8">
       <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-line bg-bg-2/90 px-5 py-3 text-sm backdrop-blur">
         <span className="text-ink-3">
-          Preview — <span className="capitalize text-ink">{post.status.replace("_", " ")}</span>, not
+          Preview: <span className="capitalize text-ink">{post.status.replace("_", " ")}</span>, not
           necessarily public
         </span>
         <Link href={`/admin/blog/${post.id}`} className="text-ink-3 hover:text-gold">

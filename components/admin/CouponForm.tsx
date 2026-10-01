@@ -42,7 +42,7 @@ export function CouponForm({ currency }: { currency: string }) {
           <input
             name="code"
             type="text"
-            placeholder="e.g. STARTUP50 — blank = auto"
+            placeholder="e.g. STARTUP50, or leave blank for auto"
             autoCapitalize="characters"
             className={cn(inputClass, "uppercase placeholder:normal-case placeholder:text-ink-4")}
           />
