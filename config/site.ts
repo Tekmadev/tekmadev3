@@ -447,11 +447,17 @@ export const productNav: { label: string; blurb: string; items: NavProduct[] } =
     ],
   };
 
+/**
+ * Top-level page links, after the "What we build" dropdown. No "The System"
+ * here: the dropdown's Growth System already takes people to that part of the
+ * homepage, and two entries for one place read as a duplicate (owner,
+ * 2026-09-30). The footer still lists both sections.
+ */
 export const navLinks = [
-  { href: "/#system", label: "The System" },
   { href: "/#proof", label: "Proof" },
   { href: "/tools", label: "Free tools" },
   { href: "/guides", label: "Guides" },
+  { href: "/blog", label: "Blog" },
   { href: "/#faq", label: "FAQ" },
 ];
 
@@ -501,6 +507,7 @@ export const footerColumns = [
       { label: "Webline for startups", href: "/webline" },
       { label: "Free tools", href: "/tools" },
       { label: "Guides", href: "/guides" },
+      { label: "Blog", href: "/blog" },
       { label: "FAQ", href: "/#faq" },
     ],
   },
