@@ -1,6 +1,7 @@
 import { blocksToMarkdown } from "@/lib/blog-markdown";
 import type { BlogAuthor, BlogCategory, BlogPostWithRefs, BlogStatus } from "@/lib/blog-data";
-import { quickCreateCategoryAction } from "@/app/admin/(dashboard)/blog/actions";
+import { quickCreateCategoryAction, requestBlogMediaUploadAction } from "@/app/admin/(dashboard)/blog/actions";
+import { BlogBodyImageButton, BlogImageField } from "@/components/admin/BlogImageUpload";
 import { CategoryPicker } from "@/components/admin/CategoryPicker";
 import { PendingSubmit } from "@/components/PendingSubmit";
 
@@ -97,18 +98,26 @@ export function BlogForm({
       {/* Body */}
       <div className="rounded-2xl border border-line-strong bg-surface p-5">
         <div className="flex flex-col gap-4">
-          <Field
-            label="Body (Markdown)"
-            hint="## Heading, - bullet, 1. numbered, > quote, > [!tip] callout, > [!answer] Question?, | tables |, ![alt](url), ```code```. Converted to structured blocks on save."
-          >
+          <div className="flex flex-col gap-1.5 text-sm text-ink-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label htmlFor="blog-body" className="font-medium text-ink">
+                Body (Markdown)
+              </label>
+              <BlogBodyImageButton targetId="blog-body" requestUpload={requestBlogMediaUploadAction} />
+            </div>
             <textarea
+              id="blog-body"
               name="body"
               defaultValue={bodyMd}
               rows={20}
               className={INPUT + " font-mono text-[13px] leading-relaxed"}
               placeholder={"## The short answer\n\nEvery missed call is a missed job. Here is how to fix it.\n\n> [!tip] Reply in under 5 minutes and you are 9x more likely to book.\n\n- Answer every call, 24/7\n- Text back instantly when you miss one"}
             />
-          </Field>
+            <span className="text-xs text-ink-4">
+              ## Heading, - bullet, 1. numbered, &gt; quote, &gt; [!tip] callout, &gt; [!answer] Question?, | tables |, ![alt](url),
+              ```code```. Converted to structured blocks on save. Insert image uploads a picture and places it at the cursor.
+            </span>
+          </div>
           <Field label="Key takeaways" hint="One per line. Shows as a summary box up top (great for AI answers and snippets).">
             <textarea name="key_takeaways" defaultValue={takeawaysText} rows={3} className={INPUT} />
           </Field>
@@ -149,17 +158,25 @@ export function BlogForm({
       <div className="rounded-2xl border border-line-strong bg-surface p-5">
         <h2 className="text-sm font-semibold text-ink">Media and flags</h2>
         <div className="mt-4 flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Cover image URL">
-              <input name="cover_image_url" defaultValue={post?.cover_image_url ?? ""} className={INPUT} placeholder="https://..." />
-            </Field>
-            <Field label="Cover image alt text" hint="Describe the image (accessibility + SEO).">
-              <input name="cover_image_alt" defaultValue={post?.cover_image_alt ?? ""} className={INPUT} />
-            </Field>
-          </div>
-          <Field label="Social (OG) image URL" hint="Optional. Defaults to the cover image.">
-            <input name="og_image_url" defaultValue={post?.og_image_url ?? ""} className={INPUT} placeholder="https://..." />
+          <BlogImageField
+            name="cover_image_url"
+            label="Cover image"
+            hint="1200 x 630 works everywhere: the post, the blog list and social shares. PNG, JPG, WebP, AVIF or GIF, up to 10 MB."
+            defaultValue={post?.cover_image_url}
+            inputClassName={INPUT}
+            requestUpload={requestBlogMediaUploadAction}
+          />
+          <Field label="Cover image alt text" hint="Describe the image (accessibility + SEO).">
+            <input name="cover_image_alt" defaultValue={post?.cover_image_alt ?? ""} className={INPUT} />
           </Field>
+          <BlogImageField
+            name="og_image_url"
+            label="Social (OG) image"
+            hint="Optional. Defaults to the cover image."
+            defaultValue={post?.og_image_url}
+            inputClassName={INPUT}
+            requestUpload={requestBlogMediaUploadAction}
+          />
           <div className="flex flex-wrap gap-6 pt-1">
             <label className="flex items-center gap-2.5 text-sm text-ink-2">
               <input type="checkbox" name="featured" defaultChecked={post?.featured ?? false} className="h-4 w-4 accent-gold" />

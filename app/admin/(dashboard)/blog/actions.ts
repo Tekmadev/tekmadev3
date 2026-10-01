@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireOwner } from "@/lib/admin";
 import { markdownToBlocks } from "@/lib/blog-markdown";
+import { createBlogMediaUpload, type BlogMediaTicket } from "@/lib/blog-media";
 import {
   createPost,
   updatePost,
@@ -231,4 +232,22 @@ export async function quickCreateCategoryAction(rawName: string): Promise<QuickC
     console.error("[blog] quick category create failed", err instanceof Error ? err.message : String(err));
     return { ok: false, message: "Could not add the category. Try again." };
   }
+}
+
+/**
+ * The editor's image upload buttons (components/admin/BlogImageUpload.tsx).
+ * Returns a one-time signed upload URL for the public blog-media bucket; the
+ * browser sends the file straight to Storage and keeps the public URL.
+ */
+export async function requestBlogMediaUploadAction(input: {
+  fileName: string;
+  size: number;
+  type: string;
+}): Promise<BlogMediaTicket> {
+  await requireOwner();
+  return createBlogMediaUpload({
+    fileName: String(input?.fileName ?? ""),
+    size: Number(input?.size),
+    type: String(input?.type ?? ""),
+  });
 }
