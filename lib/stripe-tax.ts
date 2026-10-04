@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import { stripeFor, type StripeMode } from "@/lib/stripe-mode";
 import { hourKey, notifyAdmins } from "@/lib/admin-notify";
-import { getSalesTaxSetting } from "@/lib/site-settings";
+import { getSalesTaxSetting, setSalesTax } from "@/lib/site-settings";
 
 /**
  * Sales tax (GST/HST) at checkout, through Stripe Tax.
@@ -141,4 +141,70 @@ export async function createCheckoutSession(
     });
     return session;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* The owner's switch, as the admin screens show it                    */
+/* ------------------------------------------------------------------ */
+
+/** What checkout does for a mode: charging, switched on but not charging, or off. */
+export type SalesTaxState = "charging" | "on_not_charging" | "off";
+
+/**
+ * Charging needs the owner's switch on, Stripe Tax complete and at least one
+ * active registration (with none, Stripe charges zero everywhere).
+ */
+export function salesTaxState(on: boolean, status: TaxStatus): SalesTaxState {
+  if (!on) return "off";
+  return status.active && status.registrations.length > 0 ? "charging" : "on_not_charging";
+}
+
+const MISSING: Record<string, string> = {
+  "head_office.address": "your head office address",
+  "defaults.tax_code": "a default product tax category",
+  "defaults.tax_behavior": "whether prices include tax",
+};
+
+const COUNTRY: Record<string, string> = { CA: "Canada", US: "United States", GB: "United Kingdom" };
+
+/** The Stripe Tax readiness line under the switch (Admin, Pricing and the app). */
+export function taxReadinessLine(s: TaxStatus): string {
+  if (s.active) {
+    const where = s.registrations.length
+      ? `Registered to collect in: ${s.registrations.map((c) => COUNTRY[c] ?? c).join(", ")}.`
+      : "No tax registration is active in Stripe, so no tax would be charged anywhere.";
+    const how =
+      s.behavior === "inclusive"
+        ? "Tax is taken out of the listed price."
+        : "Tax is added on top of the listed price.";
+    return `Stripe Tax is ready. ${where} ${how}`;
+  }
+  if (s.reason === "pending") {
+    const need = s.missing.map((m) => MISSING[m] ?? m).join(", ");
+    return `Stripe Tax is not finished${need ? `: Stripe still needs ${need}` : ""}.`;
+  }
+  if (s.reason === "no_key") return "No Stripe key for this mode.";
+  return "Could not read Stripe Tax settings. The Stripe key may lack permission to read them.";
+}
+
+/**
+ * Flip the owner's sales tax switch for a mode, record who did it, and leave a
+ * line in the notification inbox. Shared by Admin, Pricing and the admin API.
+ * False when the setting could not be saved (nothing changed then).
+ */
+export async function switchSalesTax(mode: StripeMode, on: boolean, by: string): Promise<boolean> {
+  const ok = await setSalesTax(mode, on, by);
+  if (!ok) return false;
+
+  await notifyAdmins({
+    event: "settings.sales_tax_changed",
+    title: `Sales tax switched ${on ? "ON" : "OFF"}${mode === "test" ? " in test mode" : ""}`,
+    body: on
+      ? "New checkouts now add GST/HST by the buyer's province. Plans already running are not changed."
+      : "New checkouts no longer add GST/HST.",
+    url: "/admin/pricing",
+    actor: { type: "staff", label: by },
+    isTest: mode === "test",
+  });
+  return true;
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireOwner } from "@/lib/admin";
+import { adminCan, requireAdminCapability } from "@/lib/admin";
 import { listPostsAdmin, listCategories, countPostsByCategory, type BlogStatus } from "@/lib/blog-data";
 import { PageHeader, Panel, Notice, Badge, fmtDateTime } from "@/components/admin/ui";
 import { ConfirmButton } from "@/components/admin/PendingButton";
@@ -41,7 +41,9 @@ export default async function BlogAdmin({
 }: {
   searchParams: Promise<{ ok?: string; e?: string }>;
 }) {
-  await requireOwner();
+  const ctx = await requireAdminCapability("blog.view");
+  // View only without blog.write: posts open as a preview, no new post, no category changes.
+  const canWrite = adminCan(ctx, "blog.write");
   const [posts, categories, postCounts] = await Promise.all([listPostsAdmin(), listCategories(), countPostsByCategory()]);
   const { ok, e } = await searchParams;
   const notice = ok ? NOTICES[ok] : e ? NOTICES[e] : null;
@@ -49,19 +51,21 @@ export default async function BlogAdmin({
   return (
     <div className="flex max-w-5xl flex-col gap-8">
       <PageHeader title="Blog" subtitle="Write, edit, and publish posts. Structured for SEO, GEO, and AEO.">
-        <Link
-          href="/admin/blog/new"
-          className="rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
-        >
-          New post
-        </Link>
+        {canWrite && (
+          <Link
+            href="/admin/blog/new"
+            className="rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
+          >
+            New post
+          </Link>
+        )}
       </PageHeader>
 
       {notice && <Notice kind={notice.kind}>{notice.text}</Notice>}
 
       <Panel title={`Posts (${posts.length})`}>
         {posts.length === 0 ? (
-          <p className="text-sm text-ink-4">No posts yet. Create your first one.</p>
+          <p className="text-sm text-ink-4">{canWrite ? "No posts yet. Create your first one." : "No posts yet."}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -79,7 +83,7 @@ export default async function BlogAdmin({
                 {posts.map((p) => (
                   <tr key={p.id} className="border-b border-line last:border-0">
                     <td className="py-2.5 pr-4 align-top">
-                      <Link href={`/admin/blog/${p.id}`} className="font-medium text-ink hover:text-gold">
+                      <Link href={canWrite ? `/admin/blog/${p.id}` : `/admin/blog/${p.id}/preview`} className="font-medium text-ink hover:text-gold">
                         {p.title}
                       </Link>
                       {p.featured && <span className="ml-2 text-xs text-gold">Featured</span>}
@@ -92,8 +96,8 @@ export default async function BlogAdmin({
                     <td className="py-2.5 pr-4 align-top whitespace-nowrap text-ink-3">{fmtDateTime(p.updated_at)}</td>
                     <td className="py-2.5 pr-4 align-top">
                       <div className="flex items-center gap-3 whitespace-nowrap">
-                        <Link href={`/admin/blog/${p.id}`} className="text-ink-3 hover:text-gold">
-                          Edit
+                        <Link href={canWrite ? `/admin/blog/${p.id}` : `/admin/blog/${p.id}/preview`} className="text-ink-3 hover:text-gold">
+                          {canWrite ? "Edit" : "Preview"}
                         </Link>
                         {p.status === "published" && (
                           <a
@@ -117,7 +121,9 @@ export default async function BlogAdmin({
 
       <Panel title={`Categories (${categories.length})`}>
         {categories.length === 0 ? (
-          <p className="mb-4 text-sm text-ink-4">No categories yet. Add one here, or with the + next to Category in the post editor.</p>
+          <p className="mb-4 text-sm text-ink-4">
+            {canWrite ? "No categories yet. Add one here, or with the + next to Category in the post editor." : "No categories yet."}
+          </p>
         ) : (
           <ul className="mb-5 divide-y divide-line">
             {categories.map((c) => {
@@ -126,51 +132,59 @@ export default async function BlogAdmin({
               return (
                 <li key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-2.5">
                   {/* Rename keeps the slug, so /blog?category=<slug> links stay valid. */}
-                  <form action={renameCategoryAction} className="flex min-w-[260px] flex-1 items-center gap-2">
-                    <input type="hidden" name="id" value={c.id} />
-                    <input name="name" defaultValue={c.name} required maxLength={60} aria-label={`Rename ${c.name}`} className={CATEGORY_INPUT} />
-                    <PendingSubmit className={CATEGORY_BUTTON}>
-                      Rename
-                    </PendingSubmit>
-                  </form>
+                  {canWrite ? (
+                    <form action={renameCategoryAction} className="flex min-w-[260px] flex-1 items-center gap-2">
+                      <input type="hidden" name="id" value={c.id} />
+                      <input name="name" defaultValue={c.name} required maxLength={60} aria-label={`Rename ${c.name}`} className={CATEGORY_INPUT} />
+                      <PendingSubmit className={CATEGORY_BUTTON}>
+                        Rename
+                      </PendingSubmit>
+                    </form>
+                  ) : (
+                    <span className="min-w-[260px] flex-1 text-sm text-ink">{c.name}</span>
+                  )}
                   <span className="text-xs text-ink-4">
                     /blog?category={c.slug} · {postsLabel}
                   </span>
-                  <form action={deleteCategoryAction}>
-                    <input type="hidden" name="id" value={c.id} />
-                    <ConfirmButton
-                      message={
-                        n > 0
-                          ? `Delete "${c.name}"? ${postsLabel} will keep everything but lose the category.`
-                          : `Delete "${c.name}"?`
-                      }
-                      className="rounded-full border border-signal/40 px-3.5 py-2 text-sm text-signal transition-colors hover:bg-signal/[0.06] disabled:opacity-60"
-                    >
-                      Delete
-                    </ConfirmButton>
-                  </form>
+                  {canWrite && (
+                    <form action={deleteCategoryAction}>
+                      <input type="hidden" name="id" value={c.id} />
+                      <ConfirmButton
+                        message={
+                          n > 0
+                            ? `Delete "${c.name}"? ${postsLabel} will keep everything but lose the category.`
+                            : `Delete "${c.name}"?`
+                        }
+                        className="rounded-full border border-signal/40 px-3.5 py-2 text-sm text-signal transition-colors hover:bg-signal/[0.06] disabled:opacity-60"
+                      >
+                        Delete
+                      </ConfirmButton>
+                    </form>
+                  )}
                 </li>
               );
             })}
           </ul>
         )}
-        <form action={createCategoryAction} className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1.5 text-sm text-ink-2">
-            <span className="font-medium text-ink">New category</span>
-            <input
-              name="name"
-              required
-              maxLength={60}
-              placeholder="AI Automation"
-              className="rounded-xl border border-line-strong bg-bg px-3 py-2.5 text-sm text-ink outline-none focus:border-gold"
-            />
-          </label>
-          <PendingSubmit
-            className="rounded-full border border-line-strong px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:border-gold"
-          >
-            Add
-          </PendingSubmit>
-        </form>
+        {canWrite && (
+          <form action={createCategoryAction} className="flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1.5 text-sm text-ink-2">
+              <span className="font-medium text-ink">New category</span>
+              <input
+                name="name"
+                required
+                maxLength={60}
+                placeholder="AI Automation"
+                className="rounded-xl border border-line-strong bg-bg px-3 py-2.5 text-sm text-ink outline-none focus:border-gold"
+              />
+            </label>
+            <PendingSubmit
+              className="rounded-full border border-line-strong px-4 py-2.5 text-sm font-medium text-ink transition-colors hover:border-gold"
+            >
+              Add
+            </PendingSubmit>
+          </form>
+        )}
       </Panel>
     </div>
   );

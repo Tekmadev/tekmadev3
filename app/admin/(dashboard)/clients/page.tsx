@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Building2, Hammer, Lock, Rocket, Settings2, UserPlus } from "lucide-react";
-import { requireAdmin } from "@/lib/admin";
+import { adminCan, requireAdminCapability } from "@/lib/admin";
 import { CLIENT_STATUS_LABEL, listClients, type ClientStatus } from "@/lib/clients-data";
 import {
   derivedStage,
@@ -44,11 +44,13 @@ function daysUntil(date: string | null): number | null {
 }
 
 export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ status?: string; deleted?: string }> }) {
-  await requireAdmin();
+  const ctx = await requireAdminCapability("clients.view");
   const params = await searchParams;
   const filter = params.status ?? "";
 
-  const all = await listClients();
+  // Test accounts are for roles that may see test data (the admin API hides them the same way).
+  const seesTest = adminCan(ctx, "testdata.view");
+  const all = (await listClients()).filter((c) => seesTest || !c.is_test);
   const clients = all.filter((c) => {
     if (filter === "all") return true;
     if (filter === "") return c.status !== "churned" && c.status !== "lead";
@@ -81,13 +83,17 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   return (
     <div className="flex flex-col gap-8">
       <PageHeader title="Clients" subtitle={`${all.length} accounts`}>
-        <Link href="/admin/clients/templates" className={btnSecondary}>
-          <Settings2 className="h-4 w-4" />
-          Checklist templates
-        </Link>
-        <Link href="/admin/clients/new" className={btnPrimary}>
-          Add client
-        </Link>
+        {adminCan(ctx, "clients.templates") && (
+          <Link href="/admin/clients/templates" className={btnSecondary}>
+            <Settings2 className="h-4 w-4" />
+            Checklist templates
+          </Link>
+        )}
+        {adminCan(ctx, "clients.create") && (
+          <Link href="/admin/clients/new" className={btnPrimary}>
+            Add client
+          </Link>
+        )}
       </PageHeader>
 
       {params.deleted === "1" && <Notice kind="ok">Client moved to trash.</Notice>}

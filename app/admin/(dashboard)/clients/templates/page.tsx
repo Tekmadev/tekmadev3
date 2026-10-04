@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireOwner } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { listTemplates, STAGES, type OnboardingTaskTemplate } from "@/lib/onboarding-data";
 import { PageHeader, Panel, Notice } from "@/components/admin/ui";
 import { Badge, Field, inputCls, selectCls } from "@/components/portal/ui";
@@ -13,7 +13,7 @@ const OWNERS = ["client", "tekmadev"];
 const KINDS = ["form", "upload", "access_grant", "approval", "esign", "call", "internal", "checklist", "billing"];
 
 export default async function TemplatesPage({ searchParams }: { searchParams: Promise<{ saved?: string; deleted?: string; e?: string }> }) {
-  await requireOwner();
+  await requireAdminCapability("clients.templates");
   const params = await searchParams;
   const templates = await listTemplates();
 

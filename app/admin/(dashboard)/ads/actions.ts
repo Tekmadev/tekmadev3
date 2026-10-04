@@ -2,12 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireOwner } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { syncMetaInsights } from "@/lib/meta-ads";
 
-/** "Refresh from Meta": the same pull the nightly job does, on demand. Owner only. */
+/** "Refresh from Meta": the same pull the nightly job does, on demand (ads.refresh). */
 export async function refreshMetaAdsAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("ads.refresh");
   const range = String(formData.get("range") || "");
   const result = await syncMetaInsights({ trigger: "manual" });
   revalidatePath("/admin/ads");

@@ -1,4 +1,4 @@
-import { requireOwner } from "@/lib/admin";
+import { adminCan, requireAdminCapability } from "@/lib/admin";
 import { getCouponsView, type CouponRow } from "@/lib/coupon-data";
 import { getAllPlans } from "@/lib/pricing-data";
 import { isOneTimeScope, scopeLabel } from "@/lib/coupon-scopes";
@@ -45,7 +45,9 @@ export default async function CouponsAdmin({
 }: {
   searchParams: Promise<{ ok?: string; e?: string; code?: string; msg?: string }>;
 }) {
-  await requireOwner();
+  const ctx = await requireAdminCapability("coupons.view");
+  const canWrite = adminCan(ctx, "coupons.write");
+  const canShare = adminCan(ctx, "coupons.share");
   const [coupons, plans] = await Promise.all([getCouponsView(), getAllPlans()]);
   const { ok, e, code, msg } = await searchParams;
 
@@ -77,14 +79,14 @@ export default async function CouponsAdmin({
     </span>,
     c.redeem_by ? fmtDate(c.redeem_by) : "-",
     c.active ? <Badge key="s" tone="gold">active</Badge> : <Badge key="s" tone="muted">disabled</Badge>,
-    c.active && (c.applies_to === "monthly" || c.applies_to === "order") ? (
+    canShare && c.active && (c.applies_to === "monthly" || c.applies_to === "order") ? (
       <DealLink key="dl" url={`${business.url}/start?deal=${encodeURIComponent(c.code)}`} />
     ) : (
       <span key="dl" className="text-ink-4">
         -
       </span>
     ),
-    c.active ? (
+    canWrite && c.active ? (
       <form key="a" action={deactivateCouponAction}>
         <input type="hidden" name="id" value={c.id} />
         <PendingSubmit
@@ -106,7 +108,7 @@ export default async function CouponsAdmin({
 
       {notice && <Notice kind={notice.kind}>{notice.text}</Notice>}
 
-      {!stripeReady && (
+      {canWrite && !stripeReady && (
         <Notice kind="err">
           No Stripe products are set up yet. Save a price on the Pricing page first, then create coupons here.
         </Notice>
@@ -128,15 +130,17 @@ export default async function CouponsAdmin({
         setup fee and auto-applies that code, no stacking needed.
       </p>
 
-      <Panel title="New coupon">
-        <CouponForm currency={currency} />
-      </Panel>
+      {canWrite && (
+        <Panel title="New coupon">
+          <CouponForm currency={currency} />
+        </Panel>
+      )}
 
       <Panel title="Existing coupons">
         <DataTable
           head={["Code", "Discount", "Applies to", "Duration", "Redeemed", "Expires", "Status", "Deal link", ""]}
           rows={rows}
-          empty="No coupons yet. Create one above."
+          empty={canWrite ? "No coupons yet. Create one above." : "No coupons yet."}
         />
       </Panel>
     </div>

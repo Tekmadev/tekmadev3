@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Users, UserPlus, MailOpen, MousePointerClick, LayoutTemplate } from "lucide-react";
-import { requireOwner } from "@/lib/admin";
+import { adminCan, requireAdminCapability } from "@/lib/admin";
 import { getSubscribers, getSubscriberStats } from "@/lib/subscribers-data";
 import { unsubscribeCopy } from "@/config/site";
 import { getCampaigns, getRecentEmailEvents, getEmailStats } from "@/lib/email-data";
@@ -49,13 +49,18 @@ export default async function EmailAdmin({
 }: {
   searchParams: Promise<{ ok?: string; e?: string }>;
 }) {
-  await requireOwner();
+  const ctx = await requireAdminCapability("email.view");
+  const canWriteCampaigns = adminCan(ctx, "email.campaigns.write");
+  // Subscriber records (emails, consent) are never loaded for a role without them.
+  const seesSubscribers = adminCan(ctx, "email.subscribers.view");
+  const canWriteSubscribers = adminCan(ctx, "email.subscribers.write");
+  const seesCrm = adminCan(ctx, "crm.view");
 
   const [subStats, emailStats, campaigns, subscribers, events] = await Promise.all([
     getSubscriberStats(),
     getEmailStats(),
     getCampaigns(),
-    getSubscribers(100),
+    seesSubscribers ? getSubscribers(100) : Promise.resolve([]),
     getRecentEmailEvents(25),
   ]);
 
@@ -92,25 +97,29 @@ export default async function EmailAdmin({
         paused
       </Badge>
     ),
-    <div key="act" className="flex items-center gap-2">
-      <form action={toggleCampaignAction}>
-        <input type="hidden" name="id" value={c.id} />
-        <input type="hidden" name="active" value={(!c.active).toString()} />
-        <PendingSubmit
-          className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-gold/50 hover:text-gold"
-        >
-          {c.active ? "Pause" : "Resume"}
-        </PendingSubmit>
-      </form>
-      <form action={deleteCampaignAction}>
-        <input type="hidden" name="id" value={c.id} />
-        <PendingSubmit
-          className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-signal/50 hover:text-signal"
-        >
-          Delete
-        </PendingSubmit>
-      </form>
-    </div>,
+    canWriteCampaigns ? (
+      <div key="act" className="flex items-center gap-2">
+        <form action={toggleCampaignAction}>
+          <input type="hidden" name="id" value={c.id} />
+          <input type="hidden" name="active" value={(!c.active).toString()} />
+          <PendingSubmit
+            className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-gold/50 hover:text-gold"
+          >
+            {c.active ? "Pause" : "Resume"}
+          </PendingSubmit>
+        </form>
+        <form action={deleteCampaignAction}>
+          <input type="hidden" name="id" value={c.id} />
+          <PendingSubmit
+            className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-signal/50 hover:text-signal"
+          >
+            Delete
+          </PendingSubmit>
+        </form>
+      </div>
+    ) : (
+      ""
+    ),
   ]);
 
   const subscriberRows = subscribers.map((s) => [
@@ -141,30 +150,40 @@ export default async function EmailAdmin({
     ),
     // "CRM" rather than the vendor, like the badge on Free tools. Only a real
     // upsert stamps ghl_synced_at, and the inspector shows both sides in full.
-    <Link key="crm" href={`/admin/crm?email=${encodeURIComponent(s.email)}`} title="Compare with the CRM">
-      {s.ghl_synced_at ? <Badge tone="ok">CRM</Badge> : <Badge tone="muted">No CRM</Badge>}
-    </Link>,
+    seesCrm ? (
+      <Link key="crm" href={`/admin/crm?email=${encodeURIComponent(s.email)}`} title="Compare with the CRM">
+        {s.ghl_synced_at ? <Badge tone="ok">CRM</Badge> : <Badge tone="muted">No CRM</Badge>}
+      </Link>
+    ) : s.ghl_synced_at ? (
+      <Badge key="crm" tone="ok">CRM</Badge>
+    ) : (
+      <Badge key="crm" tone="muted">No CRM</Badge>
+    ),
     txt(s.country),
-    <div key="act" className="flex items-center gap-2">
-      {s.status === "active" && (
-        <form action={unsubscribeSubscriberAction}>
+    canWriteSubscribers ? (
+      <div key="act" className="flex items-center gap-2">
+        {s.status === "active" && (
+          <form action={unsubscribeSubscriberAction}>
+            <input type="hidden" name="id" value={s.id} />
+            <PendingSubmit
+              className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-gold/50 hover:text-gold"
+            >
+              Unsubscribe
+            </PendingSubmit>
+          </form>
+        )}
+        <form action={deleteSubscriberAction}>
           <input type="hidden" name="id" value={s.id} />
           <PendingSubmit
-            className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-gold/50 hover:text-gold"
+            className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-signal/50 hover:text-signal"
           >
-            Unsubscribe
+            Delete
           </PendingSubmit>
         </form>
-      )}
-      <form action={deleteSubscriberAction}>
-        <input type="hidden" name="id" value={s.id} />
-        <PendingSubmit
-          className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-signal/50 hover:text-signal"
-        >
-          Delete
-        </PendingSubmit>
-      </form>
-    </div>,
+      </div>
+    ) : (
+      ""
+    ),
   ]);
 
   const eventRows = events.map((ev) => [
@@ -221,9 +240,11 @@ export default async function EmailAdmin({
         .
       </p>
 
-      <Panel title="New campaign">
-        <CampaignForm />
-      </Panel>
+      {canWriteCampaigns && (
+        <Panel title="New campaign">
+          <CampaignForm />
+        </Panel>
+      )}
 
       <Panel title="Campaigns">
         <DataTable
@@ -233,13 +254,15 @@ export default async function EmailAdmin({
         />
       </Panel>
 
-      <Panel title={`Subscribers (${subStats.total.toLocaleString("en-US")})`}>
-        <DataTable
-          head={["When", "Email", "Source", "Status", "CRM", "Country", ""]}
-          rows={subscriberRows}
-          empty="No subscribers yet. They appear here the moment someone signs up in the footer."
-        />
-      </Panel>
+      {seesSubscribers && (
+        <Panel title={`Subscribers (${subStats.total.toLocaleString("en-US")})`}>
+          <DataTable
+            head={["When", "Email", "Source", "Status", "CRM", "Country", ""]}
+            rows={subscriberRows}
+            empty="No subscribers yet. They appear here the moment someone signs up in the footer."
+          />
+        </Panel>
+      )}
 
       <Panel title="Recent engagement">
         <DataTable

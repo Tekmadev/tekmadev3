@@ -19,9 +19,32 @@ import type { BlogBlock } from "@/lib/blog-data";
  *   ```lang ... ```            code block
  *   --- or ***                  divider
  *   ::: cta ... :::             call-to-action (heading:, body:, button:, href:)
+ *
+ * Inside a quote, callout or answer, a blank quoted line (">") is a paragraph
+ * break: the block text holds "\n\n" there. A `::: cta` with no closing `:::`
+ * is not a CTA; its lines stay text. Table rows always have one cell per
+ * header. The admin app's preview (POST /api/admin/v1/blog/render) uses this
+ * same converter, so what it shows is what gets stored.
  */
 
 const CALLOUT_RE = /^\[!(tip|info|warning|answer)\]\s*(.*)$/i;
+
+/** Quoted lines as block text: lines join with a space, a blank line becomes a paragraph break. */
+function joinQuoted(lines: string[]): string {
+  const paragraphs: string[] = [];
+  let current: string[] = [];
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (line) {
+      current.push(line);
+    } else if (current.length) {
+      paragraphs.push(current.join(" "));
+      current = [];
+    }
+  }
+  if (current.length) paragraphs.push(current.join(" "));
+  return paragraphs.join("\n\n");
+}
 
 export function markdownToBlocks(md: string): BlogBlock[] {
   const lines = (md ?? "").replace(/\r\n?/g, "\n").split("\n");
@@ -53,27 +76,26 @@ export function markdownToBlocks(md: string): BlogBlock[] {
       continue;
     }
 
-    // CTA directive
+    // CTA directive (only when it is closed; otherwise the lines stay text)
     if (/^:::\s*cta\s*$/i.test(line.trim())) {
-      const buf: string[] = [];
-      i++;
-      while (i < lines.length && lines[i].trim() !== ":::") {
-        buf.push(lines[i]);
-        i++;
+      let end = i + 1;
+      while (end < lines.length && lines[end].trim() !== ":::") end++;
+      if (end < lines.length) {
+        const buf = lines.slice(i + 1, end);
+        i = end + 1; // past the closing :::
+        const field = (name: string) => {
+          const m = buf.find((b) => b.toLowerCase().startsWith(`${name}:`));
+          return m ? m.slice(m.indexOf(":") + 1).trim() : "";
+        };
+        blocks.push({
+          type: "cta",
+          heading: field("heading") || "Ready to grow?",
+          body: field("body") || undefined,
+          buttonLabel: field("button") || "Book a call",
+          href: field("href") || "/#book",
+        });
+        continue;
       }
-      i++; // closing :::
-      const field = (name: string) => {
-        const m = buf.find((b) => b.toLowerCase().startsWith(`${name}:`));
-        return m ? m.slice(m.indexOf(":") + 1).trim() : "";
-      };
-      blocks.push({
-        type: "cta",
-        heading: field("heading") || "Ready to grow?",
-        body: field("body") || undefined,
-        buttonLabel: field("button") || "Book a call",
-        href: field("href") || "/#book",
-      });
-      continue;
     }
 
     // Divider
@@ -116,14 +138,13 @@ export function markdownToBlocks(md: string): BlogBlock[] {
       const marker = first.match(CALLOUT_RE);
       if (marker) {
         const kind = marker[1].toLowerCase();
-        const rest = [marker[2], ...quoted.slice(1)].join(" ").trim();
         if (kind === "answer") {
-          blocks.push({ type: "answer", question: marker[2].trim() || undefined, text: quoted.slice(1).join(" ").trim() });
+          blocks.push({ type: "answer", question: marker[2].trim() || undefined, text: joinQuoted(quoted.slice(1)) });
         } else {
-          blocks.push({ type: "callout", variant: kind as "tip" | "info" | "warning", text: rest });
+          blocks.push({ type: "callout", variant: kind as "tip" | "info" | "warning", text: joinQuoted([marker[2], ...quoted.slice(1)]) });
         }
       } else {
-        blocks.push({ type: "quote", text: quoted.join(" ").trim() });
+        blocks.push({ type: "quote", text: joinQuoted(quoted) });
       }
       continue;
     }
@@ -134,7 +155,9 @@ export function markdownToBlocks(md: string): BlogBlock[] {
       i += 2; // header + separator
       const rows: string[][] = [];
       while (i < lines.length && lines[i].includes("|") && !isBlank(lines[i])) {
-        rows.push(splitRow(lines[i]));
+        const cells = splitRow(lines[i]);
+        // Exactly one cell per header.
+        rows.push(headers.map((_, c) => cells[c] ?? ""));
         i++;
       }
       blocks.push({ type: "table", headers, rows });
@@ -153,13 +176,17 @@ export function markdownToBlocks(md: string): BlogBlock[] {
       continue;
     }
 
-    // Paragraph (consume until a blank line or a block starter)
-    const para: string[] = [];
+    // Paragraph (consume until a blank line or a block starter). The first line
+    // is always taken: it can look like a block start without being one (an
+    // unclosed "::: cta", an image with a space in its URL), and skipping it
+    // would never move past it.
+    const para: string[] = [line.trim()];
+    i++;
     while (i < lines.length && !isBlank(lines[i]) && !isBlockStart(lines[i])) {
       para.push(lines[i].trim());
       i++;
     }
-    if (para.length) blocks.push({ type: "paragraph", text: para.join(" ") });
+    blocks.push({ type: "paragraph", text: para.join(" ") });
   }
 
   return blocks;
@@ -185,6 +212,12 @@ function splitRow(line: string): string[] {
     .map((c) => c.trim());
 }
 
+/** Block text as quoted lines: a paragraph break ("\n\n") becomes a bare ">" line. */
+function quoteLines(text: string): string[] {
+  if (!text) return [];
+  return text.split("\n").map((line) => (line.trim() ? `> ${line}` : ">"));
+}
+
 /** Serialize blocks back to Markdown for the editor textarea. */
 export function blocksToMarkdown(blocks: BlogBlock[]): string {
   const out: string[] = [];
@@ -200,13 +233,15 @@ export function blocksToMarkdown(blocks: BlogBlock[]): string {
         out.push(b.items.map((it, n) => (b.ordered ? `${n + 1}. ${it}` : `- ${it}`)).join("\n"));
         break;
       case "quote":
-        out.push(`> ${b.text}`);
+        out.push(quoteLines(b.text).join("\n") || ">");
         break;
-      case "callout":
-        out.push(`> [!${b.variant ?? "info"}] ${b.text}`);
+      case "callout": {
+        const [first = "", ...rest] = (b.text ?? "").split("\n");
+        out.push([`> [!${b.variant ?? "info"}] ${first}`, ...quoteLines(rest.join("\n"))].join("\n"));
         break;
+      }
       case "answer":
-        out.push(`> [!answer] ${b.question ?? ""}\n> ${b.text}`);
+        out.push([`> [!answer] ${b.question ?? ""}`, ...quoteLines(b.text)].join("\n"));
         break;
       case "image":
         out.push(`![${b.alt}](${b.url}${b.caption ? ` "${b.caption}"` : ""})`);

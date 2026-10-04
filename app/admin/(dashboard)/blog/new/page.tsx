@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireOwner } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { listAuthors, listCategories } from "@/lib/blog-data";
 import { PageHeader, Notice } from "@/components/admin/ui";
 import { BlogForm } from "@/components/admin/BlogForm";
@@ -12,7 +12,7 @@ export default async function NewPostPage({
 }: {
   searchParams: Promise<{ e?: string }>;
 }) {
-  await requireOwner();
+  await requireAdminCapability("blog.write");
   const [authors, categories] = await Promise.all([listAuthors(), listCategories()]);
   const { e } = await searchParams;
 

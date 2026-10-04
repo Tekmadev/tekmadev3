@@ -181,6 +181,11 @@ export type ApprovalKind =
   | "landing_page"
   | "follow_up_sequence"
   | "social_content"
+  // Written by the admin app (migration 20261003000040 allows them).
+  | "copy"
+  | "design"
+  | "email"
+  | "automation"
   | "other";
 
 export type ClientApproval = {
@@ -236,6 +241,10 @@ export type BookedCallSource =
   | "chat"
   | "manual"
   | "import"
+  // Logged by hand in the admin app (migration 20261003000040 allows them).
+  | "phone"
+  | "website"
+  | "referral"
   | "other";
 
 export type BookedCall = {
@@ -637,6 +646,7 @@ export async function createAccessGrant(input: {
   task_id?: string | null;
   label?: string | null;
   notes?: string | null;
+  metadata?: Record<string, unknown>;
 }): Promise<AccessGrant> {
   const { data, error } = await db()
     .from("client_access_grants")
@@ -647,6 +657,7 @@ export async function createAccessGrant(input: {
       task_id: input.task_id ?? null,
       label: input.label ?? null,
       notes: input.notes ?? null,
+      metadata: input.metadata ?? {},
     })
     .select("*")
     .single();
@@ -755,8 +766,16 @@ export async function createApproval(input: {
   preview_url?: string | null;
   attachments?: { label: string; url: string }[];
   requested_by: string;
+  /**
+   * What makes a new version. "task" (the default, the web admin): the same
+   * checklist task, superseding the previous version unless it was approved.
+   * "title" (the admin app): the same title, case-insensitive, superseding
+   * only versions still pending, and only once the new one is saved.
+   */
+  version_by?: "task" | "title";
 }): Promise<ClientApproval> {
   const supabase = db();
+  if (input.version_by === "title") return createApprovalVersionByTitle(input);
   // A new request for the same task supersedes the previous pending one.
   let version = 1;
   if (input.task_id) {
@@ -793,6 +812,45 @@ export async function createApproval(input: {
     .single();
   if (error) throw new Error(error.message);
   return data as ClientApproval;
+}
+
+/** createApproval with `version_by: "title"`: versions count per title, and the new one supersedes what is still pending. */
+async function createApprovalVersionByTitle(input: Parameters<typeof createApproval>[0]): Promise<ClientApproval> {
+  const supabase = db();
+  const title = input.title.trim();
+  // ilike without wildcards is a case-insensitive equality; escape the pattern characters.
+  const { data: prevRows, error: prevError } = await supabase
+    .from("client_approvals")
+    .select("id,version,status")
+    .eq("client_id", input.client_id)
+    .ilike("title", title.replace(/[\\%_]/g, (c) => `\\${c}`));
+  if (prevError) throw new Error(prevError.message);
+  const prev = (prevRows ?? []) as { id: string; version: number; status: ClientApproval["status"] }[];
+  const version = prev.reduce((max, row) => Math.max(max, row.version), 0) + 1;
+  const { data, error } = await supabase
+    .from("client_approvals")
+    .insert({
+      client_id: input.client_id,
+      onboarding_id: input.onboarding_id ?? null,
+      task_id: input.task_id ?? null,
+      kind: input.kind,
+      title,
+      description: input.description ?? null,
+      preview_url: input.preview_url ?? null,
+      attachments: input.attachments ?? [],
+      version,
+      requested_by: input.requested_by,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+  const created = data as ClientApproval;
+  const pendingIds = prev.filter((row) => row.status === "pending").map((row) => row.id);
+  if (pendingIds.length) {
+    const { error: supersedeError } = await supabase.from("client_approvals").update({ status: "superseded" }).in("id", pendingIds);
+    if (supersedeError) console.error("[approvals] could not supersede the previous version", supersedeError.message);
+  }
+  return created;
 }
 
 export async function decideApproval(

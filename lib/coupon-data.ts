@@ -36,7 +36,16 @@ export async function getCoupons(): Promise<CouponRow[]> {
  * stored values if Stripe is unconfigured or unreachable.
  */
 export async function getCouponsView(): Promise<CouponRow[]> {
-  const rows = await getCoupons();
+  return withLiveCouponState(await getCoupons());
+}
+
+/**
+ * Stored coupon rows with Stripe's live redemption count and active state laid
+ * over them (Stripe is the source of truth for usage). Rows come back as they
+ * were when Stripe is unconfigured or unreachable. Shared by the dashboard
+ * list and the admin API.
+ */
+export async function withLiveCouponState(rows: CouponRow[]): Promise<CouponRow[]> {
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret || rows.length === 0) return rows;
 

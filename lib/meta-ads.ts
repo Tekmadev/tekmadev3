@@ -129,6 +129,83 @@ async function fetchInsights(cfg: MetaAdsConfig, since: string, until: string): 
   return rows;
 }
 
+type CampaignRow = { id: string; name?: string; status?: string; effective_status?: string };
+
+/** Archived campaigns are left out of the campaigns edge unless asked for by status. */
+const CAMPAIGN_STATUSES = ["ACTIVE", "PAUSED", "ARCHIVED", "IN_PROCESS", "WITH_ISSUES"];
+
+/** Every campaign in the account with its status. Throws on any API error. */
+async function fetchCampaigns(cfg: MetaAdsConfig, withArchived: boolean): Promise<CampaignRow[]> {
+  const rows: CampaignRow[] = [];
+  let after: string | null = null;
+  for (let page = 0; page < 20; page++) {
+    const params = new URLSearchParams({ fields: "id,name,status,effective_status", limit: "500" });
+    if (withArchived) params.set("effective_status", JSON.stringify(CAMPAIGN_STATUSES));
+    if (after) params.set("after", after);
+    const res = await fetch(`${GRAPH}/act_${cfg.accountId}/campaigns?${params}`, {
+      headers: { Authorization: `Bearer ${cfg.token}` },
+      signal: AbortSignal.timeout(20_000),
+      cache: "no-store",
+    });
+    const body = (await res.json().catch(() => ({}))) as {
+      data?: CampaignRow[];
+      paging?: { cursors?: { after?: string }; next?: string };
+      error?: { message?: string; code?: number };
+    };
+    if (!res.ok || body.error) {
+      const e = body.error;
+      throw new Error(`Meta ${res.status}${e?.code ? ` (code ${e.code})` : ""}: ${e?.message ?? "request failed"}`);
+    }
+    rows.push(...(body.data ?? []));
+    after = body.paging?.next && body.paging.cursors?.after ? body.paging.cursors.after : null;
+    if (!after) break;
+  }
+  return rows;
+}
+
+/**
+ * Each campaign's status into `ad_campaigns`, for the admin app's Ads screen
+ * (the Insights edge reports delivery, never status). Best effort and quiet: a
+ * failure is logged and the number is null, so it can never fail a pull, the
+ * nightly job or the web admin's Refresh. Returns how many campaigns it saved.
+ */
+export async function syncMetaCampaignStatuses(
+  cfg: MetaAdsConfig,
+  supabase: NonNullable<ReturnType<typeof getSupabaseAdmin>>,
+): Promise<number | null> {
+  try {
+    let campaigns: CampaignRow[];
+    try {
+      campaigns = await fetchCampaigns(cfg, true);
+    } catch {
+      // An account that rejects the status filter still lists its live campaigns.
+      campaigns = await fetchCampaigns(cfg, false);
+    }
+    const now = new Date().toISOString();
+    const records = campaigns
+      .filter((c) => typeof c.id === "string" && c.id.length > 0)
+      .map((c) => ({
+        platform: PLATFORM,
+        account_id: cfg.accountId,
+        campaign_id: c.id,
+        name: c.name ?? null,
+        status: c.status ?? null,
+        effective_status: c.effective_status ?? null,
+        synced_at: now,
+      }));
+    for (let i = 0; i < records.length; i += 500) {
+      const { error } = await supabase
+        .from("ad_campaigns")
+        .upsert(records.slice(i, i + 500), { onConflict: "platform,account_id,campaign_id" });
+      if (error) throw new Error(`save failed: ${error.message}`);
+    }
+    return records.length;
+  } catch (err) {
+    console.error("[meta ads] campaign statuses not synced", err instanceof Error ? err.message : String(err));
+    return null;
+  }
+}
+
 export type SyncResult =
   | { ok: true; rows: number; from: string; to: string; backfilled: boolean }
   | { ok: false; error: string };
@@ -204,6 +281,9 @@ export async function syncMetaInsights(opts: { trigger: "cron" | "manual" } = { 
     }
 
     await finish({ status: "ok", rows_upserted: records.length });
+    // Insights carry delivery, not status; the admin app shows each campaign's
+    // status. Best effort: never fails the pull (see syncMetaCampaignStatuses).
+    await syncMetaCampaignStatuses(cfg, supabase);
     return { ok: true, rows: records.length, from: since, to: until, backfilled };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

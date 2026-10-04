@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, ArrowUpRight, Bell } from "lucide-react";
-import { requireAdmin } from "@/lib/admin";
+import { adminCan, adminInboxViewer, requireAdminCapability } from "@/lib/admin";
 import {
   EMPTY_SUMMARY,
   decodeCursor,
@@ -47,14 +47,16 @@ const timeOf = (iso: string) =>
 type Search = { filter?: string; category?: string; test?: string; cursor?: string };
 
 export default async function NotificationsPage({ searchParams }: { searchParams: Promise<Search> }) {
-  const ctx = await requireAdmin();
-  const viewer = { userId: ctx.user.id, isOwner: ctx.role === "owner" };
+  const ctx = await requireAdminCapability("notifications.view");
+  // The categories and audience this role may read (staff: Leads and Clients).
+  const viewer = adminInboxViewer(ctx);
+  const seesTest = adminCan(ctx, "testdata.view");
   const q = await searchParams;
 
   const filter = FILTERS.some((f) => f.key === q.filter) ? (q.filter as NotificationFilter) : "all";
   const category = isCategory(q.category) ? q.category : null;
-  // Test rows are an owner tool. The database enforces it too.
-  const includeTest = q.test === "1" && viewer.isOwner;
+  // Test rows need testdata.view. The database enforces the audience too.
+  const includeTest = q.test === "1" && seesTest && viewer.isOwner;
   const cursor = decodeCursor(q.cursor);
 
   const [summaryOrNull, itemsOrNull, prefs] = await Promise.all([
@@ -90,7 +92,10 @@ export default async function NotificationsPage({ searchParams }: { searchParams
     else groups.push({ label, rows: [n] });
   }
 
-  const categories = ADMIN_CATEGORIES.filter((c) => viewer.isOwner || c.key !== "team");
+  // Only the categories this role may read get a chip.
+  const categories = ADMIN_CATEGORIES.filter((c) =>
+    viewer.categories ? viewer.categories.includes(c.key) : viewer.isOwner || (c.key !== "team" && c.key !== "audience"),
+  );
   const chip = (active: boolean) =>
     cn(
       "shrink-0 snap-start rounded-full border px-3.5 py-1.5 text-sm transition-colors",
@@ -136,7 +141,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
               {c.label}
             </Link>
           ))}
-          {viewer.isOwner && (
+          {seesTest && viewer.isOwner && (
             <Link href={href({ test: includeTest ? undefined : "1", cursor: undefined })} className={chip(includeTest)}>
               {includeTest ? "Test included" : "Include test"}
             </Link>

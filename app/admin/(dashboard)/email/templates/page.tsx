@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { requireOwner } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { marketingEmailTemplates } from "@/lib/email-templates.generated";
 import { PageHeader } from "@/components/admin/ui";
 import { EmailTemplateOrganizer } from "@/components/admin/EmailTemplateOrganizer";
@@ -8,7 +8,7 @@ import { EmailTemplateOrganizer } from "@/components/admin/EmailTemplateOrganize
 export const dynamic = "force-dynamic";
 
 export default async function EmailTemplatesPage() {
-  await requireOwner();
+  await requireAdminCapability("email.view");
 
   return (
     <div className="flex flex-col gap-6">

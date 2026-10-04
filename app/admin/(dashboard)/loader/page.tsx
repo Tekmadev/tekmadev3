@@ -1,4 +1,4 @@
-import { requireOwner } from "@/lib/admin";
+import { adminCan, requireAdminCapability } from "@/lib/admin";
 import { PageHeader, Notice } from "@/components/admin/ui";
 import { LoaderSettingsForm } from "@/components/admin/LoaderSettingsForm";
 import { getLoaderSettings } from "@/lib/site-settings";
@@ -13,7 +13,7 @@ const NOTICES: Record<string, { kind: "ok" | "err"; text: string }> = {
 };
 
 export default async function LoaderPage({ searchParams }: { searchParams: Promise<{ ok?: string; e?: string }> }) {
-  await requireOwner();
+  const ctx = await requireAdminCapability("loader.view");
   const [{ ok, e }, settings] = await Promise.all([searchParams, getLoaderSettings()]);
   const notice = ok ? NOTICES[ok] : e ? NOTICES[e] : null;
 
@@ -24,7 +24,11 @@ export default async function LoaderPage({ searchParams }: { searchParams: Promi
         subtitle="The black hole logo that shows while a page loads and inside every button that is working."
       />
       {notice && <Notice kind={notice.kind}>{notice.text}</Notice>}
-      <LoaderSettingsForm initial={settings} action={saveLoaderAction} />
+      {adminCan(ctx, "loader.write") ? (
+        <LoaderSettingsForm initial={settings} action={saveLoaderAction} />
+      ) : (
+        <Notice kind="err">Your role can see this page but cannot change the loader.</Notice>
+      )}
     </div>
   );
 }

@@ -11,7 +11,8 @@ function show(v: unknown, options?: { value: string; label: string }[]): string 
   return String(v);
 }
 
-export function IntakePanel({ intake, clientId }: { intake: ClientIntake | null; clientId: string }) {
+/** `canReview` (clients.intake.review) shows Mark reviewed; the action checks it again. */
+export function IntakePanel({ intake, clientId, canReview }: { intake: ClientIntake | null; clientId: string; canReview: boolean }) {
   if (!intake) return <p className="text-sm text-ink-4">The client has not started the intake yet.</p>;
   const a = intake.answers as Record<string, unknown>;
 
@@ -22,7 +23,7 @@ export function IntakePanel({ intake, clientId }: { intake: ClientIntake | null;
         <span>v{intake.version}</span>
         {intake.submitted_at && <span>Submitted {fmtDateTime(intake.submitted_at)}</span>}
         {intake.reviewed_at && <span>Reviewed {fmtDateTime(intake.reviewed_at)}</span>}
-        {intake.status === "submitted" && (
+        {canReview && intake.status === "submitted" && (
           <form action={markIntakeReviewedAction} className="ml-auto">
             <input type="hidden" name="intake_id" value={intake.id} />
             <input type="hidden" name="client_id" value={clientId} />

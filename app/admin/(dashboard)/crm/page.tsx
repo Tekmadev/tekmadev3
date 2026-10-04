@@ -1,4 +1,4 @@
-import { requireOwner } from "@/lib/admin";
+import { adminCan, requireAdminCapability } from "@/lib/admin";
 import { Notice, PageHeader } from "@/components/admin/ui";
 import { ConnectionPanel } from "@/components/admin/crm/ConnectionPanel";
 import { AttentionPanel, QueuePanel, ReconcilePanel } from "@/components/admin/crm/QueuePanels";
@@ -7,12 +7,13 @@ import { InspectorPanel } from "@/components/admin/crm/InspectorPanel";
 export const dynamic = "force-dynamic";
 
 /**
- * CRM sync: the owner's view of the GoHighLevel integration.
+ * CRM sync: the owner's and managers' view of the GoHighLevel integration
+ * (crm.view to look, crm.write for every button).
  *
  * Everything the integration does is visible here: whether it is connected
  * and proven, what is waiting, what stopped and why, and what one address
  * looks like on both sides. The route and the labels say "CRM" rather than the
- * vendor; the body copy may name it because only the owner reads this page.
+ * vendor; the body copy may name it because only the owner and managers read this page.
  */
 
 const OK: Record<string, string> = {
@@ -59,7 +60,8 @@ export default async function CrmPage({
 }: {
   searchParams: Promise<{ ok?: string; e?: string; n?: string; queued?: string; halted?: string; email?: string; where?: string }>;
 }) {
-  await requireOwner();
+  const ctx = await requireAdminCapability("crm.view");
+  const canWrite = adminCan(ctx, "crm.write");
   const { ok, e, n, queued, halted, email, where } = await searchParams;
 
   let okText = ok ? OK[ok] : null;
@@ -83,13 +85,13 @@ export default async function CrmPage({
       {okText && <Notice kind="ok">{okText}</Notice>}
       {e && <Notice kind="err">{ERR[e] ?? "Something went wrong."}</Notice>}
 
-      <ConnectionPanel />
+      <ConnectionPanel canWrite={canWrite} />
       <div className="grid gap-8 xl:grid-cols-2">
-        <QueuePanel />
-        <ReconcilePanel />
+        <QueuePanel canWrite={canWrite} />
+        <ReconcilePanel canWrite={canWrite} />
       </div>
-      <AttentionPanel />
-      <InspectorPanel email={email} />
+      <AttentionPanel canWrite={canWrite} />
+      <InspectorPanel email={email} canWrite={canWrite} />
 
       <p className="text-xs text-ink-4">
         Setup, step by step, is in <code>docs/crm-setup.md</code>. Do not send a campaign from GoHighLevel until the Inbound switch is on

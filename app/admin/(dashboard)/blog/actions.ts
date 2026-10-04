@@ -1,10 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
-import { requireOwner } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { markdownToBlocks } from "@/lib/blog-markdown";
 import { createBlogMediaUpload, type BlogMediaTicket } from "@/lib/blog-media";
+import { revalidateBlogCategories, revalidateBlogPost } from "@/lib/blog-revalidate";
 import {
   createPost,
   updatePost,
@@ -87,16 +87,13 @@ function buildInput(fd: FormData): BlogPostInput {
 }
 
 function revalidatePost(slug?: string | null) {
-  revalidatePath("/blog");
-  revalidatePath("/sitemap.xml");
-  if (slug) revalidatePath(`/blog/${slug}`);
-  revalidatePath("/admin/blog");
+  revalidateBlogPost(slug);
 }
 
 // --- actions ---
 
 export async function createPostAction(fd: FormData) {
-  const ctx = await requireOwner();
+  const ctx = await requireAdminCapability("blog.write");
   let id: string;
   try {
     const post = await createPost(buildInput(fd), ctx.email);
@@ -110,7 +107,7 @@ export async function createPostAction(fd: FormData) {
 }
 
 export async function updatePostAction(fd: FormData) {
-  const ctx = await requireOwner();
+  const ctx = await requireAdminCapability("blog.write");
   const id = str(fd.get("id"));
   if (!id) redirect("/admin/blog?e=input");
 
@@ -128,7 +125,7 @@ export async function updatePostAction(fd: FormData) {
 }
 
 export async function publishPostAction(fd: FormData) {
-  const ctx = await requireOwner();
+  const ctx = await requireAdminCapability("blog.write");
   const id = str(fd.get("id"));
   if (!id) redirect("/admin/blog?e=input");
   const post = await getPostByIdAdmin(id);
@@ -138,7 +135,7 @@ export async function publishPostAction(fd: FormData) {
 }
 
 export async function setStatusAction(fd: FormData) {
-  const ctx = await requireOwner();
+  const ctx = await requireAdminCapability("blog.write");
   const id = str(fd.get("id"));
   const status = str(fd.get("status")) as BlogStatus;
   if (!id || !status) redirect("/admin/blog?e=input");
@@ -149,7 +146,7 @@ export async function setStatusAction(fd: FormData) {
 }
 
 export async function deletePostAction(fd: FormData) {
-  const ctx = await requireOwner();
+  const ctx = await requireAdminCapability("blog.trash");
   const id = str(fd.get("id"));
   if (!id) redirect("/admin/blog?e=input");
   const post = await getPostByIdAdmin(id);
@@ -162,8 +159,7 @@ export async function deletePostAction(fd: FormData) {
 
 /** Category names show on the public blog (chips, cards, articles). */
 function revalidateCategories() {
-  revalidatePath("/blog", "layout");
-  revalidatePath("/admin/blog");
+  revalidateBlogCategories();
 }
 
 function categoryFailure(err: unknown, what: string): "category_dup" | "category" {
@@ -173,7 +169,7 @@ function categoryFailure(err: unknown, what: string): "category_dup" | "category
 }
 
 export async function createCategoryAction(fd: FormData) {
-  await requireOwner();
+  await requireAdminCapability("blog.write");
   const name = str(fd.get("name"));
   if (!name) redirect("/admin/blog?e=input");
   try {
@@ -186,7 +182,7 @@ export async function createCategoryAction(fd: FormData) {
 }
 
 export async function renameCategoryAction(fd: FormData) {
-  await requireOwner();
+  await requireAdminCapability("blog.write");
   const id = str(fd.get("id"));
   const name = str(fd.get("name"));
   if (!id || !name) redirect("/admin/blog?e=input");
@@ -200,7 +196,7 @@ export async function renameCategoryAction(fd: FormData) {
 }
 
 export async function deleteCategoryAction(fd: FormData) {
-  await requireOwner();
+  await requireAdminCapability("blog.write");
   const id = str(fd.get("id"));
   if (!id) redirect("/admin/blog?e=input");
   try {
@@ -220,7 +216,7 @@ export type QuickCategoryResult = { ok: true; category: BlogCategory } | { ok: f
  * is untouched: no redirect, no page change, just the new row back.
  */
 export async function quickCreateCategoryAction(rawName: string): Promise<QuickCategoryResult> {
-  await requireOwner();
+  await requireAdminCapability("blog.write");
   const name = typeof rawName === "string" ? rawName.trim() : "";
   if (!name) return { ok: false, message: "Type a name first." };
   try {
@@ -244,7 +240,7 @@ export async function requestBlogMediaUploadAction(input: {
   size: number;
   type: string;
 }): Promise<BlogMediaTicket> {
-  await requireOwner();
+  await requireAdminCapability("blog.write");
   return createBlogMediaUpload({
     fileName: String(input?.fileName ?? ""),
     size: Number(input?.size),

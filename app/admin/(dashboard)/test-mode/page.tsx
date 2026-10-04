@@ -1,4 +1,4 @@
-import { requireOwner } from "@/lib/admin";
+import { adminCan, requireAdminCapability } from "@/lib/admin";
 import { business } from "@/config/site";
 import { testModeSwitchedOn } from "@/lib/test-mode";
 import { getTestModeStatus, listTestOrders } from "@/lib/test-mode-data";
@@ -28,7 +28,7 @@ function Step({ done, children }: { done: boolean; children: React.ReactNode }) 
 }
 
 /**
- * Rehearse a real purchase on the real site without moving money. Owner only.
+ * Rehearse a real purchase on the real site without moving money (testmode.view to look, testmode.write to act).
  * Nothing here can affect a real customer: see lib/stripe-mode.ts for the rules.
  */
 export default async function TestModePage({
@@ -36,7 +36,8 @@ export default async function TestModePage({
 }: {
   searchParams: Promise<{ ok?: string; e?: string; m?: string; n?: string; c?: string; o?: string; s?: string; l?: string }>;
 }) {
-  await requireOwner();
+  const ctx = await requireAdminCapability("testmode.view");
+  const canWrite = adminCan(ctx, "testmode.write");
   const [p, status, on, orders] = await Promise.all([searchParams, getTestModeStatus(), testModeSwitchedOn(), listTestOrders()]);
   const active = on && status.configured && status.catalogReady;
   const webhookUrl = `${business.url.replace("://", "://www.")}/api/webhooks/stripe`;
@@ -74,17 +75,19 @@ export default async function TestModePage({
             ? "Webline checkout in this browser now uses the Stripe sandbox. Every other visitor, and every other browser, still pays for real. It switches itself off after two hours."
             : "Checkout is live for everyone, including you. Switching it on affects only this browser, only while you are signed in as an admin."}
         </p>
-        <form action={switchTestModeAction} className="mt-5 flex flex-wrap items-center gap-3">
-          <input type="hidden" name="on" value={active ? "0" : "1"} />
-          <PendingSubmit className={active ? secondary : primary}>
-            {active ? "Switch test mode off" : "Switch test mode on"}
-          </PendingSubmit>
-          {active && (
-            <a href="/webline" className={primary}>
-              Go buy Webline
-            </a>
-          )}
-        </form>
+        {canWrite && (
+          <form action={switchTestModeAction} className="mt-5 flex flex-wrap items-center gap-3">
+            <input type="hidden" name="on" value={active ? "0" : "1"} />
+            <PendingSubmit className={active ? secondary : primary}>
+              {active ? "Switch test mode off" : "Switch test mode on"}
+            </PendingSubmit>
+            {active && (
+              <a href="/webline" className={primary}>
+                Go buy Webline
+              </a>
+            )}
+          </form>
+        )}
         {active && (
           <dl className="mt-6 grid gap-3 border-t border-line pt-5 text-sm sm:grid-cols-2">
             <div>
@@ -115,14 +118,16 @@ export default async function TestModePage({
             Build the test catalog: the same Webline and Webline Care, at today&apos;s prices, inside the sandbox.
           </Step>
         </ol>
-        <form action={setupTestCatalogAction} className="mt-5">
-          <PendingSubmit className={status.catalogReady ? secondary : primary} disabled={!status.configured}>
-            {status.catalogReady ? "Rebuild test catalog" : "Set up test catalog"}
-          </PendingSubmit>
-          <p className="mt-3 text-xs text-ink-4">
-            Run it again after changing a price in Pricing, or after clearing the sandbox&apos;s data in Stripe. It only rebuilds what no longer matches.
-          </p>
-        </form>
+        {canWrite && (
+          <form action={setupTestCatalogAction} className="mt-5">
+            <PendingSubmit className={status.catalogReady ? secondary : primary} disabled={!status.configured}>
+              {status.catalogReady ? "Rebuild test catalog" : "Set up test catalog"}
+            </PendingSubmit>
+            <p className="mt-3 text-xs text-ink-4">
+              Run it again after changing a price in Pricing, or after clearing the sandbox&apos;s data in Stripe. It only rebuilds what no longer matches.
+            </p>
+          </form>
+        )}
         <ul className="mt-5 flex flex-wrap gap-2">
           {status.products.map((prod) => (
             <li key={prod.id} className="flex items-center gap-2 text-xs text-ink-3">
@@ -151,15 +156,17 @@ export default async function TestModePage({
           {status.counts.subscriptions} test subscription{status.counts.subscriptions === 1 ? "" : "s"}. Deleting removes them and everything attached: checklist, agreement, uploads,
           notifications, and the login, if it is on no real account. Real clients are never touched. Stripe&apos;s own sandbox data stays; clear it in Stripe if you want.
         </p>
-        <form action={purgeTestDataAction} className="mt-5 flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-2 text-sm text-ink-2">
-            <input type="checkbox" name="confirm" className="h-4 w-4" />
-            Delete all test data
-          </label>
-          <PendingSubmit className={secondary}>
-            Delete
-          </PendingSubmit>
-        </form>
+        {canWrite && (
+          <form action={purgeTestDataAction} className="mt-5 flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-ink-2">
+              <input type="checkbox" name="confirm" className="h-4 w-4" />
+              Delete all test data
+            </label>
+            <PendingSubmit className={secondary}>
+              Delete
+            </PendingSubmit>
+          </form>
+        )}
       </Panel>
     </div>
   );

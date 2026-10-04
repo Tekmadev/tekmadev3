@@ -5,7 +5,8 @@ import { saveCrmLocationAction } from "@/app/admin/(dashboard)/clients/actions";
 
 /**
  * Which GoHighLevel sub-account is this client's, and which of its calendars
- * count toward their guarantee. Owner only, rendered only for the owner.
+ * count toward their guarantee. Rendered only for a role with clients.crm,
+ * and saveCrmLocationAction checks it again.
  */
 export function CrmLocationPanel({ clientId, location }: { clientId: string; location: ClientCrmLocation | null }) {
   return (

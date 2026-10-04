@@ -4,10 +4,12 @@ import { ADMIN_CATEGORIES, type AdminCategory, type AdminSeverity } from "@/lib/
 /**
  * Reading the admin notification center, per viewer.
  *
- * Every function takes the viewer's Supabase auth user id and whether they are
- * an owner. The database decides what is unread (a watermark plus per-row reads
- * plus muted categories) and what a manager may not see, so the web admin, the
- * JSON API and a future mobile app all get the same answer.
+ * Every function takes the viewer's Supabase auth user id, whether they are in
+ * the owner audience, and (for a role that may read only some categories, like
+ * staff) those categories. The database decides what is unread (a watermark
+ * plus per-row reads plus muted categories) and what a viewer may not see, so
+ * the web admin, the JSON API and the Android app all get the same answer.
+ * Build the viewer with lib/admin.ts adminInboxViewer.
  *
  * Reads return null when they FAIL, which is not the same as empty. An inbox
  * that quietly shows "nothing new" while the database is down is worse than one
@@ -45,7 +47,20 @@ export type AdminNotification = {
 
 export type NotificationSummary = { unread: number; needsAction: number; criticalUnread: number };
 
-export type Viewer = { userId: string; isOwner: boolean };
+export type Viewer = {
+  userId: string;
+  /** In the owner audience: owner-only rows (and, when asked for, test rows). */
+  isOwner: boolean;
+  /**
+   * The only categories this viewer may read, or null / absent for every one
+   * the audience rule allows. Set, the reads and writes below use the
+   * category-aware functions the admin API uses (admin_api_notification_*).
+   */
+  categories?: AdminCategory[] | null;
+};
+
+/** The categories a narrowed viewer may read, or null when the audience rule alone decides. */
+const narrowedTo = (viewer: Viewer): AdminCategory[] | null => (viewer.categories ? viewer.categories : null);
 
 /** Where the next page starts. Both halves, so rows sharing a timestamp are never skipped. */
 export type NotificationCursor = { before: string; beforeId: string };
@@ -84,10 +99,18 @@ export async function seedViewer(viewer: Viewer): Promise<void> {
 export async function getNotificationSummary(viewer: Viewer): Promise<NotificationSummary | null> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return null;
-  const { data, error } = await supabase.rpc("admin_notification_summary", {
-    p_user: viewer.userId,
-    p_is_owner: viewer.isOwner,
-  });
+  const categories = narrowedTo(viewer);
+  const { data, error } = categories
+    ? await supabase.rpc("admin_api_notification_summary", {
+        p_user: viewer.userId,
+        p_is_owner: viewer.isOwner,
+        p_categories: categories,
+        p_include_test: false,
+      })
+    : await supabase.rpc("admin_notification_summary", {
+        p_user: viewer.userId,
+        p_is_owner: viewer.isOwner,
+      });
   if (error || !data) {
     console.error("[admin-notifications] summary failed", error?.message);
     return null;
@@ -110,7 +133,10 @@ export async function listNotifications(
   const supabase = getSupabaseAdmin();
   if (!supabase) return null;
   const limit = Math.min(Math.max(Math.floor(opts.limit ?? 30) || 30, 1), 100);
-  const { data, error } = await supabase.rpc("admin_notification_list", {
+  const categories = narrowedTo(viewer);
+  // A category this viewer may not read simply has no rows.
+  if (categories && opts.category && !categories.includes(opts.category)) return [];
+  const args = {
     p_user: viewer.userId,
     p_is_owner: viewer.isOwner,
     p_filter: opts.filter ?? "all",
@@ -119,7 +145,10 @@ export async function listNotifications(
     p_before: opts.cursor?.before ?? null,
     p_before_id: opts.cursor?.beforeId ?? null,
     p_limit: limit,
-  });
+  };
+  const { data, error } = categories
+    ? await supabase.rpc("admin_api_notification_list", { ...args, p_categories: categories, p_ids: null })
+    : await supabase.rpc("admin_notification_list", args);
   if (error) {
     console.error("[admin-notifications] list failed", error.message);
     return null;
@@ -132,11 +161,19 @@ export async function markNotificationsRead(viewer: Viewer, ids: string[]): Prom
   const supabase = getSupabaseAdmin();
   const clean = [...new Set(ids.filter((id) => UUID_RE.test(id)))].slice(0, 200);
   if (!supabase || clean.length === 0) return false;
-  const { error } = await supabase.rpc("admin_notification_mark_read", {
-    p_user: viewer.userId,
-    p_is_owner: viewer.isOwner,
-    p_ids: clean,
-  });
+  const categories = narrowedTo(viewer);
+  const { error } = categories
+    ? await supabase.rpc("admin_api_notification_mark_read", {
+        p_user: viewer.userId,
+        p_is_owner: viewer.isOwner,
+        p_categories: categories,
+        p_ids: clean,
+      })
+    : await supabase.rpc("admin_notification_mark_read", {
+        p_user: viewer.userId,
+        p_is_owner: viewer.isOwner,
+        p_ids: clean,
+      });
   if (error) console.error("[admin-notifications] mark read failed", error.message);
   return !error;
 }
@@ -165,6 +202,20 @@ export async function markAllNotificationsRead(viewer: Viewer, seen?: string | n
 export async function setNotificationResolved(viewer: Viewer, id: string, resolved: boolean, by: string): Promise<boolean> {
   const supabase = getSupabaseAdmin();
   if (!supabase || !UUID_RE.test(id)) return false;
+  const categories = narrowedTo(viewer);
+  if (categories) {
+    // The admin API's version: only rows in the viewer's categories, answered as a word.
+    const { data, error } = await supabase.rpc("admin_api_notification_resolve", {
+      p_user: viewer.userId,
+      p_is_owner: viewer.isOwner,
+      p_categories: categories,
+      p_id: id,
+      p_resolved: resolved,
+      p_by: by,
+    });
+    if (error) console.error("[admin-notifications] resolve failed", error.message);
+    return !error && data === "ok";
+  }
   const { data, error } = await supabase.rpc("admin_notification_resolve", {
     p_id: id,
     p_is_owner: viewer.isOwner,
@@ -187,8 +238,12 @@ export async function getNotificationPrefs(viewer: Viewer): Promise<CategoryPref
       .eq("user_id", viewer.userId);
     for (const r of (data ?? []) as { category: string; muted: boolean; push: boolean }[]) rows.set(r.category, r);
   }
-  // Team and Audience only ever hold owner-only rows, so a manager never sees the switch.
-  return ADMIN_CATEGORIES.filter((c) => viewer.isOwner || (c.key !== "team" && c.key !== "audience")).map((c) => ({
+  // Team and Audience only ever hold owner-audience rows, so nobody outside it
+  // sees the switch; a narrowed viewer sees only their own categories.
+  const categories = narrowedTo(viewer);
+  return ADMIN_CATEGORIES.filter((c) =>
+    categories ? categories.includes(c.key) : viewer.isOwner || (c.key !== "team" && c.key !== "audience"),
+  ).map((c) => ({
     category: c.key,
     label: c.label,
     muted: rows.get(c.key)?.muted ?? false,
@@ -203,6 +258,8 @@ export async function setCategoryPref(
 ): Promise<boolean> {
   const supabase = getSupabaseAdmin();
   if (!supabase) return false;
+  const categories = narrowedTo(viewer);
+  if (categories && !categories.includes(category)) return false;
   const { error } = await supabase
     .from("admin_notification_prefs")
     .upsert(

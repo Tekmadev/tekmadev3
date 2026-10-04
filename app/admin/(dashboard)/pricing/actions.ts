@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireOwner } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getPlan } from "@/lib/pricing-data";
 import { syncPlanToStripe } from "@/lib/plan-sync";
@@ -10,8 +10,7 @@ import { getProductMeta } from "@/config/products";
 import { business } from "@/config/site";
 import { getProduct } from "@/lib/products-data";
 import { reconcileProductCopy, syncCarePlanToStripe, syncProductToStripe } from "@/lib/product-sync";
-import { setSalesTax } from "@/lib/site-settings";
-import { notifyAdmins } from "@/lib/admin-notify";
+import { switchSalesTax } from "@/lib/stripe-tax";
 
 /**
  * Updates a plan's price from the dashboard: writes the new amounts to the DB
@@ -19,7 +18,7 @@ import { notifyAdmins } from "@/lib/admin-notify";
  * Stripe prices and archives the old ones (so checkout uses the new amount).
  */
 export async function updatePlanAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("pricing.write");
 
   const tierId = String(formData.get("tier") || "");
   const monthlyDollars = Number(formData.get("monthly"));
@@ -93,7 +92,7 @@ export async function updatePlanAction(formData: FormData) {
  * ones. Stripe products are created on first save.
  */
 export async function updateProductAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("pricing.write");
 
   const productId = String(formData.get("product") || "");
   const meta = getProductMeta(productId);
@@ -202,27 +201,17 @@ export async function updateProductAction(formData: FormData) {
 
 /**
  * The owner's switch for charging GST/HST at checkout, per Stripe mode. It
- * changes what every buyer pays, so it is owner only, it records who flipped
+ * changes what every buyer pays, so it needs pricing.write, it records who flipped
  * it, and it leaves a line in the notification inbox.
  */
 export async function setSalesTaxAction(formData: FormData) {
-  const ctx = await requireOwner();
+  const ctx = await requireAdminCapability("pricing.write");
   const mode = formData.get("mode") === "test" ? "test" : "live";
   const on = formData.get("on") === "1";
 
-  const ok = await setSalesTax(mode, on, ctx.email);
+  // Saves the switch, records who flipped it and leaves a line in the inbox.
+  const ok = await switchSalesTax(mode, on, ctx.email);
   if (!ok) redirect("/admin/pricing?e=db");
-
-  await notifyAdmins({
-    event: "settings.sales_tax_changed",
-    title: `Sales tax switched ${on ? "ON" : "OFF"}${mode === "test" ? " in test mode" : ""}`,
-    body: on
-      ? "New checkouts now add GST/HST by the buyer's province. Plans already running are not changed."
-      : "New checkouts no longer add GST/HST.",
-    url: "/admin/pricing",
-    actor: { type: "staff", label: ctx.email },
-    isTest: mode === "test",
-  });
 
   revalidatePath("/admin/pricing");
   redirect(`/admin/pricing?ok=${on ? "tax_on" : "tax_off"}`);

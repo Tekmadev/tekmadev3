@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CircleDollarSign, Eye, MousePointerClick, ShoppingBag, UserRound, Users, CalendarCheck } from "lucide-react";
-import { requireOwner } from "@/lib/admin";
+import { adminCan, requireAdminCapability } from "@/lib/admin";
 import { ADS_RANGES, DEFAULT_ADS_RANGE, getAdsDashboard, type AdsDashboard } from "@/lib/ads-data";
 import { PageHeader, Panel, Notice, StatCard, DataTable, fmtDateTime } from "@/components/admin/ui";
 import { AreaChart, type DayPoint } from "@/components/admin/Charts";
@@ -47,7 +47,8 @@ export default async function AdsPage({
 }: {
   searchParams: Promise<{ range?: string; synced?: string; e?: string }>;
 }) {
-  await requireOwner();
+  const ctx = await requireAdminCapability("ads.view");
+  const canRefresh = adminCan(ctx, "ads.refresh");
   const { range: rangeKey, synced, e } = await searchParams;
   const data = await getAdsDashboard(rangeKey);
   const range = data?.range ?? ADS_RANGES.find((r) => r.key === DEFAULT_ADS_RANGE)!;
@@ -79,7 +80,7 @@ export default async function AdsPage({
             </Link>
           ))}
         </nav>
-        {data?.connected && (
+        {data?.connected && canRefresh && (
           <form action={refreshMetaAdsAction} className="flex items-center gap-3">
             <input type="hidden" name="range" value={range.key === DEFAULT_ADS_RANGE ? "" : range.key} />
             {data.lastSync && (

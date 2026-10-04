@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { getAdminContext, getAdminContextFromBearer } from "@/lib/admin";
+import { adminCan, adminInboxViewer, getAdminContext, getAdminContextFromBearer } from "@/lib/admin";
 import {
   decodeCursor,
   encodeCursor,
@@ -24,7 +24,9 @@ export const dynamic = "force-dynamic";
  *
  * Auth: a browser session cookie, or `Authorization: Bearer <Supabase access
  * token>` for a client that has no cookies. Either way the account must be on
- * the staff list. Anything else is a 401 with no detail.
+ * the staff list. Anything else is a 401 with no detail. What each role reads
+ * comes from the permission table (lib/admin.ts adminInboxViewer): staff see
+ * the Leads and Clients categories only.
  *
  * GET  ?filter=all|unread|action &category= &test=1 &cursor=<opaque> &limit= &prefs=1
  *      -> { ok, summary: { unread, needsAction, criticalUnread }, items, nextCursor, prefs? }
@@ -43,13 +45,13 @@ const json = (body: unknown, status = 200) => NextResponse.json(body, { status, 
 
 async function viewerOf(req: NextRequest) {
   const ctx = (await getAdminContext()) ?? (await getAdminContextFromBearer(req.headers.get("authorization")));
-  return ctx ? { ctx, viewer: { userId: ctx.user.id, isOwner: ctx.role === "owner" } } : null;
+  return ctx ? { ctx, viewer: adminInboxViewer(ctx) } : null;
 }
 
 export async function GET(req: NextRequest) {
   const who = await viewerOf(req);
   if (!who) return json({ ok: false }, 401);
-  const { viewer } = who;
+  const { ctx, viewer } = who;
 
   const q = req.nextUrl.searchParams;
   const filterParam = q.get("filter") as NotificationFilter | null;
@@ -62,7 +64,7 @@ export async function GET(req: NextRequest) {
     listNotifications(viewer, {
       filter,
       category: isCategory(category) ? category : null,
-      includeTest: q.get("test") === "1",
+      includeTest: q.get("test") === "1" && adminCan(ctx, "testdata.view"),
       cursor: decodeCursor(q.get("cursor")),
       limit,
     }),

@@ -18,6 +18,7 @@ import { getSupabaseAdmin } from "@/lib/supabase";
  *     or a double click writes nothing.
  *  3. It is a leaf. It imports only the Supabase client, so the mail sender,
  *     the ad tracker and the data layer can all call it without an import cycle.
+ *     (The phone push sender is loaded lazily, after a row is written.)
  *
  * Event keys are an API. A mobile client will switch on them, so add freely and
  * never rename. The catalogue below is the single place a key gets its
@@ -203,6 +204,22 @@ const safeUrl = (u: string | null | undefined) =>
 // A notification must never hold up a webhook. If the database stalls, give up.
 const WRITE_TIMEOUT_MS = 3000;
 
+/**
+ * Phone notifications for a row that was just written or bumped
+ * (lib/admin-api/push: the admin app's registered phones). Loaded lazily so
+ * this file stays a leaf, and fire and forget: the push goes out after the
+ * response, and a push problem never reaches the caller.
+ */
+async function pushToPhones(id: unknown): Promise<void> {
+  if (typeof id !== "string" || !id) return;
+  try {
+    const { queueAdminPush } = await import("@/lib/admin-api/push");
+    queueAdminPush(id);
+  } catch (err) {
+    console.error("[admin-notify] push not queued", err instanceof Error ? err.message : String(err));
+  }
+}
+
 export async function notifyAdmins(input: AdminNotifyInput): Promise<void> {
   try {
     const supabase = getSupabaseAdmin();
@@ -229,8 +246,13 @@ export async function notifyAdmins(input: AdminNotifyInput): Promise<void> {
     };
 
     if (!row.dedupe_key) {
-      const { error } = await supabase.from("admin_notifications").insert(row).abortSignal(AbortSignal.timeout(WRITE_TIMEOUT_MS));
+      const { data: inserted, error } = await supabase
+        .from("admin_notifications")
+        .insert(row)
+        .select("id")
+        .abortSignal(AbortSignal.timeout(WRITE_TIMEOUT_MS));
       if (error) console.error("[admin-notify] insert failed", input.event, error.message);
+      else await pushToPhones(inserted?.[0]?.id);
       return;
     }
 
@@ -243,13 +265,20 @@ export async function notifyAdmins(input: AdminNotifyInput): Promise<void> {
       console.error("[admin-notify] insert failed", input.event, error.message);
       return;
     }
+    // A new row: tell the phones.
+    if ((data ?? []).length > 0) {
+      await pushToPhones(data?.[0]?.id);
+      return;
+    }
     // Nothing came back, so the key already existed. For a burst key that is
     // news (it happened again); for an idempotency key it is a retry, and silence.
-    if (input.collapse && (data ?? []).length === 0) {
-      const { error: bumpError } = await supabase
+    if (input.collapse) {
+      const { data: bumpedId, error: bumpError } = await supabase
         .rpc("admin_notification_bump", { p_key: row.dedupe_key })
         .abortSignal(AbortSignal.timeout(WRITE_TIMEOUT_MS));
       if (bumpError) console.error("[admin-notify] bump failed", input.event, bumpError.message);
+      // A bump is news again: push it (same tag, so it replaces the entry on the phone).
+      else await pushToPhones(bumpedId);
     }
   } catch (err) {
     console.error("[admin-notify] threw", input.event, err instanceof Error ? err.message : String(err));

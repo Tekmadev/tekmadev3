@@ -2,17 +2,20 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireOwner } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { normalizeSlug } from "@/lib/links-data";
 import { setSubscriberStatus } from "@/lib/subscribers-data";
-import { requestCrmErasure } from "@/lib/crm/outbox";
+import { createEmailCampaign, deleteEmailCampaign, eraseSubscriber, setEmailCampaignActive } from "@/lib/email-admin";
+
+// The writes themselves live in lib/email-admin.ts, shared with the admin API
+// (app/api/admin/v1/email). These actions keep the page's own checks and
+// redirect codes.
 
 export async function createCampaignAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("email.campaigns.write");
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase) redirect("/admin/email?e=config");
+  if (!getSupabaseAdmin()) redirect("/admin/email?e=config");
 
   const key = normalizeSlug(String(formData.get("key") || ""));
   if (!key) redirect("/admin/email?e=key");
@@ -20,66 +23,52 @@ export async function createCampaignAction(formData: FormData) {
   const name = String(formData.get("name") || "").trim();
   if (!name) redirect("/admin/email?e=name");
 
-  const { error } = await supabase.from("email_campaigns").insert({
+  const result = await createEmailCampaign({
     key,
     name,
     subject: String(formData.get("subject") || "").trim() || null,
     template: String(formData.get("template") || "").trim() || null,
     description: String(formData.get("description") || "").trim() || null,
-    active: true,
   });
-
-  if (error) {
-    if (/duplicate key|unique/i.test(error.message)) redirect("/admin/email?e=dupe");
-    console.error("[email] campaign insert failed", error.message);
-    redirect("/admin/email?e=db");
-  }
+  if (!result.ok) redirect(`/admin/email?e=${result.reason}`);
 
   revalidatePath("/admin/email");
   redirect("/admin/email?ok=created");
 }
 
 export async function toggleCampaignAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("email.campaigns.write");
 
   const id = String(formData.get("id") || "").trim();
   const next = String(formData.get("active") || "") === "true";
   if (!id) redirect("/admin/email?e=input");
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase) redirect("/admin/email?e=config");
+  if (!getSupabaseAdmin()) redirect("/admin/email?e=config");
 
-  const { error } = await supabase.from("email_campaigns").update({ active: next }).eq("id", id);
-  if (error) {
-    console.error("[email] campaign toggle failed", error.message);
-    redirect("/admin/email?e=db");
-  }
+  const result = await setEmailCampaignActive(id, next);
+  if (!result.ok) redirect(`/admin/email?e=${result.reason}`);
 
   revalidatePath("/admin/email");
   redirect(`/admin/email?ok=${next ? "enabled" : "disabled"}`);
 }
 
 export async function deleteCampaignAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("email.campaigns.write");
 
   const id = String(formData.get("id") || "").trim();
   if (!id) redirect("/admin/email?e=input");
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase) redirect("/admin/email?e=config");
+  if (!getSupabaseAdmin()) redirect("/admin/email?e=config");
 
-  const { error } = await supabase.from("email_campaigns").delete().eq("id", id);
-  if (error) {
-    console.error("[email] campaign delete failed", error.message);
-    redirect("/admin/email?e=db");
-  }
+  const result = await deleteEmailCampaign(id);
+  if (!result.ok) redirect(`/admin/email?e=${result.reason}`);
 
   revalidatePath("/admin/email");
   redirect("/admin/email?ok=campaign_deleted");
 }
 
 export async function unsubscribeSubscriberAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("email.subscribers.write");
 
   const id = String(formData.get("id") || "").trim();
   if (!id) redirect("/admin/email?e=input");
@@ -108,30 +97,17 @@ export async function unsubscribeSubscriberAction(formData: FormData) {
 
 /** Hard-delete a subscriber, e.g. to satisfy a data-erasure request. */
 export async function deleteSubscriberAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("email.subscribers.write");
 
   const id = String(formData.get("id") || "").trim();
   if (!id) redirect("/admin/email?e=input");
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase) redirect("/admin/email?e=config");
+  if (!getSupabaseAdmin()) redirect("/admin/email?e=config");
 
-  const { data: row, error: readError } = await supabase.from("subscribers").select("email").eq("id", id).maybeSingle();
-  if (readError) {
-    console.error("[email] subscriber read failed", readError.message);
-    redirect("/admin/email?e=db");
-  }
-  // The CRM half first. Deleting only our row would leave their contact tagged
-  // for the newsletter and mailable, and a person who asked to be forgotten
-  // would keep getting campaigns. If it cannot be queued, nothing is deleted,
-  // so the owner can try again rather than lose the only record of the address.
-  if (row?.email && !(await requestCrmErasure(String(row.email)))) redirect("/admin/email?e=crm_erase");
-
-  const { error } = await supabase.from("subscribers").delete().eq("id", id);
-  if (error) {
-    console.error("[email] subscriber delete failed", error.message);
-    redirect("/admin/email?e=db");
-  }
+  // The CRM erasure is queued first and nothing is deleted when it cannot be
+  // (see eraseSubscriber), so the owner can try again.
+  const result = await eraseSubscriber(id);
+  if (!result.ok) redirect(`/admin/email?e=${result.reason}`);
 
   revalidatePath("/admin/email");
   redirect("/admin/email?ok=subscriber_deleted");

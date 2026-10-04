@@ -47,7 +47,8 @@ function runLine(r: CrmSyncRun): string {
   return parts.join(", ");
 }
 
-export async function QueuePanel() {
+/** Each panel takes `canWrite` (crm.write): without it the buttons are not shown, and the actions refuse anyway. */
+export async function QueuePanel({ canWrite }: { canWrite: boolean }) {
   const [counts, runs] = await Promise.all([getCrmQueueCounts(), listCrmRuns(6)]);
   const o = counts.outbox;
   const i = counts.inbox;
@@ -58,9 +59,11 @@ export async function QueuePanel() {
     <Panel
       title="Queue"
       action={
-        <form action={syncNowAction}>
-          <RefreshButton pendingLabel="Syncing">Sync now</RefreshButton>
-        </form>
+        canWrite ? (
+          <form action={syncNowAction}>
+            <RefreshButton pendingLabel="Syncing">Sync now</RefreshButton>
+          </form>
+        ) : undefined
       }
     >
       <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -103,7 +106,7 @@ export async function QueuePanel() {
 const small =
   "rounded-full border border-line-strong px-3 py-1 text-xs font-medium text-ink transition-colors hover:border-gold hover:text-gold";
 
-export async function AttentionPanel() {
+export async function AttentionPanel({ canWrite }: { canWrite: boolean }) {
   const rows = await listCrmAttention(50);
 
   return (
@@ -114,7 +117,7 @@ export async function AttentionPanel() {
         endpoint unsubscribe an address.
       </p>
       <DataTable
-        head={["What", "Who", "Tries", "Why it stopped", "When", ""]}
+        head={["What", "Who", "Tries", "Why it stopped", "When", ...(canWrite ? [""] : [])]}
         empty="Nothing is stuck."
         rows={rows.map((r) => [
           <span key="w">
@@ -135,31 +138,33 @@ export async function AttentionPanel() {
             )}
           </span>,
           fmtDateTime(r.at),
-          <div key="a" className="flex gap-2">
-            {r.signed && (
-              <form action={retryCrmAction}>
-                <input type="hidden" name="queue" value={r.queue} />
-                <input type="hidden" name="id" value={r.id} />
-                <PendingSubmit className={small}>
-                  Retry
-                </PendingSubmit>
-              </form>
-            )}
-            <form action={discardCrmAction}>
-              <input type="hidden" name="queue" value={r.queue} />
-              <input type="hidden" name="id" value={r.id} />
-              <ConfirmButton message="Stop trying this one for good? It stays on record, it is not deleted." className={small}>
-                Discard
-              </ConfirmButton>
-            </form>
-          </div>,
+          ...(canWrite
+            ? [
+                <div key="a" className="flex gap-2">
+                  {r.signed && (
+                    <form action={retryCrmAction}>
+                      <input type="hidden" name="queue" value={r.queue} />
+                      <input type="hidden" name="id" value={r.id} />
+                      <PendingSubmit className={small}>Retry</PendingSubmit>
+                    </form>
+                  )}
+                  <form action={discardCrmAction}>
+                    <input type="hidden" name="queue" value={r.queue} />
+                    <input type="hidden" name="id" value={r.id} />
+                    <ConfirmButton message="Stop trying this one for good? It stays on record, it is not deleted." className={small}>
+                      Discard
+                    </ConfirmButton>
+                  </form>
+                </div>,
+              ]
+            : []),
         ])}
       />
     </Panel>
   );
 }
 
-export async function ReconcilePanel() {
+export async function ReconcilePanel({ canWrite }: { canWrite: boolean }) {
   const runs = (await listCrmRuns(30)).filter((r) => r.job === "reconcile");
   const last = runs[0] ?? null;
   // lib/crm/reconcile.ts writes this exact prefix when the mass-suppression valve trips.
@@ -169,9 +174,11 @@ export async function ReconcilePanel() {
     <Panel
       title="Last reconcile"
       action={
-        <form action={reconcileNowAction}>
-          <RefreshButton pendingLabel="Checking every contact">Run now</RefreshButton>
-        </form>
+        canWrite ? (
+          <form action={reconcileNowAction}>
+            <RefreshButton pendingLabel="Checking every contact">Run now</RefreshButton>
+          </form>
+        ) : undefined
       }
     >
       {!last ? (

@@ -2,9 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireOwner } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { getSupabaseAdmin } from "@/lib/supabase";
-import { normalizeSlug, isReservedSlug } from "@/lib/links-data";
+import { normalizeSlug, isReservedSlug, insertLink, setLinkActive, deleteLink } from "@/lib/links-data";
 
 /** UTM values: lowercase, no spaces, bounded. Empty -> null. */
 function cleanUtm(raw: FormDataEntryValue | null): string | null {
@@ -35,7 +35,7 @@ function normalizeDestination(raw: string): string | null {
 }
 
 export async function createLinkAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("links.write");
 
   const supabase = getSupabaseAdmin();
   if (!supabase) redirect("/admin/links?e=config");
@@ -47,28 +47,23 @@ export async function createLinkAction(formData: FormData) {
   const destination = normalizeDestination(String(formData.get("destination") || "/"));
   if (destination === null) redirect("/admin/links?e=destination");
 
-  const { error } = await supabase.from("links").insert({
+  const result = await insertLink({
     slug,
     destination,
     utm_source: cleanUtm(formData.get("utm_source")),
     utm_medium: cleanUtm(formData.get("utm_medium")),
     utm_campaign: cleanUtm(formData.get("utm_campaign")),
     label: String(formData.get("label") || "").trim() || null,
-    active: true,
   });
 
-  if (error) {
-    if (/duplicate key|unique/i.test(error.message)) redirect("/admin/links?e=dupe");
-    console.error("[links] insert failed", error.message);
-    redirect("/admin/links?e=db");
-  }
+  if (!result.ok) redirect(`/admin/links?e=${result.reason}`);
 
   revalidatePath("/admin/links");
   redirect(`/admin/links?ok=created&slug=${encodeURIComponent(slug)}`);
 }
 
 export async function toggleLinkAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("links.write");
 
   const id = String(formData.get("id") || "").trim();
   const next = String(formData.get("active") || "") === "true";
@@ -77,18 +72,15 @@ export async function toggleLinkAction(formData: FormData) {
   const supabase = getSupabaseAdmin();
   if (!supabase) redirect("/admin/links?e=config");
 
-  const { error } = await supabase.from("links").update({ active: next }).eq("id", id);
-  if (error) {
-    console.error("[links] toggle failed", error.message);
-    redirect("/admin/links?e=db");
-  }
+  const result = await setLinkActive(id, next);
+  if (!result.ok) redirect(`/admin/links?e=${result.reason}`);
 
   revalidatePath("/admin/links");
   redirect(`/admin/links?ok=${next ? "enabled" : "disabled"}`);
 }
 
 export async function deleteLinkAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("links.write");
 
   const id = String(formData.get("id") || "").trim();
   if (!id) redirect("/admin/links?e=input");
@@ -96,11 +88,8 @@ export async function deleteLinkAction(formData: FormData) {
   const supabase = getSupabaseAdmin();
   if (!supabase) redirect("/admin/links?e=config");
 
-  const { error } = await supabase.from("links").delete().eq("id", id);
-  if (error) {
-    console.error("[links] delete failed", error.message);
-    redirect("/admin/links?e=db");
-  }
+  const result = await deleteLink(id);
+  if (!result.ok) redirect(`/admin/links?e=${result.reason}`);
 
   revalidatePath("/admin/links");
   redirect("/admin/links?ok=deleted");

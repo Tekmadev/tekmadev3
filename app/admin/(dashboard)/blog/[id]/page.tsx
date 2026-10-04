@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { requireOwner } from "@/lib/admin";
+import { notFound, redirect } from "next/navigation";
+import { adminCan, requireAdminCapability } from "@/lib/admin";
 import { getPostByIdAdmin, listAuthors, listCategories } from "@/lib/blog-data";
 import { PageHeader, Notice, Badge } from "@/components/admin/ui";
 import { BlogForm } from "@/components/admin/BlogForm";
@@ -25,8 +25,11 @@ export default async function EditPostPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ ok?: string; e?: string }>;
 }) {
-  await requireOwner();
+  const ctx = await requireAdminCapability("blog.view");
   const { id } = await params;
+  // View only (staff): the post as readers will see it, not the editor.
+  if (!adminCan(ctx, "blog.write")) redirect(`/admin/blog/${encodeURIComponent(id)}/preview`);
+  const canTrash = adminCan(ctx, "blog.trash");
   const [post, authors, categories] = await Promise.all([
     getPostByIdAdmin(id),
     listAuthors(),
@@ -84,12 +87,14 @@ export default async function EditPostPage({
             Archive
           </PendingSubmit>
         </form>
-        <form action={deletePostAction} className="ml-auto">
-          <input type="hidden" name="id" value={post.id} />
-          <PendingSubmit className="rounded-full border border-signal/40 px-4 py-2 text-sm text-signal transition-colors hover:bg-signal/[0.06]">
-            Move to trash
-          </PendingSubmit>
-        </form>
+        {canTrash && (
+          <form action={deletePostAction} className="ml-auto">
+            <input type="hidden" name="id" value={post.id} />
+            <PendingSubmit className="rounded-full border border-signal/40 px-4 py-2 text-sm text-signal transition-colors hover:bg-signal/[0.06]">
+              Move to trash
+            </PendingSubmit>
+          </form>
+        )}
       </div>
 
       <BlogForm action={updatePostAction} post={post} authors={authors} categories={categories} />

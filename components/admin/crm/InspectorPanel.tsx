@@ -59,14 +59,14 @@ function theirLine(t: TheirSide): string {
   return "";
 }
 
-function Result({ r }: { r: CrmInspection }) {
+function Result({ r, canWrite }: { r: CrmInspection; canWrite: boolean }) {
   const s = r.subscriber;
   const t = r.theirs;
   const m = mailable(s?.status ?? null, t);
   const found = t.state === "found" ? t : null;
   // The CRM says contactable while we hold an unsubscribe: the one case that
   // needs a human, because a CRM event cannot prove the person asked for it.
-  const offerResubscribe = s?.status === "unsubscribed" && found?.dnd === "inactive";
+  const offerResubscribe = canWrite && s?.status === "unsubscribed" && found?.dnd === "inactive";
 
   return (
     <div className="mt-5 space-y-5">
@@ -152,7 +152,8 @@ function Result({ r }: { r: CrmInspection }) {
   );
 }
 
-export async function InspectorPanel({ email }: { email?: string }) {
+/** `canWrite` (crm.write) shows the resubscribe confirmation; the action checks it again. */
+export async function InspectorPanel({ email, canWrite }: { email?: string; canWrite: boolean }) {
   const result = email ? await inspectCrmContact(email) : null;
 
   return (
@@ -174,7 +175,7 @@ export async function InspectorPanel({ email }: { email?: string }) {
       </form>
       <p className="mt-2 text-xs text-ink-4">Shows what this site holds beside what GoHighLevel holds right now, and the full consent history.</p>
       {email && !result && <p className="mt-4 text-sm text-ink-3">That is not a valid email address.</p>}
-      {result && <Result r={result} />}
+      {result && <Result r={result} canWrite={canWrite} />}
     </Panel>
   );
 }

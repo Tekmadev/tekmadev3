@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath, updateTag } from "next/cache";
-import { requireOwner } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { LOADER_DEFAULTS, LOADER_LIMITS, normalizeLoader } from "@/config/loader";
 import { LOADER_SETTINGS_TAG, setLoaderSettings } from "@/lib/site-settings";
 
@@ -12,7 +12,7 @@ import { LOADER_SETTINGS_TAG, setLoaderSettings } from "@/lib/site-settings";
  * anywhere on the site gets the new motion, with nothing deployed.
  */
 export async function saveLoaderAction(formData: FormData) {
-  const ctx = await requireOwner();
+  const ctx = await requireAdminCapability("loader.write");
   const next =
     formData.get("reset") === "1"
       ? LOADER_DEFAULTS

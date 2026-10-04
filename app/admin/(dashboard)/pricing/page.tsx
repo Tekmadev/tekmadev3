@@ -1,4 +1,4 @@
-import { requireOwner } from "@/lib/admin";
+import { adminCan, requireAdminCapability } from "@/lib/admin";
 import { getAllPlans, type PlanFull } from "@/lib/pricing-data";
 import { getAllProducts, type ProductRow } from "@/lib/products-data";
 import { getProductMeta } from "@/config/products";
@@ -25,28 +25,39 @@ export default async function PricingAdmin({
 }: {
   searchParams: Promise<{ ok?: string; e?: string }>;
 }) {
-  await requireOwner();
+  const ctx = await requireAdminCapability("pricing.view");
+  // Staff see the prices and the tax status; changing them needs pricing.write.
+  const canEdit = adminCan(ctx, "pricing.write");
   const [plans, products] = await Promise.all([getAllPlans(), getAllProducts()]);
   const { ok, e } = await searchParams;
   const notice = ok ? (NOTICES[ok] ?? NOTICES["1"]) : e ? NOTICES[e] : null;
 
   return (
     <div className="flex max-w-3xl flex-col gap-8">
-      <PageHeader title="Pricing" subtitle="Edit a price and save. The site updates instantly and Stripe stays in sync." />
+      <PageHeader
+        title="Pricing"
+        subtitle={
+          canEdit
+            ? "Edit a price and save. The site updates instantly and Stripe stays in sync."
+            : "Current prices and products. View only for your role."
+        }
+      />
 
       {notice && <Notice kind={notice.kind}>{notice.text}</Notice>}
 
-      <SalesTaxPanel />
+      <SalesTaxPanel canEdit={canEdit} />
 
-      <p className="text-sm text-ink-3">
-        Saving creates a new Stripe price and archives the old one (Stripe prices are immutable). Existing
-        subscribers keep their current price; only new checkouts use the new amount.
-      </p>
+      {canEdit && (
+        <p className="text-sm text-ink-3">
+          Saving creates a new Stripe price and archives the old one (Stripe prices are immutable). Existing
+          subscribers keep their current price; only new checkouts use the new amount.
+        </p>
+      )}
 
       <div className="flex flex-col gap-5">
         {plans.length === 0 && <Notice kind="err">No plans found. Check the Supabase env.</Notice>}
         {plans.map((plan) => (
-          <PlanForm key={plan.id} plan={plan} />
+          <PlanForm key={plan.id} plan={plan} canEdit={canEdit} />
         ))}
       </div>
 
@@ -62,14 +73,14 @@ export default async function PricingAdmin({
       <div className="flex flex-col gap-5">
         {products.length === 0 && <Notice kind="err">No products found. Run the Webline migration.</Notice>}
         {products.map((product) => (
-          <ProductForm key={product.id} product={product} />
+          <ProductForm key={product.id} product={product} canEdit={canEdit} />
         ))}
       </div>
     </div>
   );
 }
 
-function ProductForm({ product }: { product: ProductRow }) {
+function ProductForm({ product, canEdit }: { product: ProductRow; canEdit: boolean }) {
   const meta = getProductMeta(product.id);
   const currency = (product.currency || "cad").toUpperCase();
   const care = meta?.care;
@@ -87,6 +98,8 @@ function ProductForm({ product }: { product: ProductRow }) {
       {meta && <p className="mb-4 text-sm text-ink-3">{meta.tagline}</p>}
       <form action={updateProductAction}>
         <input type="hidden" name="product" value={product.id} />
+        {/* View only: the same fields, disabled, and no save. */}
+        <fieldset disabled={!canEdit}>
         <div className="grid grid-cols-2 gap-4">
           <label className="flex flex-col gap-1.5 text-sm text-ink-2">
             One-time fee ({currency})
@@ -154,17 +167,20 @@ function ProductForm({ product }: { product: ProductRow }) {
             Public page: <a href={meta.path} className="underline hover:text-ink">{meta.path}</a>
           </p>
         )}
-        <PendingSubmit
-          className="mt-5 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
-        >
-          Save {product.name}
-        </PendingSubmit>
+        </fieldset>
+        {canEdit && (
+          <PendingSubmit
+            className="mt-5 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
+          >
+            Save {product.name}
+          </PendingSubmit>
+        )}
       </form>
     </Panel>
   );
 }
 
-function PlanForm({ plan }: { plan: PlanFull }) {
+function PlanForm({ plan, canEdit }: { plan: PlanFull; canEdit: boolean }) {
   const currency = (plan.currency || "cad").toUpperCase();
   const synced = Boolean(plan.stripe_monthly_price_id);
 
@@ -179,6 +195,7 @@ function PlanForm({ plan }: { plan: PlanFull }) {
     >
       <form action={updatePlanAction}>
         <input type="hidden" name="tier" value={plan.id} />
+        <fieldset disabled={!canEdit}>
         <div className="grid grid-cols-2 gap-4">
           <label className="flex flex-col gap-1.5 text-sm text-ink-2">
             Monthly ({currency})
@@ -204,11 +221,14 @@ function PlanForm({ plan }: { plan: PlanFull }) {
           </label>
         </div>
 
-        <PendingSubmit
-          className="mt-5 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
-        >
-          Save {plan.name}
-        </PendingSubmit>
+        </fieldset>
+        {canEdit && (
+          <PendingSubmit
+            className="mt-5 rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
+          >
+            Save {plan.name}
+          </PendingSubmit>
+        )}
       </form>
     </Panel>
   );

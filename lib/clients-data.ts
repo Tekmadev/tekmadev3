@@ -504,7 +504,9 @@ export async function logActivity(input: {
   summary?: string | null;
   visibility?: "internal" | "client";
   data?: Record<string, unknown>;
-}): Promise<void> {
+}): Promise<ClientActivity | null> {
+  // Returns the saved row (the admin API answers with it), or null when the
+  // insert failed. Callers that only log may ignore it.
   const { data, error } = await db()
     .from("client_activity")
     .insert({
@@ -518,10 +520,12 @@ export async function logActivity(input: {
       visibility: input.visibility ?? "internal",
       data: input.data ?? {},
     })
-    .select("id")
+    .select("*")
     .maybeSingle();
   if (error) console.error("[client_activity] insert failed", error.message);
-  await notifyFromActivity(input, (data?.id as string | undefined) ?? null);
+  const row = (data as ClientActivity | null) ?? null;
+  await notifyFromActivity(input, row?.id ?? null);
+  return row;
 }
 
 /**

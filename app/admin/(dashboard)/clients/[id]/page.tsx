@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ExternalLink, FileText, Rocket } from "lucide-react";
-import { requireAdmin } from "@/lib/admin";
+import { adminCan, requireAdminCapability, type Capability } from "@/lib/admin";
+import { hiddenActivityPrefixes } from "@/lib/admin-api/clients/sections/activity";
 import { CLIENT_STATUS_LABEL, getClientById, getLatestSubscriptionForClient, listActivity, listMembers, subscriptionEndsAt } from "@/lib/clients-data";
 import {
   derivedStage,
@@ -61,14 +62,19 @@ export default async function ClientDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ created?: string; saved?: string; live?: string; invite?: string; e?: string; invited?: string }>;
 }) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.view");
+  const can = (capability: Capability) => adminCan(ctx, capability);
   const [{ id }, sp] = await Promise.all([params, searchParams]);
   const client = await getClientById(id);
-  if (!client || client.deleted_at) notFound();
+  // A test account is not there for a role without test data, exactly as in the admin API.
+  if (!client || client.deleted_at || (client.is_test && !can("testdata.view"))) notFound();
 
+  // Billing (amounts, subscription, order) only with clients.billing: never for staff.
+  const seesBilling = can("clients.billing");
+  // Which CRM sub-account decides what counts toward a guarantee: clients.crm.
+  const seesCrm = can("clients.crm");
   const onboarding = await getActiveOnboarding(client.id);
-  // Owner only: which CRM sub-account decides what counts toward a guarantee.
-  const crmLocation = ctx.role === "owner" ? await getCrmLocationForClient(client.id) : null;
+  const crmLocation = seesCrm ? await getCrmLocationForClient(client.id) : null;
   const [tasks, intake, grants, assets, approvals, agreements, calls, members, activity, subscription, order] = await Promise.all([
     onboarding ? listTasks(onboarding.id) : Promise.resolve([]),
     getLatestIntake(client.id),
@@ -79,9 +85,12 @@ export default async function ClientDetailPage({
     listBookedCalls(client.id),
     listMembers(client.id),
     listActivity(client.id, { visibility: "all", limit: 100 }),
-    getLatestSubscriptionForClient(client),
-    getLatestOrderForClient(client),
+    seesBilling ? getLatestSubscriptionForClient(client) : Promise.resolve(null),
+    seesBilling ? getLatestOrderForClient(client) : Promise.resolve(null),
   ]);
+  // The same entries the admin API leaves out for this role (billing and care plan amounts, CRM plumbing).
+  const hidden = hiddenActivityPrefixes({ can });
+  const visibleActivity = activity.filter((a) => !hidden.some((prefix) => a.event.startsWith(prefix)));
   const assetsWithUrls = await Promise.all(assets.map(async (a) => ({ ...a, url: await signedAssetUrl(a.storage_path, 60 * 30) })));
 
   const progress = taskProgress(tasks);
@@ -97,7 +106,7 @@ export default async function ClientDetailPage({
       >
         <Badge tone={STATUS_TONE[client.status] ?? "neutral"}>{CLIENT_STATUS_LABEL[client.status]}</Badge>
         {onboarding?.blocked && <Badge tone="signal">Blocked</Badge>}
-        {client.status !== "live" && (
+        {client.status !== "live" && can("clients.go_live") && (
           <form action={goLiveAction}>
             <input type="hidden" name="client_id" value={client.id} />
             <SubmitButton pendingLabel="Switching on">
@@ -129,7 +138,7 @@ export default async function ClientDetailPage({
           }[sp.e] ?? "The CRM account could not be saved."}
         </Notice>
       )}
-      {sp.e === "care" && (
+      {sp.e === "care" && can("clients.go_live") && (
         <Notice kind="err">
           <span className="block">
             Not switched on: this client has not set up {getProductMeta(client.plan_id)?.care?.name ?? "their care plan"} yet. It is
@@ -145,25 +154,27 @@ export default async function ClientDetailPage({
         </Notice>
       )}
 
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section className={"grid grid-cols-2 gap-4 " + (seesBilling ? "lg:grid-cols-4" : "lg:grid-cols-3")}>
         <StatCard label="Stage" value={stage ? stageLabel(stage) : client.status === "live" ? "Live" : "-"} sub={onboarding?.target_live_date ? `target ${fmtDate(onboarding.target_live_date)}` : undefined} />
         <StatCard label="Checklist" value={`${progress.done}/${progress.total}`} sub={`${progress.clientOpen.length} waiting on client`} />
         <StatCard label="Booked calls" value={calls.filter((c) => c.qualified).length} sub={client.guarantee_eligible ? `target ${client.guarantee_target}` : "no guarantee"} />
-        <StatCard
-          label="Billing"
-          value={subscription ? (planEnds ? "Ending" : humanize(subscription.status)) : order ? humanize(order.status) : "-"}
-          sub={
-            subscription
-              ? `${fmtMoney(subscription.amount_total, subscription.currency)} · ${planEnds ? `ends ${fmtDate(planEnds)}` : subscription.current_period_end ? fmtDate(subscription.current_period_end) : ""}`
-              : order
-                ? `${fmtMoney(order.amount_total, order.currency)} one-time · ${paymentMethodLabel(order.payment_method_type)}`
-                : "no billing record"
-          }
-        />
+        {seesBilling && (
+          <StatCard
+            label="Billing"
+            value={subscription ? (planEnds ? "Ending" : humanize(subscription.status)) : order ? humanize(order.status) : "-"}
+            sub={
+              subscription
+                ? `${fmtMoney(subscription.amount_total, subscription.currency)} · ${planEnds ? `ends ${fmtDate(planEnds)}` : subscription.current_period_end ? fmtDate(subscription.current_period_end) : ""}`
+                : order
+                  ? `${fmtMoney(order.amount_total, order.currency)} one-time · ${paymentMethodLabel(order.payment_method_type)}`
+                  : "no billing record"
+            }
+          />
+        )}
       </section>
 
       <nav className="sticky top-0 z-20 -mx-5 flex snap-x gap-2 overflow-x-auto border-b border-line bg-bg/90 px-5 py-2 backdrop-blur sm:-mx-8 sm:px-8">
-        {SECTIONS.filter(([key]) => key !== "crm" || ctx.role === "owner").map(([key, label]) => (
+        {SECTIONS.filter(([key]) => key !== "crm" || seesCrm).map(([key, label]) => (
           <a key={key} href={`#${key}`} className="shrink-0 snap-start rounded-full border border-line-strong px-3 py-1.5 text-xs text-ink-3 hover:text-ink">
             {label}
           </a>
@@ -173,7 +184,15 @@ export default async function ClientDetailPage({
       <Panel title="Onboarding">
         <div id="onboarding" className="scroll-mt-28">
           {onboarding ? (
-            <OnboardingPanel onboarding={onboarding} tasks={tasks} stage={stage ?? onboarding.stage} percent={progress.percent} />
+            <OnboardingPanel
+              onboarding={onboarding}
+              tasks={tasks}
+              stage={stage ?? onboarding.stage}
+              percent={progress.percent}
+              canRun={can("clients.onboarding")}
+              canAddTask={can("clients.tasks.create")}
+              canSetTaskStatus={can("clients.tasks.status")}
+            />
           ) : (
             <p className="text-sm text-ink-4">No active onboarding run.</p>
           )}
@@ -182,13 +201,18 @@ export default async function ClientDetailPage({
 
       <Panel title="Intake">
         <div id="intake" className="scroll-mt-28">
-          <IntakePanel intake={intake} clientId={client.id} />
+          <IntakePanel intake={intake} clientId={client.id} canReview={can("clients.intake.review")} />
         </div>
       </Panel>
 
       <Panel title="Access">
         <div id="access" className="scroll-mt-28">
-          <AccessPanel grants={grants} clientId={client.id} />
+          <AccessPanel
+            grants={grants}
+            clientId={client.id}
+            canRequest={can("clients.access.request")}
+            canUpdate={can("clients.access.update")}
+          />
         </div>
       </Panel>
 
@@ -227,7 +251,7 @@ export default async function ClientDetailPage({
 
       <Panel title="Approvals">
         <div id="approvals" className="scroll-mt-28">
-          <ApprovalsPanel approvals={approvals} tasks={tasks} clientId={client.id} />
+          <ApprovalsPanel approvals={approvals} tasks={tasks} clientId={client.id} canRequest={can("clients.approvals.request")} />
         </div>
       </Panel>
 
@@ -258,11 +282,11 @@ export default async function ClientDetailPage({
 
       <Panel title="Booked calls">
         <div id="calls" className="scroll-mt-28">
-          <CallsPanel client={client} calls={calls} />
+          <CallsPanel client={client} calls={calls} canLog={can("clients.calls.log")} canReview={can("clients.calls.review")} />
         </div>
       </Panel>
 
-      {ctx.role === "owner" && (
+      {seesCrm && (
         <Panel title="CRM account">
           <div id="crm" className="scroll-mt-28">
             <CrmLocationPanel clientId={client.id} location={crmLocation} />
@@ -272,23 +296,23 @@ export default async function ClientDetailPage({
 
       <Panel title="Team">
         <div id="team" className="scroll-mt-28">
-          <TeamPanel members={members} clientId={client.id} />
+          <TeamPanel members={members} clientId={client.id} canManage={can("clients.members")} />
         </div>
       </Panel>
 
       <Panel title="Account">
         <div id="account" className="scroll-mt-28">
-          <AccountForm client={client} />
+          <AccountForm client={client} canEdit={can("clients.edit")} />
         </div>
       </Panel>
 
       <Panel title="Activity">
         <div id="activity" className="scroll-mt-28">
-          <ActivityPanel activity={activity} clientId={client.id} />
+          <ActivityPanel activity={visibleActivity} clientId={client.id} canWrite={can("clients.activity.write")} />
         </div>
       </Panel>
 
-      {ctx.role === "owner" && (
+      {can("clients.trash") && (
         <form action={deleteClientAction} className="flex items-center justify-between rounded-2xl border border-signal/30 p-5">
           <input type="hidden" name="client_id" value={client.id} />
           <p className="text-sm text-ink-3">Move this client to trash. Data is kept; the portal stops working for them.</p>

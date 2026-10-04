@@ -21,6 +21,10 @@ export async function proxy(request: NextRequest) {
   const host = request.headers.get("host");
   const { pathname, search } = request.nextUrl;
 
+  // The admin API for the Android app authenticates with a bearer token only.
+  // It is never redirected, rewritten or cookie-refreshed, on any host.
+  if (pathname === "/api/admin/v1" || pathname.startsWith("/api/admin/v1/")) return NextResponse.next();
+
   if (isPortalHost(host)) {
     // The portal is private: answer robots and sitemap here rather than
     // rewriting to app routes, which Next would prerender as metadata files.

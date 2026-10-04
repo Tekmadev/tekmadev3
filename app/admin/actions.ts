@@ -15,7 +15,9 @@ export async function signInAction(formData: FormData) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error || !data.user) redirect("/admin/login?e=1");
 
-  // Even with valid credentials, only the owner or a team member gets in.
+  // Even with valid credentials, only a team member (owner, manager or staff)
+  // gets in; a client portal login is signed straight back out. What each role
+  // may then open is decided page by page (lib/admin.ts requireAdminCapability).
   if (!(await isAllowedAdmin(data.user.email))) {
     await supabase.auth.signOut();
     redirect("/admin/login?e=denied");

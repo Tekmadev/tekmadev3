@@ -34,7 +34,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           <div className="flex items-center justify-between">
             <dt className="text-ink-3">Role</dt>
             <dd>
-              <Badge tone="gold">{role}</Badge>
+              <Badge tone={role === "owner" ? "gold" : role === "manager" ? "neutral" : "muted"}>
+                {role === "owner" ? "Owner" : role === "manager" ? "Manager" : "Staff"}
+              </Badge>
             </dd>
           </div>
         </dl>

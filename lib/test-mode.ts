@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { getAdminContext } from "@/lib/admin";
+import { adminCan, getAdminContext } from "@/lib/admin";
 import { testModeConfigured, type StripeMode } from "@/lib/stripe-mode";
 
 /**
@@ -24,7 +24,9 @@ export async function checkoutMode(): Promise<StripeMode> {
   if (!testModeConfigured()) return "live";
   const jar = await cookies();
   if (jar.get(COOKIE)?.value !== "1") return "live";
-  return (await getAdminContext()) ? "test" : "live";
+  // A team member whose role may run test mode (staff never touch money, test money included).
+  const ctx = await getAdminContext();
+  return ctx && adminCan(ctx, "testmode.write") ? "test" : "live";
 }
 
 export async function testModeSwitchedOn(): Promise<boolean> {

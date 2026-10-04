@@ -62,7 +62,8 @@ function storedChecks(v: unknown): StoredCheck[] {
 const btn =
   "rounded-full border border-line-strong px-4 py-2 text-sm font-medium text-ink transition-colors hover:border-gold hover:text-gold disabled:cursor-not-allowed disabled:opacity-50";
 
-export async function ConnectionPanel() {
+/** `canWrite` (crm.write) shows Verify and the switches; the actions check it again. */
+export async function ConnectionPanel({ canWrite }: { canWrite: boolean }) {
   const configured = crmConfigured();
   const [setting, probe, app, fieldKeys] = await Promise.all([
     getCrmSyncSetting(),
@@ -98,7 +99,7 @@ export async function ConnectionPanel() {
               : "Connected, but not proven yet. Verify first: nothing can be switched on until every check below is green."}
       </p>
 
-      {configured && (
+      {configured && canWrite && (
         <form action={verifyConnectionAction} className="mt-4">
           <RefreshButton pendingLabel="Checking, about 20 seconds">Verify connection</RefreshButton>
         </form>
@@ -150,13 +151,15 @@ export async function ConnectionPanel() {
               {on && !verified && (
                 <p className="mt-2 text-xs text-signal">Switched on, but nothing runs until the connection is verified.</p>
               )}
-              <form action={setCrmSwitchAction} className="mt-3">
-                <input type="hidden" name="surface" value={s.key} />
-                <input type="hidden" name="on" value={on ? "0" : "1"} />
-                <PendingSubmit className={btn} disabled={!on && !verified}>
-                  {on ? "Turn off" : "Turn on"}
-                </PendingSubmit>
-              </form>
+              {canWrite && (
+                <form action={setCrmSwitchAction} className="mt-3">
+                  <input type="hidden" name="surface" value={s.key} />
+                  <input type="hidden" name="on" value={on ? "0" : "1"} />
+                  <PendingSubmit className={btn} disabled={!on && !verified}>
+                    {on ? "Turn off" : "Turn on"}
+                  </PendingSubmit>
+                </form>
+              )}
             </div>
           );
         })}

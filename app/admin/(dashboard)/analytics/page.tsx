@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Eye, Gauge, TrendingUp } from "lucide-react";
-import { requireAdmin } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { ANALYTICS_RANGES, DEFAULT_RANGE, getTrafficAnalytics, resolveRange } from "@/lib/analytics-data";
 import { PageHeader, Panel, Notice, StatCard, fmtDate } from "@/components/admin/ui";
 import { AreaChart, Donut, HBars } from "@/components/admin/Charts";
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 const BUCKET_NOUN = { hour: "hour", day: "day", week: "week", month: "month" } as const;
 
 export default async function Analytics({ searchParams }: { searchParams: Promise<{ range?: string }> }) {
-  await requireAdmin();
+  await requireAdminCapability("analytics.view");
   const { range: rangeKey } = await searchParams;
   const range = resolveRange(rangeKey);
   const data = await getTrafficAnalytics(range.key);

@@ -9,6 +9,10 @@ import Stripe from "stripe";
  * The setup fee lives under its OWN product so a coupon can discount setup only
  * (Stripe coupons apply at the product level). Existing subscribers are
  * unaffected; only new checkouts use the new prices.
+ *
+ * The admin API (lib/admin-api/pricing) saves one price at a time, so the
+ * steps are also exported on their own: createPlanMonthlyPrice,
+ * createPlanSetupPrice and archiveStripePrice.
  */
 export async function syncPlanToStripe(opts: {
   secret: string;
@@ -29,48 +33,99 @@ export async function syncPlanToStripe(opts: {
   setupPriceId: string | null;
 }> {
   const stripe = new Stripe(opts.secret);
-  const currency = opts.currency.toLowerCase();
 
   // Subscription product (carries the monthly price). Reused across edits.
-  let productId = opts.existing.productId || null;
-  if (!productId) {
-    const product = await stripe.products.create({ name: `Tekmadev ${opts.name}` });
-    productId = product.id;
-  }
-
-  const monthlyPrice = await stripe.prices.create({
-    product: productId,
-    currency,
-    unit_amount: opts.monthlyCents,
-    recurring: { interval: "month" },
+  const monthly = await createPlanMonthlyPrice({
+    stripe,
+    name: opts.name,
+    currency: opts.currency,
+    monthlyCents: opts.monthlyCents,
+    productId: opts.existing.productId,
   });
 
   // Setup fee: its own product, so a coupon can target setup-only.
   let setupProductId = opts.existing.setupProductId || null;
   let setupPriceId: string | null = null;
   if (opts.setupCents > 0) {
-    if (!setupProductId) {
-      const setupProduct = await stripe.products.create({ name: `Tekmadev ${opts.name} Setup` });
-      setupProductId = setupProduct.id;
-    }
-    const setupPrice = await stripe.prices.create({
-      product: setupProductId,
-      currency,
-      unit_amount: opts.setupCents,
+    const setup = await createPlanSetupPrice({
+      stripe,
+      name: opts.name,
+      currency: opts.currency,
+      setupCents: opts.setupCents,
+      setupProductId,
     });
-    setupPriceId = setupPrice.id;
+    setupProductId = setup.setupProductId;
+    setupPriceId = setup.setupPriceId;
   }
 
   // Archive the prices this replaces (best-effort; never block on it).
   for (const old of [opts.existing.monthlyPriceId, opts.existing.setupPriceId]) {
-    if (old) {
-      try {
-        await stripe.prices.update(old, { active: false });
-      } catch {
-        /* already archived or missing */
-      }
-    }
+    await archiveStripePrice(stripe, old);
   }
 
-  return { productId, setupProductId, monthlyPriceId: monthlyPrice.id, setupPriceId };
+  return { productId: monthly.productId, setupProductId, monthlyPriceId: monthly.priceId, setupPriceId };
+}
+
+type StripeOrSecret = Stripe | string;
+const client = (s: StripeOrSecret): Stripe => (typeof s === "string" ? new Stripe(s) : s);
+
+/**
+ * A new recurring monthly price for a plan, under the plan's subscription
+ * product (created on first use). Archives nothing: see archiveStripePrice.
+ */
+export async function createPlanMonthlyPrice(opts: {
+  stripe: StripeOrSecret;
+  name: string;
+  currency: string;
+  monthlyCents: number;
+  productId?: string | null;
+}): Promise<{ productId: string; priceId: string }> {
+  const stripe = client(opts.stripe);
+  let productId = opts.productId || null;
+  if (!productId) {
+    const product = await stripe.products.create({ name: `Tekmadev ${opts.name}` });
+    productId = product.id;
+  }
+  const price = await stripe.prices.create({
+    product: productId,
+    currency: opts.currency.toLowerCase(),
+    unit_amount: opts.monthlyCents,
+    recurring: { interval: "month" },
+  });
+  return { productId, priceId: price.id };
+}
+
+/**
+ * A new one-time setup price for a plan, under the plan's own setup product
+ * (created on first use). Archives nothing: see archiveStripePrice.
+ */
+export async function createPlanSetupPrice(opts: {
+  stripe: StripeOrSecret;
+  name: string;
+  currency: string;
+  setupCents: number;
+  setupProductId?: string | null;
+}): Promise<{ setupProductId: string; setupPriceId: string }> {
+  const stripe = client(opts.stripe);
+  let setupProductId = opts.setupProductId || null;
+  if (!setupProductId) {
+    const setupProduct = await stripe.products.create({ name: `Tekmadev ${opts.name} Setup` });
+    setupProductId = setupProduct.id;
+  }
+  const setupPrice = await stripe.prices.create({
+    product: setupProductId,
+    currency: opts.currency.toLowerCase(),
+    unit_amount: opts.setupCents,
+  });
+  return { setupProductId, setupPriceId: setupPrice.id };
+}
+
+/** Archive a price that was replaced. Best effort: an archived or missing price is fine. */
+export async function archiveStripePrice(stripe: StripeOrSecret, priceId: string | null | undefined): Promise<void> {
+  if (!priceId) return;
+  try {
+    await client(stripe).prices.update(priceId, { active: false });
+  } catch {
+    /* already archived or missing */
+  }
 }

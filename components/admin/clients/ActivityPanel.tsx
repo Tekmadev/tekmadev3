@@ -3,32 +3,39 @@ import { Badge, Field, inputCls, selectCls, fmtDateTime } from "@/components/por
 import { SubmitButton } from "@/components/portal/SubmitButton";
 import { addNoteAction } from "@/app/admin/(dashboard)/clients/actions";
 
-export function ActivityPanel({ activity, clientId }: { activity: ClientActivity[]; clientId: string }) {
+/**
+ * The activity feed. `canWrite` (clients.activity.write) posts notes and
+ * updates. The page passes only the entries this role may see (no billing or
+ * care plan entries without clients.billing, no CRM ones without clients.crm).
+ */
+export function ActivityPanel({ activity, clientId, canWrite }: { activity: ClientActivity[]; clientId: string; canWrite: boolean }) {
   return (
     <div className="flex flex-col gap-5">
-      <form action={addNoteAction} className="grid gap-3 rounded-xl border border-line bg-bg-2 p-4 sm:grid-cols-[10rem_1fr]">
-        <input type="hidden" name="client_id" value={clientId} />
-        <Field label="Type">
-          <select name="kind" defaultValue="note" className={selectCls}>
-            <option value="note">Internal note</option>
-            <option value="update">Update to client</option>
-          </select>
-        </Field>
-        <Field label="Subject (updates only)">
-          <input name="subject" placeholder="Website draft is ready" className={inputCls} />
-        </Field>
-        <div className="sm:col-span-2">
-          <Field label="Text" required>
-            <textarea name="text" rows={2} required className={inputCls} />
+      {canWrite && (
+        <form action={addNoteAction} className="grid gap-3 rounded-xl border border-line bg-bg-2 p-4 sm:grid-cols-[10rem_1fr]">
+          <input type="hidden" name="client_id" value={clientId} />
+          <Field label="Type">
+            <select name="kind" defaultValue="note" className={selectCls}>
+              <option value="note">Internal note</option>
+              <option value="update">Update to client</option>
+            </select>
           </Field>
-        </div>
-        <Field label="Link (updates only)">
-          <input name="action_url" placeholder="/approvals" className={inputCls} />
-        </Field>
-        <div className="flex items-end">
-          <SubmitButton pendingLabel="Saving">Post</SubmitButton>
-        </div>
-      </form>
+          <Field label="Subject (updates only)">
+            <input name="subject" placeholder="Website draft is ready" className={inputCls} />
+          </Field>
+          <div className="sm:col-span-2">
+            <Field label="Text" required>
+              <textarea name="text" rows={2} required className={inputCls} />
+            </Field>
+          </div>
+          <Field label="Link (updates only)">
+            <input name="action_url" placeholder="/approvals" className={inputCls} />
+          </Field>
+          <div className="flex items-end">
+            <SubmitButton pendingLabel="Saving">Post</SubmitButton>
+          </div>
+        </form>
+      )}
 
       <ul className="divide-y divide-line">
         {activity.length === 0 && <li className="py-3 text-sm text-ink-4">No activity yet.</li>}

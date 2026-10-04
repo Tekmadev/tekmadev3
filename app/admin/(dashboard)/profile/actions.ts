@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getSupabaseAdmin } from "@/lib/supabase";
+import { syncAdminRowName } from "@/lib/admin-profile";
 
 /**
  * Updates the signed-in admin's own display name and (optionally) password.
@@ -34,8 +34,7 @@ export async function updateProfileAction(formData: FormData) {
   if (error) redirect("/admin/profile?e=fail");
 
   // Keep the admins-table name in sync for managers (no-op for the env owner).
-  const admin = getSupabaseAdmin();
-  if (admin) await admin.from("admins").update({ name: name || null }).eq("email", email);
+  await syncAdminRowName(email, name || null);
 
   revalidatePath("/admin/profile");
   redirect("/admin/profile?ok=1");

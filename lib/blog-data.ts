@@ -274,18 +274,21 @@ const CATEGORY_NAME_MAX = 60;
 
 function categoryName(raw: string): string {
   const name = raw.trim().replace(/\s+/g, " ").slice(0, CATEGORY_NAME_MAX);
-  if (!name || !slugify(name)) throw new Error("Category needs a name");
+  if (!name) throw new Error("Category needs a name");
   return name;
 }
 
 /**
- * Same name as another category, case folded, or the same slug. The unique
- * index only covers the slug, and a rename keeps the old slug, so a name can
- * otherwise be taken twice. The table is small; one read is fine.
+ * Same name as another category, case folded, or (when a slug is given) the
+ * same slug. The unique index only covers the slug, and a rename keeps the old
+ * slug, so a name can otherwise be taken twice. The table is small; one read
+ * is fine.
  */
-async function assertCategoryNameFree(name: string, slug: string, exceptId?: string): Promise<void> {
+async function assertCategoryNameFree(name: string, slug: string | null, exceptId?: string): Promise<void> {
   const lower = name.toLowerCase();
-  const clash = (await listCategories()).some((c) => c.id !== exceptId && (c.slug === slug || c.name.toLowerCase() === lower));
+  const clash = (await listCategories()).some(
+    (c) => c.id !== exceptId && ((slug !== null && c.slug === slug) || c.name.toLowerCase() === lower),
+  );
   if (clash) throw new DuplicateCategoryError();
 }
 
@@ -294,6 +297,7 @@ export async function createCategory(input: { name: string; slug?: string; descr
   if (!supabase) throw new Error("Supabase not configured");
   const name = categoryName(input.name);
   const slug = input.slug?.trim() || slugify(name);
+  if (!slug) throw new Error("Category needs a name");
   await assertCategoryNameFree(name, slug);
   const { data, error } = await supabase
     .from("blog_categories")
@@ -306,13 +310,14 @@ export async function createCategory(input: { name: string; slug?: string; descr
 
 /**
  * Rename only. The slug stays as it was so `/blog?category=<slug>` links that
- * are already out there keep working.
+ * are already out there keep working, which is also why only the name is
+ * checked for a clash here.
  */
 export async function renameCategory(id: string, rawName: string): Promise<BlogCategory> {
   const supabase = getSupabaseAdmin();
   if (!supabase) throw new Error("Supabase not configured");
   const name = categoryName(rawName);
-  await assertCategoryNameFree(name, slugify(name), id);
+  await assertCategoryNameFree(name, null, id);
   const { data, error } = await supabase.from("blog_categories").update({ name }).eq("id", id).select("*").single();
   if (error) throw error.code === "23505" ? new DuplicateCategoryError() : error;
   return data as BlogCategory;
@@ -438,14 +443,22 @@ export async function saveRevision(
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * URL slug: lowercase ASCII letters, digits and single dashes, at most 80
+ * characters. Accents are folded first ("Café" gives "cafe") and apostrophes
+ * dropped ("don’t" gives "dont"). May return "" when nothing usable is left.
+ */
 export function slugify(input: string): string {
   return input
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim()
-    .replace(/['"]/g, "")
+    .replace(/['"\u2019]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
+    .slice(0, 80)
+    .replace(/-+$/g, "");
 }
 
 /** Rough reading time in minutes from the text across all blocks (200 wpm). */

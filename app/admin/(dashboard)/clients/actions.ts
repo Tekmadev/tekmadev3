@@ -1,18 +1,21 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireAdmin, requireOwner } from "@/lib/admin";
-import { getSupabaseAdmin } from "@/lib/supabase";
-import { getProductMeta } from "@/config/products";
-import { notifyAdmins, resolveAdminNotifications } from "@/lib/admin-notify";
+import { requireAdminCapability } from "@/lib/admin";
 import {
-  careIsSetUp,
-  createNotification,
-  getCareSubscriptionForClient,
+  addTaskByStaff,
+  changeOnboardingStage,
+  completeOnboardingRun,
+  goLiveClient,
+  reviewIntakeByStaff,
+  setOnboardingBlocked,
+  setTaskStatusByStaff,
+  trashClient,
+} from "@/lib/client-ops";
+import {
   getClientById,
   getMemberById,
   logActivity,
-  softDeleteClient,
   updateClient,
   updateMember,
   type Client,
@@ -23,22 +26,10 @@ import {
   type MemberStatus,
 } from "@/lib/clients-data";
 import {
-  completeTaskByKey,
-  createAccessGrant,
-  createApproval,
-  createBookedCall,
-  createTask,
   deleteTemplate,
   getAccessGrant,
-  getActiveOnboarding,
   getOnboardingById,
   getTaskById,
-  markIntakeReviewed,
-  refreshGuaranteeStatus,
-  setOnboardingStage,
-  setTaskStatus,
-  updateAccessGrant,
-  updateBookedCall,
   updateOnboarding,
   upsertTemplate,
   type AccessGrant,
@@ -50,12 +41,26 @@ import {
   type TaskStage,
   type TaskStatus,
 } from "@/lib/onboarding-data";
-import { accessProvider, type AccessProviderKey } from "@/lib/access-providers";
-import { inviteMember, provisionClient, sendPortalInvite } from "@/lib/client-provisioning";
+import { type AccessProviderKey } from "@/lib/access-providers";
+import { inviteMember, provisionClient } from "@/lib/client-provisioning";
+import {
+  logClientBookedCall,
+  postClientNote,
+  requestClientAccess,
+  requestClientApproval,
+  saveBookedCallReview,
+  saveClientCrmMapping,
+  sendMemberLink,
+  setClientAccessStatus,
+} from "@/lib/client-sections-data";
 
 /**
- * Admin actions for client accounts. Managers can run onboarding; only the
- * owner can delete a client. Every write logs to the client's activity trail.
+ * Admin actions for client accounts. Each one checks its own capability from
+ * the permission table the admin API uses (lib/admin-api/permissions.ts):
+ * staff may add tasks, set task status, ask for access and approvals, log
+ * calls and post notes; account edits, go live, members, onboarding run
+ * controls, call review, CRM, templates and trash need a manager or owner.
+ * Every write logs to the client's activity trail.
  */
 
 function s(v: FormDataEntryValue | null, max = 4000): string {
@@ -103,7 +108,7 @@ function pick<T extends string>(v: FormDataEntryValue | null, allowed: readonly 
 // ---------------------------------------------------------------------------
 
 export async function createClientAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.create");
   const email = s(formData.get("email"), 200).toLowerCase();
   const businessName = s(formData.get("business_name"), 200);
   if (!email.includes("@") || !businessName) redirect("/admin/clients/new?e=required");
@@ -126,7 +131,7 @@ export async function createClientAction(formData: FormData) {
 }
 
 export async function updateClientAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.edit");
   const id = s(formData.get("client_id"));
   const client = await getClientById(id);
   if (!client) redirect("/admin/clients");
@@ -158,86 +163,26 @@ export async function updateClientAction(formData: FormData) {
 }
 
 export async function deleteClientAction(formData: FormData) {
-  const ctx = await requireOwner();
+  const ctx = await requireAdminCapability("clients.trash");
   const id = s(formData.get("client_id"));
   const client = await getClientById(id);
-  await softDeleteClient(id, ctx.email);
-  // Until now a deleted client left no trace of who did it. Owner only.
-  await notifyAdmins({
-    event: "client.deleted",
-    title: `${client?.business_name ?? "A client"} was moved to the trash`,
-    body: `By ${ctx.email}`,
-    url: "/admin/clients",
-    entity: { type: "client", id },
-    actor: { type: "staff", label: ctx.email },
-    isTest: Boolean(client?.is_test),
-    data: { client_id: id, deleted_by: ctx.email },
-  });
+  // Soft delete, and the owner is told who did it (lib/client-ops.ts).
+  await trashClient(client, id, ctx.email);
   redirect("/admin/clients?deleted=1");
 }
 
-/** Flip the account live: status, milestones, and the guarantee clock in one go. */
+/** Flip the account live: status, milestones, and the guarantee clock in one go (lib/client-ops.ts). */
 export async function goLiveAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.go_live");
   const id = s(formData.get("client_id"));
   const client = await getClientById(id);
   if (!client) redirect("/admin/clients");
-  const now = new Date().toISOString();
 
   // A product with a required care plan (Webline) does not go live until the
-  // client has set it up: once the site is public there is no leverage left to
-  // collect the card. An explicit override exists for comped or invoiced sites
-  // and is written to the activity log.
-  const product = getProductMeta(client.plan_id);
-  const override = formData.get("override") === "1";
-  if (product?.care && !override) {
-    const care = await getCareSubscriptionForClient(id);
-    if (!careIsSetUp(care)) redirect(`${back(id)}?e=care`);
-  }
-  if (product?.care && override) {
-    await logActivity({
-      client_id: id,
-      actor_type: "admin",
-      actor_email: ctx.email,
-      event: "care.go_live_override",
-      summary: `Went live without ${product.care.name} (override)`,
-    });
-  }
-
-  await updateClient(
-    id,
-    {
-      status: "live",
-      live_at: client.live_at ?? now,
-      guarantee_started_at: client.guarantee_eligible ? (client.guarantee_started_at ?? now) : client.guarantee_started_at,
-      guarantee_status: client.guarantee_eligible ? "running" : "not_eligible",
-    },
-    ctx.email,
-  );
-  const onboarding = await getActiveOnboarding(id);
-  if (onboarding) {
-    await updateOnboarding(onboarding.id, { live_at: now, stage: "optimizing", stage_entered_at: now });
-    await completeTaskByKey(onboarding.id, "go_live.clock_start", ctx.email);
-    await completeTaskByKey(onboarding.id, "go_live.switch_on", ctx.email);
-    await completeTaskByKey(onboarding.id, "go_live.publish", ctx.email);
-  }
-  await logActivity({
-    client_id: id,
-    actor_type: "admin",
-    actor_email: ctx.email,
-    event: "client.live",
-    summary: client.guarantee_eligible ? "System live. Guarantee clock started." : "System live.",
-    visibility: "client",
-  });
-  await createNotification({
-    client_id: id,
-    template_key: "go_live",
-    subject: "You are live",
-    body: client.guarantee_eligible
-      ? `Everything is switched on. Your ${client.guarantee_window_days}-day guarantee window starts today.`
-      : "Everything is switched on. Booked appointments will start showing on your dashboard.",
-    action_url: "/calls",
-  });
+  // client has set it up. An explicit override exists for comped or invoiced
+  // sites and is written to the activity log.
+  const result = await goLiveClient(client, { by: ctx.email, override: formData.get("override") === "1" });
+  if (!result.ok) redirect(`${back(id)}?e=care`);
   redirect(`${back(id)}?live=1`);
 }
 
@@ -246,46 +191,26 @@ export async function goLiveAction(formData: FormData) {
 // ---------------------------------------------------------------------------
 
 export async function setStageAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.onboarding");
   const onboarding = await getOnboardingById(s(formData.get("onboarding_id")));
   if (!onboarding) redirect("/admin/clients");
   const stage = pick(formData.get("stage"), STAGES, onboarding.stage);
-  await setOnboardingStage(onboarding.id, stage);
-  await logActivity({
-    client_id: onboarding.client_id,
-    actor_type: "admin",
-    actor_email: ctx.email,
-    event: "onboarding.stage_changed",
-    entity_type: "onboarding",
-    entity_id: onboarding.id,
-    summary: `Stage set to ${stage.replace("_", " ")}`,
-    visibility: "client",
-    data: { from: onboarding.stage, to: stage },
-  });
+  await changeOnboardingStage(onboarding, stage, ctx.email);
   redirect(back(onboarding.client_id, "onboarding"));
 }
 
 export async function setBlockedAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.onboarding");
   const onboarding = await getOnboardingById(s(formData.get("onboarding_id")));
   if (!onboarding) redirect("/admin/clients");
   const blocked = formData.get("blocked") === "on";
   const reason = opt(formData.get("blocked_reason"), 500);
-  await updateOnboarding(onboarding.id, { blocked, blocked_reason: blocked ? reason : null });
-  await logActivity({
-    client_id: onboarding.client_id,
-    actor_type: "admin",
-    actor_email: ctx.email,
-    event: blocked ? "onboarding.blocked" : "onboarding.unblocked",
-    entity_type: "onboarding",
-    entity_id: onboarding.id,
-    summary: blocked ? `Blocked: ${reason ?? "no reason given"}` : "Unblocked",
-  });
+  await setOnboardingBlocked(onboarding, blocked, reason, ctx.email);
   redirect(back(onboarding.client_id, "onboarding"));
 }
 
 export async function setOnboardingDatesAction(formData: FormData) {
-  await requireAdmin();
+  await requireAdminCapability("clients.onboarding");
   const onboarding = await getOnboardingById(s(formData.get("onboarding_id")));
   if (!onboarding) redirect("/admin/clients");
   await updateOnboarding(onboarding.id, {
@@ -296,80 +221,41 @@ export async function setOnboardingDatesAction(formData: FormData) {
 }
 
 export async function setTaskStatusAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.tasks.status");
   const task = await getTaskById(s(formData.get("task_id")));
   if (!task) redirect("/admin/clients");
   const status = pick(formData.get("status"), TASK_STATUSES, task.status);
-  if (status !== task.status) {
-    await setTaskStatus(task.id, status, ctx.email);
-    await logActivity({
-      client_id: task.client_id,
-      actor_type: "admin",
-      actor_email: ctx.email,
-      event: "task.status_changed",
-      entity_type: "task",
-      entity_id: task.id,
-      summary: `"${task.title}" set to ${status.replace(/_/g, " ")}`,
-      visibility: status === "done" ? "client" : "internal",
-    });
-  }
+  await setTaskStatusByStaff(task, status, ctx.email);
   redirect(back(task.client_id, "onboarding"));
 }
 
 export async function addTaskAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.tasks.create");
   const onboarding = await getOnboardingById(s(formData.get("onboarding_id")));
   if (!onboarding) redirect("/admin/clients");
   const title = s(formData.get("title"), 200);
   if (!title) redirect(back(onboarding.client_id, "onboarding"));
-  const task = await createTask({
-    onboarding_id: onboarding.id,
-    client_id: onboarding.client_id,
-    title,
-    description: opt(formData.get("description"), 1000),
-    stage: pick(formData.get("stage"), TASK_STAGES, onboarding.stage === "complete" ? "optimizing" : (onboarding.stage as TaskStage)),
-    owner: pick<TaskOwner>(formData.get("owner"), ["client", "tekmadev"], "tekmadev"),
-    kind: pick(formData.get("kind"), TASK_KINDS, "checklist"),
-    required: formData.get("required") === "on",
-    due_at: iso(formData.get("due_at")),
-  });
-  await logActivity({
-    client_id: onboarding.client_id,
-    actor_type: "admin",
-    actor_email: ctx.email,
-    event: "task.created",
-    entity_type: "task",
-    entity_id: task.id,
-    summary: `Task added: ${title}`,
-    visibility: task.owner === "client" ? "client" : "internal",
-  });
-  if (task.owner === "client") {
-    await createNotification({
-      client_id: onboarding.client_id,
-      template_key: "task_added",
-      subject: `New to-do: ${title}`,
-      body: task.description,
-      action_url: "/onboarding",
-    });
-  }
+  await addTaskByStaff(
+    onboarding,
+    {
+      title,
+      description: opt(formData.get("description"), 1000),
+      stage: pick(formData.get("stage"), TASK_STAGES, onboarding.stage === "complete" ? "optimizing" : (onboarding.stage as TaskStage)),
+      owner: pick<TaskOwner>(formData.get("owner"), ["client", "tekmadev"], "tekmadev"),
+      kind: pick(formData.get("kind"), TASK_KINDS, "checklist"),
+      required: formData.get("required") === "on",
+      due_at: iso(formData.get("due_at")),
+    },
+    ctx.email,
+  );
   redirect(back(onboarding.client_id, "onboarding"));
 }
 
 export async function completeOnboardingAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.onboarding");
   const onboarding = await getOnboardingById(s(formData.get("onboarding_id")));
   if (!onboarding) redirect("/admin/clients");
-  await setOnboardingStage(onboarding.id, "complete");
-  await logActivity({
-    client_id: onboarding.client_id,
-    actor_type: "admin",
-    actor_email: ctx.email,
-    event: "onboarding.completed",
-    entity_type: "onboarding",
-    entity_id: onboarding.id,
-    summary: "Onboarding complete",
-    visibility: "client",
-  });
+  await completeOnboardingRun(onboarding, ctx.email);
   redirect(back(onboarding.client_id, "onboarding"));
 }
 
@@ -378,112 +264,55 @@ export async function completeOnboardingAction(formData: FormData) {
 // ---------------------------------------------------------------------------
 
 export async function markIntakeReviewedAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.intake.review");
   const clientId = s(formData.get("client_id"));
-  await markIntakeReviewed(s(formData.get("intake_id")), ctx.email);
-  await resolveAdminNotifications({ events: ["onboarding.intake_submitted"], clientId, by: ctx.email });
-  await logActivity({ client_id: clientId, actor_type: "admin", actor_email: ctx.email, event: "intake.reviewed", summary: "Intake reviewed", visibility: "client" });
+  await reviewIntakeByStaff(s(formData.get("intake_id")), clientId, ctx.email);
   redirect(back(clientId, "intake"));
 }
 
 export async function setAccessStatusAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.access.update");
   const grant = await getAccessGrant(s(formData.get("grant_id")));
   if (!grant) redirect("/admin/clients");
   const status = pick(formData.get("status"), ACCESS_STATUSES, grant.status);
-  const now = new Date().toISOString();
-  const patch: Partial<AccessGrant> = { status, notes: opt(formData.get("notes"), 1000) ?? grant.notes };
-  if (status === "granted" && !grant.granted_at) patch.granted_at = now;
-  if (status === "verified") {
-    patch.granted_at = grant.granted_at ?? now;
-    patch.verified_at = now;
-    patch.verified_by = ctx.email;
-  }
-  if (status === "revoked") patch.revoked_at = now;
-  await updateAccessGrant(grant.id, patch);
-  // Staff have dealt with it, one way or another: the "verify it" item closes
-  // by itself instead of waiting for someone to tick it off in the inbox too.
-  if (status !== grant.status) {
-    await resolveAdminNotifications({
-      events: ["onboarding.access_marked_done", "onboarding.access_not_applicable"],
-      entityId: grant.id,
-      by: ctx.email,
-    });
-  }
-  if (status === "verified" && grant.task_id) await setTaskStatus(grant.task_id, "done", ctx.email);
-  if (status === "pending_client" && grant.task_id) await setTaskStatus(grant.task_id, "waiting_on_client", ctx.email);
-  await logActivity({
-    client_id: grant.client_id,
-    actor_type: "admin",
-    actor_email: ctx.email,
-    event: `access.${status}`,
-    entity_type: "access_grant",
-    entity_id: grant.id,
-    summary: `${grant.label ?? grant.provider}: ${status.replace(/_/g, " ")}`,
-    visibility: status === "verified" || status === "pending_client" ? "client" : "internal",
-  });
+  // Shared with the admin API (lib/client-sections-data.ts): stamps, inbox, task sync, activity.
+  await setClientAccessStatus({ grant, status, notes: opt(formData.get("notes"), 1000) ?? grant.notes, by: ctx.email });
   redirect(back(grant.client_id, "access"));
 }
 
 export async function addAccessGrantAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.access.request");
   const clientId = s(formData.get("client_id"));
   const provider = s(formData.get("provider")) as AccessProviderKey;
-  const def = accessProvider(provider);
-  const grant = await createAccessGrant({
-    client_id: clientId,
-    provider: def.key,
-    method: def.method,
-    label: opt(formData.get("label"), 120) ?? def.label,
+  await requestClientAccess({
+    clientId,
+    provider,
+    label: opt(formData.get("label"), 120),
     notes: opt(formData.get("notes"), 1000),
+    by: ctx.email,
   });
-  await logActivity({
-    client_id: clientId,
-    actor_type: "admin",
-    actor_email: ctx.email,
-    event: "access.requested",
-    entity_type: "access_grant",
-    entity_id: grant.id,
-    summary: `Access requested: ${grant.label}`,
-    visibility: "client",
-  });
-  await createNotification({ client_id: clientId, template_key: "access_requested", subject: `We need access: ${grant.label}`, body: def.summary, action_url: "/access" });
   redirect(back(clientId, "access"));
 }
 
 export async function requestApprovalAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.approvals.request");
   const clientId = s(formData.get("client_id"));
   const title = s(formData.get("title"), 200);
   if (!title) redirect(back(clientId, "approvals"));
-  const onboarding = await getActiveOnboarding(clientId);
   const taskId = opt(formData.get("task_id"));
   const attLabel = opt(formData.get("attachment_label"), 120);
   const attUrl = opt(formData.get("attachment_url"), 500);
 
-  const approval = await createApproval({
-    client_id: clientId,
-    onboarding_id: onboarding?.id ?? null,
-    task_id: taskId,
-    kind: pick(formData.get("kind"), APPROVAL_KINDS, "other"),
+  await requestClientApproval({
+    clientId,
     title,
+    kind: pick(formData.get("kind"), APPROVAL_KINDS, "other"),
     description: opt(formData.get("description"), 2000),
-    preview_url: opt(formData.get("preview_url"), 500),
+    previewUrl: opt(formData.get("preview_url"), 500),
+    taskId,
     attachments: attLabel && attUrl ? [{ label: attLabel, url: attUrl }] : [],
-    requested_by: ctx.email,
+    by: ctx.email,
   });
-  if (taskId) await setTaskStatus(taskId, "waiting_on_client", ctx.email);
-  await logActivity({
-    client_id: clientId,
-    actor_type: "admin",
-    actor_email: ctx.email,
-    event: "approval.requested",
-    entity_type: "approval",
-    entity_id: approval.id,
-    summary: `Approval requested: ${title} (v${approval.version})`,
-    visibility: "client",
-  });
-  await createNotification({ client_id: clientId, template_key: "approval_requested", subject: `Please review: ${title}`, body: approval.description, action_url: "/approvals" });
   redirect(back(clientId, "approvals"));
 }
 
@@ -492,46 +321,51 @@ export async function requestApprovalAction(formData: FormData) {
 // ---------------------------------------------------------------------------
 
 export async function addBookedCallAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.calls.log");
   const clientId = s(formData.get("client_id"));
-  const call = await createBookedCall({
-    client_id: clientId,
-    external_id: opt(formData.get("external_id"), 200) ?? `manual-${Date.now().toString(36)}`,
-    source: pick(formData.get("source"), CALL_SOURCES, "manual"),
-    contact_name: opt(formData.get("contact_name"), 120),
-    contact_phone: opt(formData.get("contact_phone"), 40),
-    contact_email: opt(formData.get("contact_email"), 200),
-    service_requested: opt(formData.get("service_requested"), 200),
-    booked_at: iso(formData.get("booked_at")) ?? new Date().toISOString(),
-    booked_for: iso(formData.get("booked_for")),
-    status: pick(formData.get("status"), CALL_STATUSES, "booked"),
-    notes: opt(formData.get("notes"), 1000),
-    reviewed_by: ctx.email,
-    reviewed_at: new Date().toISOString(),
-  });
-  await logActivity({ client_id: clientId, actor_type: "admin", actor_email: ctx.email, event: "call.added", entity_type: "booked_call", entity_id: call.id, summary: `Booked call added: ${call.contact_name ?? "unknown"}` });
-  await refreshGuaranteeStatus(clientId, ctx.email);
+  // Shared with the admin API (lib/client-sections-data.ts): the call, its activity line, the guarantee check.
+  await logClientBookedCall(
+    {
+      client_id: clientId,
+      external_id: opt(formData.get("external_id"), 200) ?? `manual-${Date.now().toString(36)}`,
+      source: pick(formData.get("source"), CALL_SOURCES, "manual"),
+      contact_name: opt(formData.get("contact_name"), 120),
+      contact_phone: opt(formData.get("contact_phone"), 40),
+      contact_email: opt(formData.get("contact_email"), 200),
+      service_requested: opt(formData.get("service_requested"), 200),
+      booked_at: iso(formData.get("booked_at")) ?? new Date().toISOString(),
+      booked_for: iso(formData.get("booked_for")),
+      status: pick(formData.get("status"), CALL_STATUSES, "booked"),
+      notes: opt(formData.get("notes"), 1000),
+      reviewed_by: ctx.email,
+      reviewed_at: new Date().toISOString(),
+    },
+    ctx.email,
+  );
   redirect(back(clientId, "calls"));
 }
 
 export async function updateBookedCallAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.calls.review");
   const clientId = s(formData.get("client_id"));
   const id = s(formData.get("call_id"));
   const qualified = s(formData.get("qualified")) !== "no";
-  await updateBookedCall(id, {
-    status: pick(formData.get("status"), CALL_STATUSES, "booked"),
-    qualified,
-    disqualified_reason: qualified ? null : pick(formData.get("disqualified_reason"), DQ_REASONS, "other"),
-    notes: opt(formData.get("notes"), 1000),
-    reviewed_by: ctx.email,
-    reviewed_at: new Date().toISOString(),
+  // Shared with the admin API: the update, the guarantee check, and closing the
+  // CRM appointment's "needs reviewing" card (keyed by its external id).
+  await saveBookedCallReview({
+    callId: id,
+    clientId,
+    patch: {
+      status: pick(formData.get("status"), CALL_STATUSES, "booked"),
+      qualified,
+      disqualified_reason: qualified ? null : pick(formData.get("disqualified_reason"), DQ_REASONS, "other"),
+      notes: opt(formData.get("notes"), 1000),
+      reviewed_by: ctx.email,
+      reviewed_at: new Date().toISOString(),
+    },
+    by: ctx.email,
+    externalId: opt(formData.get("external_id"), 200),
   });
-  await refreshGuaranteeStatus(clientId, ctx.email);
-  // An appointment that came in from the CRM raised a "needs reviewing" card
-  // keyed by its external id. Reviewing it is the answer, so the card closes.
-  const externalId = opt(formData.get("external_id"), 200);
-  if (externalId) await resolveAdminNotifications({ events: ["client.appointment_booked"], entityId: externalId, by: ctx.email });
   redirect(back(clientId, "calls"));
 }
 
@@ -547,12 +381,12 @@ const CRM_ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
  * Which CRM sub-account belongs to this client, and which of its calendars
  * count toward the guarantee.
  *
- * Owner only, because it decides what counts toward a commercial promise.
+ * clients.crm, because it decides what counts toward a commercial promise.
  * An empty calendar list counts every appointment in the account; the owner
  * decided only calendars we built should count, so the form asks for them.
  */
 export async function saveCrmLocationAction(formData: FormData) {
-  const ctx = await requireOwner();
+  const ctx = await requireAdminCapability("clients.crm");
   const clientId = s(formData.get("client_id"));
   if (!clientId) redirect("/admin/clients");
   const locationId = s(formData.get("location_id"), 64);
@@ -561,74 +395,13 @@ export async function saveCrmLocationAction(formData: FormData) {
   if (locationId && !CRM_ID_RE.test(locationId)) redirect(`/admin/clients/${clientId}?e=crm_location#crm`);
   if (calendars.some((c) => !CRM_ID_RE.test(c))) redirect(`/admin/clients/${clientId}?e=crm_calendar#crm`);
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase) redirect(`/admin/clients/${clientId}?e=crm_db#crm`);
-
-  if (locationId) {
-    const { data: taken, error: takenError } = await supabase
-      .from("crm_locations")
-      .select("client_id,is_agency")
-      .eq("ghl_location_id", locationId)
-      .maybeSingle();
-    if (takenError) redirect(`/admin/clients/${clientId}?e=crm_db#crm`);
-    // Never silently moved from one client to another: the other client's
-    // appointments would start counting toward this one's guarantee.
-    if (taken && (taken.is_agency || (taken.client_id && taken.client_id !== clientId))) {
-      redirect(`/admin/clients/${clientId}?e=crm_taken#crm`);
-    }
-    if (locationId === (process.env.GHL_LOCATION_ID ?? "").trim()) redirect(`/admin/clients/${clientId}?e=crm_own#crm`);
+  // Shared with the admin API (lib/client-sections-data.ts): the taken and own
+  // checks, the unlink, the upsert, releasing held appointments, the activity line.
+  const result = await saveClientCrmMapping({ clientId, locationId: locationId || null, calendarIds: calendars, by: ctx.email });
+  if (!result.ok) {
+    const code = result.reason === "own" ? "crm_own" : result.reason === "db" ? "crm_db" : "crm_taken";
+    redirect(`/admin/clients/${clientId}?e=${code}#crm`);
   }
-
-  // One sub-account per client. Unlink whatever this client pointed at before,
-  // rather than deleting it, so a mistake is one save away from undone.
-  const { error: unlinkError } = await supabase
-    .from("crm_locations")
-    .update({ client_id: null, updated_at: new Date().toISOString() })
-    .eq("client_id", clientId)
-    .neq("ghl_location_id", locationId || "__none__");
-  if (unlinkError) redirect(`/admin/clients/${clientId}?e=crm_db#crm`);
-
-  if (locationId) {
-    const client = await getClientById(clientId);
-    const { error } = await supabase.from("crm_locations").upsert(
-      {
-        ghl_location_id: locationId,
-        client_id: clientId,
-        label: client?.business_name ?? null,
-        qualifying_calendar_ids: calendars,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "ghl_location_id" },
-    );
-    if (error) {
-      console.error("[clients] crm location save failed", error.message);
-      redirect(`/admin/clients/${clientId}?e=crm_db#crm`);
-    }
-
-    // Appointments that arrived before the mapping existed were held, not
-    // dropped. Make them due now so they land on this client's next sync pass.
-    const { error: heldError } = await supabase
-      .from("crm_inbox")
-      .update({ status: "pending", next_attempt_at: new Date().toISOString() })
-      .eq("location_id", locationId)
-      .eq("status", "unmapped");
-    if (heldError) console.error("[clients] could not release held appointments", heldError.message);
-    await resolveAdminNotifications({ events: ["crm.inbound_unmapped"], entityId: locationId, by: ctx.email });
-  }
-
-  await logActivity({
-    client_id: clientId,
-    actor_type: "admin",
-    actor_email: ctx.email,
-    event: "crm.location_mapped",
-    entity_type: "client",
-    entity_id: clientId,
-    // Internal: the client's portal has no business showing CRM plumbing.
-    visibility: "internal",
-    summary: locationId
-      ? `CRM account set to ${locationId}${calendars.length ? `, ${calendars.length} qualifying calendar${calendars.length === 1 ? "" : "s"}` : ", every calendar counts"}`
-      : "CRM account unlinked",
-  });
   redirect(`/admin/clients/${clientId}?saved=1#crm`);
 }
 
@@ -637,7 +410,7 @@ export async function saveCrmLocationAction(formData: FormData) {
 // ---------------------------------------------------------------------------
 
 export async function addMemberAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.members");
   const clientId = s(formData.get("client_id"));
   const email = s(formData.get("email"), 200).toLowerCase();
   if (!email.includes("@")) redirect(`${back(clientId, "team")}?e=email`);
@@ -654,24 +427,16 @@ export async function addMemberAction(formData: FormData) {
 }
 
 export async function resendInviteAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.members");
   const member = await getMemberById(s(formData.get("member_id")));
   if (!member) redirect("/admin/clients");
-  const result = await sendPortalInvite(member.email, member.name);
-  await logActivity({
-    client_id: member.client_id,
-    actor_type: "admin",
-    actor_email: ctx.email,
-    event: result.ok ? "member.invite_resent" : "member.invite_failed",
-    entity_type: "member",
-    entity_id: member.id,
-    summary: result.ok ? `Invite re-sent to ${member.email}` : `Invite failed: ${result.error}`,
-  });
+  // Shared with the admin API (lib/client-sections-data.ts): the email and its activity line.
+  const result = await sendMemberLink(member, ctx.email);
   redirect(`${back(member.client_id, "team")}${result.ok ? "?invited=1" : "?e=invite"}`);
 }
 
 export async function setMemberStatusAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.members");
   const member = await getMemberById(s(formData.get("member_id")));
   if (!member) redirect("/admin/clients");
   const status = pick<MemberStatus>(formData.get("status"), ["invited", "active", "disabled"], member.status);
@@ -682,22 +447,20 @@ export async function setMemberStatusAction(formData: FormData) {
 }
 
 export async function addNoteAction(formData: FormData) {
-  const ctx = await requireAdmin();
+  const ctx = await requireAdminCapability("clients.activity.write");
   const clientId = s(formData.get("client_id"));
   const text = s(formData.get("text"), 4000);
   if (!text) redirect(back(clientId, "activity"));
   const toClient = s(formData.get("kind")) === "update";
-  await logActivity({
-    client_id: clientId,
-    actor_type: "admin",
-    actor_email: ctx.email,
-    event: toClient ? "update.sent" : "note",
-    summary: text,
-    visibility: toClient ? "client" : "internal",
+  // Shared with the admin API (lib/client-sections-data.ts): the activity row and, for an update, the client's notification.
+  await postClientNote({
+    clientId,
+    kind: toClient ? "update" : "note",
+    text,
+    subject: toClient ? opt(formData.get("subject"), 200) : null,
+    actionUrl: toClient ? opt(formData.get("action_url"), 300) : null,
+    by: ctx.email,
   });
-  if (toClient) {
-    await createNotification({ client_id: clientId, template_key: "update", subject: opt(formData.get("subject"), 200) ?? "Update from Tekmadev", body: text, action_url: opt(formData.get("action_url"), 300) });
-  }
   redirect(back(clientId, "activity"));
 }
 
@@ -706,7 +469,7 @@ export async function addNoteAction(formData: FormData) {
 // ---------------------------------------------------------------------------
 
 export async function saveTemplateAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("clients.templates");
   const key = s(formData.get("key"), 100).toLowerCase().replace(/[^a-z0-9._-]+/g, "_");
   const title = s(formData.get("title"), 200);
   if (!key || !title) redirect("/admin/clients/templates?e=required");
@@ -737,7 +500,7 @@ export async function saveTemplateAction(formData: FormData) {
 }
 
 export async function deleteTemplateAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("clients.templates");
   await deleteTemplate(s(formData.get("id")));
   redirect("/admin/clients/templates?deleted=1");
 }

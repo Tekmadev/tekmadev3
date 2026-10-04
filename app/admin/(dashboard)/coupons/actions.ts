@@ -2,13 +2,14 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireOwner } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { getAllPlans } from "@/lib/pricing-data";
 import { getAllProducts } from "@/lib/products-data";
 import { getProductMeta } from "@/config/products";
-import { createCouponInStripe, deactivateCouponInStripe, type CouponDuration, type DiscountType } from "@/lib/coupon-sync";
-import { isOneTimeScope, scopeProductId, type CouponScope } from "@/lib/coupon-scopes";
+import type { CouponDuration, DiscountType } from "@/lib/coupon-sync";
+import { isOneTimeScope, type CouponScope } from "@/lib/coupon-scopes";
+import { couponProducts, createCoupon, disableCoupon } from "@/lib/coupon-admin";
 
 const DURATIONS: CouponDuration[] = ["once", "repeating", "forever"];
 
@@ -40,7 +41,7 @@ function randomCode(): string {
 }
 
 export async function createCouponAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("coupons.write");
 
   const secret = process.env.STRIPE_SECRET_KEY;
   if (!secret) redirect("/admin/coupons?e=nostripe");
@@ -92,8 +93,7 @@ export async function createCouponAction(formData: FormData) {
     maxRedemptions = Math.round(m);
   }
 
-  let redeemByUnix: number | null = null;
-  let redeemByIso: string | null = null;
+  let redeemBy: Date | null = null;
   const expiresRaw = String(formData.get("expires") || "").trim();
   if (expiresRaw) {
     // Treat the picked day as valid through its end (UTC), so choosing "today"
@@ -101,8 +101,7 @@ export async function createCouponAction(formData: FormData) {
     const d = new Date(`${expiresRaw}T23:59:59.999Z`);
     if (Number.isNaN(d.getTime())) redirect("/admin/coupons?e=expires");
     if (d.getTime() <= Date.now()) redirect("/admin/coupons?e=expirespast");
-    redeemByUnix = Math.floor(d.getTime() / 1000);
-    redeemByIso = d.toISOString();
+    redeemBy = d;
   }
 
   // Resolve the Stripe products this scope is limited to. An empty list means
@@ -110,21 +109,7 @@ export async function createCouponAction(formData: FormData) {
   // resolving to nothing would silently create a code that discounts every
   // offer, so it is treated as an error.
   const [plans, products] = await Promise.all([getAllPlans(), getAllProducts()]);
-  const productRow = products.find((p) => p.id === scopeProductId(scope)) ?? null;
-
-  let productIds: string[] = [];
-  let currency = plans[0]?.currency || "cad";
-  if (scope === "monthly") {
-    productIds = plans.map((p) => p.stripe_product_id).filter((x): x is string => Boolean(x));
-  } else if (scope === "setup") {
-    productIds = plans.map((p) => p.stripe_setup_product_id).filter((x): x is string => Boolean(x));
-  } else if (scope.startsWith("product:")) {
-    productIds = productRow?.stripe_product_id ? [productRow.stripe_product_id] : [];
-    currency = productRow?.currency || currency;
-  } else if (scope.startsWith("care:")) {
-    productIds = productRow?.stripe_monthly_product_id ? [productRow.stripe_monthly_product_id] : [];
-    currency = productRow?.currency || currency;
-  }
+  const { productIds, currency } = couponProducts(scope, plans, products);
   if (scope !== "order" && productIds.length === 0) redirect("/admin/coupons?e=noproducts");
 
   // Code: use the given one, else generate.
@@ -133,60 +118,25 @@ export async function createCouponAction(formData: FormData) {
   if (!code) redirect("/admin/coupons?e=code");
 
   // Create in Stripe (coupon + promotion code), then mirror into the DB.
-  let couponId: string;
-  let promotionCodeId: string;
-  try {
-    const res = await createCouponInStripe({
-      secret,
-      code,
-      name,
-      discountType,
-      percentOff,
-      amountOffCents,
-      currency,
-      scope,
-      duration,
-      durationInMonths,
-      maxRedemptions,
-      redeemBy: redeemByUnix,
-      productIds,
-    });
-    couponId = res.couponId;
-    promotionCodeId = res.promotionCodeId;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[coupons] Stripe create failed", msg);
-    if (/already exists/i.test(msg)) redirect("/admin/coupons?e=dupe");
-    // Surface the real Stripe reason so the dashboard shows it instead of a generic error.
-    redirect(`/admin/coupons?e=stripe&msg=${encodeURIComponent(msg.slice(0, 240))}`);
-  }
-
-  const { error } = await supabase.from("coupons").insert({
-    id: promotionCodeId,
+  const res = await createCoupon({
+    secret,
     code,
-    stripe_coupon_id: couponId,
     name,
-    discount_type: discountType,
-    percent_off: discountType === "percent" ? percentOff : null,
-    amount_off: discountType === "fixed" ? amountOffCents : null,
-    currency: discountType === "fixed" ? currency.toUpperCase() : null,
-    applies_to: scope,
+    discountType,
+    percentOff,
+    amountOffCents,
+    currency,
+    scope,
     duration,
-    duration_in_months: duration === "repeating" ? durationInMonths : null,
-    max_redemptions: maxRedemptions,
-    redeem_by: redeemByIso,
-    active: true,
-    times_redeemed: 0,
+    durationInMonths,
+    maxRedemptions,
+    redeemBy,
+    productIds,
   });
-
-  if (error) {
-    console.error("[coupons] DB insert failed", error.message);
-    // The code lives in Stripe but not our table; deactivate it so state stays consistent.
-    try {
-      await deactivateCouponInStripe(secret, promotionCodeId);
-    } catch {
-      /* best effort */
-    }
+  if (!res.ok) {
+    if (res.error === "dupe") redirect("/admin/coupons?e=dupe");
+    // Surface the real Stripe reason so the dashboard shows it instead of a generic error.
+    if (res.error === "stripe") redirect(`/admin/coupons?e=stripe&msg=${encodeURIComponent(res.message.slice(0, 240))}`);
     redirect("/admin/coupons?e=db");
   }
 
@@ -195,29 +145,13 @@ export async function createCouponAction(formData: FormData) {
 }
 
 export async function deactivateCouponAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("coupons.write");
 
   const id = String(formData.get("id") || "").trim();
   if (!id) redirect("/admin/coupons?e=input");
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase) redirect("/admin/coupons?e=config");
-
-  const secret = process.env.STRIPE_SECRET_KEY;
-  if (secret) {
-    try {
-      await deactivateCouponInStripe(secret, id);
-    } catch (err) {
-      console.error("[coupons] Stripe deactivate failed", err instanceof Error ? err.message : String(err));
-      redirect("/admin/coupons?e=stripe");
-    }
-  }
-
-  const { error } = await supabase.from("coupons").update({ active: false }).eq("id", id);
-  if (error) {
-    console.error("[coupons] DB deactivate failed", error.message);
-    redirect("/admin/coupons?e=db");
-  }
+  const res = await disableCoupon(id);
+  if (!res.ok) redirect(`/admin/coupons?e=${res.error}`);
 
   revalidatePath("/admin/coupons");
   redirect("/admin/coupons?ok=disabled");

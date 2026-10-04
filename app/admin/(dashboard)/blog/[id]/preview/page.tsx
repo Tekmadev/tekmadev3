@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireOwner } from "@/lib/admin";
+import { adminCan, requireAdminCapability } from "@/lib/admin";
 import { getPostByIdAdmin, getRelatedPosts } from "@/lib/blog-data";
 import { BlogArticle } from "@/components/blog/BlogArticle";
 
 export const dynamic = "force-dynamic";
 
 export default async function PreviewPostPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireOwner();
+  const ctx = await requireAdminCapability("blog.view");
+  const canWrite = adminCan(ctx, "blog.write");
   const { id } = await params;
   const post = await getPostByIdAdmin(id);
   if (!post || post.deleted_at) notFound();
@@ -21,9 +22,15 @@ export default async function PreviewPostPage({ params }: { params: Promise<{ id
           Preview: <span className="capitalize text-ink">{post.status.replace("_", " ")}</span>, not
           necessarily public
         </span>
-        <Link href={`/admin/blog/${post.id}`} className="text-ink-3 hover:text-gold">
-          Back to editor
-        </Link>
+        {canWrite ? (
+          <Link href={`/admin/blog/${post.id}`} className="text-ink-3 hover:text-gold">
+            Back to editor
+          </Link>
+        ) : (
+          <Link href="/admin/blog" className="text-ink-3 hover:text-gold">
+            Back to posts
+          </Link>
+        )}
       </div>
       <div className="bg-bg text-ink">
         <BlogArticle post={post} related={related} />

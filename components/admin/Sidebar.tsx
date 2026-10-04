@@ -38,14 +38,16 @@ import { NotificationBell, useAdminNotifications } from "@/components/admin/Noti
 import type { AdminNotification, NotificationSummary } from "@/lib/admin-notifications-data";
 import { PendingSubmit } from "@/components/PendingSubmit";
 import { cn } from "@/lib/cn";
+import type { AdminRole, Capability } from "@/lib/admin";
 
-type Role = "owner" | "manager";
+const ROLE_LABEL: Record<AdminRole, string> = { owner: "Owner", manager: "Manager", staff: "Staff" };
 
 type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
-  ownerOnly?: boolean;
+  /** Shown only to a role holding this capability (lib/admin-api/permissions.ts). None: everyone. */
+  capability?: Capability;
   /** Shows the live unread count next to the label. */
   unreadBadge?: boolean;
 };
@@ -54,8 +56,8 @@ type NavGroup = { id: string; label: string; icon: LucideIcon; items: NavItem[] 
 
 /** Always visible, above the groups: the two pages opened most. */
 const TOP: NavItem[] = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard },
-  { href: "/admin/notifications", label: "Notifications", icon: Bell, unreadBadge: true },
+  { href: "/admin", label: "Overview", icon: LayoutDashboard, capability: "overview.view" },
+  { href: "/admin/notifications", label: "Notifications", icon: Bell, unreadBadge: true, capability: "notifications.view" },
 ];
 
 /**
@@ -69,8 +71,8 @@ const GROUPS: NavGroup[] = [
     label: "Insights",
     icon: ChartLine,
     items: [
-      { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
-      { href: "/admin/ads", label: "Ads", icon: Megaphone, ownerOnly: true },
+      { href: "/admin/analytics", label: "Analytics", icon: BarChart3, capability: "analytics.view" },
+      { href: "/admin/ads", label: "Ads", icon: Megaphone, capability: "ads.view" },
     ],
   },
   {
@@ -78,10 +80,10 @@ const GROUPS: NavGroup[] = [
     label: "Customers",
     icon: Users,
     items: [
-      { href: "/admin/leads", label: "Leads", icon: UserRound },
-      { href: "/admin/tools", label: "Free tools", icon: Calculator },
-      { href: "/admin/clients", label: "Clients", icon: Building2 },
-      { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
+      { href: "/admin/leads", label: "Leads", icon: UserRound, capability: "leads.view" },
+      { href: "/admin/tools", label: "Free tools", icon: Calculator, capability: "tools.view" },
+      { href: "/admin/clients", label: "Clients", icon: Building2, capability: "clients.view" },
+      { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard, capability: "billing.view" },
     ],
   },
   {
@@ -89,10 +91,10 @@ const GROUPS: NavGroup[] = [
     label: "Marketing",
     icon: Send,
     items: [
-      { href: "/admin/email", label: "Email", icon: Mail, ownerOnly: true },
-      { href: "/admin/crm", label: "CRM sync", icon: RefreshCcwDot, ownerOnly: true },
-      { href: "/admin/blog", label: "Blog", icon: FileText, ownerOnly: true },
-      { href: "/admin/links", label: "Links", icon: Link2, ownerOnly: true },
+      { href: "/admin/email", label: "Email", icon: Mail, capability: "email.view" },
+      { href: "/admin/crm", label: "CRM sync", icon: RefreshCcwDot, capability: "crm.view" },
+      { href: "/admin/blog", label: "Blog", icon: FileText, capability: "blog.view" },
+      { href: "/admin/links", label: "Links", icon: Link2, capability: "links.view" },
     ],
   },
   {
@@ -100,8 +102,8 @@ const GROUPS: NavGroup[] = [
     label: "Sales",
     icon: Wallet,
     items: [
-      { href: "/admin/pricing", label: "Pricing", icon: Tag, ownerOnly: true },
-      { href: "/admin/coupons", label: "Coupons", icon: BadgePercent, ownerOnly: true },
+      { href: "/admin/pricing", label: "Pricing", icon: Tag, capability: "pricing.view" },
+      { href: "/admin/coupons", label: "Coupons", icon: BadgePercent, capability: "coupons.view" },
     ],
   },
   {
@@ -109,9 +111,9 @@ const GROUPS: NavGroup[] = [
     label: "Settings",
     icon: SlidersHorizontal,
     items: [
-      { href: "/admin/loader", label: "Loader", icon: Orbit, ownerOnly: true },
-      { href: "/admin/test-mode", label: "Test mode", icon: FlaskConical, ownerOnly: true },
-      { href: "/admin/team", label: "Team", icon: Shield, ownerOnly: true },
+      { href: "/admin/loader", label: "Loader", icon: Orbit, capability: "loader.view" },
+      { href: "/admin/test-mode", label: "Test mode", icon: FlaskConical, capability: "testmode.view" },
+      { href: "/admin/team", label: "Team", icon: Shield, capability: "team.view" },
       { href: "/admin/profile", label: "Profile", icon: Settings },
     ],
   },
@@ -130,18 +132,21 @@ export function Sidebar({
   email,
   name,
   role,
+  capabilities,
   notifications,
 }: {
   email: string;
   name: string | null;
-  role: Role;
+  role: AdminRole;
+  /** What this role may use (lib/admin.ts adminCapabilities): a page it cannot open is not listed. */
+  capabilities: readonly Capability[];
   /** Server-rendered starting point; the hook keeps it live from there. */
   notifications: { summary: NotificationSummary; items: AdminNotification[] };
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const inbox = useAdminNotifications(notifications);
-  const allowed = (i: NavItem) => !i.ownerOnly || role === "owner";
+  const allowed = (i: NavItem) => !i.capability || capabilities.includes(i.capability);
   const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(allowed) })).filter((g) => g.items.length > 0);
 
   const isActive = (href: string) => isActivePath(pathname, href);
@@ -342,7 +347,7 @@ export function Sidebar({
             </span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-ink">{name || email}</p>
-              <p className="truncate text-xs capitalize text-ink-4">{role}</p>
+              <p className="truncate text-xs text-ink-4">{ROLE_LABEL[role]}</p>
             </div>
           </div>
           <form action={signOutAction}>

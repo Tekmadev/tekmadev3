@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { getLeads } from "@/lib/admin-data";
 import { GROW_LEAD_SOURCE, GROW_PATH, needLabel, revenueBandLabel } from "@/config/grow";
 import { PageHeader, Panel, DataTable, Badge, fmtDateTime, txt } from "@/components/admin/ui";
@@ -23,7 +23,7 @@ function websiteHref(v: unknown): string | null {
 }
 
 export default async function LeadsPage() {
-  await requireAdmin();
+  await requireAdminCapability("leads.view");
   const leads = await getLeads();
   const formLeads = leads.filter((r) => r.source === GROW_LEAD_SOURCE);
 

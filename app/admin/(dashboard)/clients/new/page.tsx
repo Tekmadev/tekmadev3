@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { tierMeta } from "@/config/pricing";
 import { productMeta } from "@/config/products";
 import { PageHeader, Panel, Notice } from "@/components/admin/ui";
@@ -10,7 +10,7 @@ import { createClientAction } from "../actions";
 export const dynamic = "force-dynamic";
 
 export default async function NewClientPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
-  await requireAdmin();
+  await requireAdminCapability("clients.create");
   const { e } = await searchParams;
 
   return (

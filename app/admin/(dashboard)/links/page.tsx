@@ -1,4 +1,4 @@
-import { requireOwner } from "@/lib/admin";
+import { adminCan, requireAdminCapability } from "@/lib/admin";
 import { getLinks, getRecentLinkClicks } from "@/lib/links-data";
 import { PageHeader, Panel, Notice, DataTable, Badge, fmtDateTime, txt } from "@/components/admin/ui";
 import { LinkForm } from "@/components/admin/LinkForm";
@@ -24,7 +24,9 @@ export default async function LinksAdmin({
 }: {
   searchParams: Promise<{ ok?: string; e?: string; slug?: string }>;
 }) {
-  await requireOwner();
+  const ctx = await requireAdminCapability("links.view");
+  // Copy, share and QR come with links.view; create, enable, disable and delete need links.write.
+  const canWrite = adminCan(ctx, "links.write");
   const [links, clicks] = await Promise.all([getLinks(), getRecentLinkClicks(25)]);
   const { ok, e, slug } = await searchParams;
 
@@ -64,25 +66,29 @@ export default async function LinksAdmin({
       </Badge>
     ),
     <DealLink key="copy" url={`${business.url}/${l.slug}`} />,
-    <div key="act" className="flex items-center gap-2">
-      <form action={toggleLinkAction}>
-        <input type="hidden" name="id" value={l.id} />
-        <input type="hidden" name="active" value={(!l.active).toString()} />
-        <PendingSubmit
-          className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-gold/50 hover:text-gold"
-        >
-          {l.active ? "Disable" : "Enable"}
-        </PendingSubmit>
-      </form>
-      <form action={deleteLinkAction}>
-        <input type="hidden" name="id" value={l.id} />
-        <PendingSubmit
-          className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-signal/50 hover:text-signal"
-        >
-          Delete
-        </PendingSubmit>
-      </form>
-    </div>,
+    canWrite ? (
+      <div key="act" className="flex items-center gap-2">
+        <form action={toggleLinkAction}>
+          <input type="hidden" name="id" value={l.id} />
+          <input type="hidden" name="active" value={(!l.active).toString()} />
+          <PendingSubmit
+            className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-gold/50 hover:text-gold"
+          >
+            {l.active ? "Disable" : "Enable"}
+          </PendingSubmit>
+        </form>
+        <form action={deleteLinkAction}>
+          <input type="hidden" name="id" value={l.id} />
+          <PendingSubmit
+            className="rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-signal/50 hover:text-signal"
+          >
+            Delete
+          </PendingSubmit>
+        </form>
+      </div>
+    ) : (
+      ""
+    ),
   ]);
 
   const clickRows = clicks.map((c) => [
@@ -113,15 +119,17 @@ export default async function LinksAdmin({
         that follows is traced back to the source.
       </p>
 
-      <Panel title="New link">
-        <LinkForm />
-      </Panel>
+      {canWrite && (
+        <Panel title="New link">
+          <LinkForm />
+        </Panel>
+      )}
 
       <Panel title="Your links">
         <DataTable
           head={["Link", "Destination", "Source", "Medium", "Campaign", "Clicks", "Status", "Share", ""]}
           rows={rows}
-          empty="No links yet. Create one above."
+          empty={canWrite ? "No links yet. Create one above." : "No links yet."}
         />
       </Panel>
 

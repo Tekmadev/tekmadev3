@@ -9,7 +9,22 @@ const SOURCES = ["receptionist", "web_form", "calendar", "missed_call_textback",
 const DQ = ["spam", "duplicate", "out_of_area", "wrong_service", "fake", "other"];
 const TONE: Record<string, Tone> = { booked: "gold", confirmed: "gold", showed: "ok", no_show: "warn", cancelled: "muted", rescheduled: "neutral" };
 
-export function CallsPanel({ client, calls }: { client: Client; calls: BookedCall[] }) {
+/**
+ * Booked calls and the guarantee. `canLog` (clients.calls.log) adds a call by
+ * hand; `canReview` (clients.calls.review) edits, qualifies and disqualifies
+ * calls toward the guarantee. The actions check them again.
+ */
+export function CallsPanel({
+  client,
+  calls,
+  canLog,
+  canReview,
+}: {
+  client: Client;
+  calls: BookedCall[];
+  canLog: boolean;
+  canReview: boolean;
+}) {
   const g = guaranteeSummary(client, calls);
   const endsAtMs = g.endsAt ? new Date(g.endsAt).getTime() : null;
 
@@ -34,64 +49,66 @@ export function CallsPanel({ client, calls }: { client: Client; calls: BookedCal
         </div>
       )}
 
-      <details className="rounded-xl border border-line bg-bg-2 p-4">
-        <summary className="cursor-pointer text-sm font-medium text-ink">Add a booked call</summary>
-        <form action={addBookedCallAction} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <input type="hidden" name="client_id" value={client.id} />
-          <Field label="Contact name">
-            <input name="contact_name" className={inputCls} />
-          </Field>
-          <Field label="Phone">
-            <input name="contact_phone" className={inputCls} />
-          </Field>
-          <Field label="Email">
-            <input name="contact_email" type="email" className={inputCls} />
-          </Field>
-          <Field label="Service requested">
-            <input name="service_requested" className={inputCls} />
-          </Field>
-          <Field label="Booked at">
-            <input name="booked_at" type="datetime-local" className={inputCls} />
-          </Field>
-          <Field label="Appointment for">
-            <input name="booked_for" type="datetime-local" className={inputCls} />
-          </Field>
-          <Field label="Source">
-            <select name="source" defaultValue="manual" className={selectCls}>
-              {SOURCES.map((x) => (
-                <option key={x} value={x}>
-                  {humanize(x)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Status">
-            <select name="status" defaultValue="booked" className={selectCls}>
-              {STATUSES.map((x) => (
-                <option key={x} value={x}>
-                  {humanize(x)}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <div className="sm:col-span-2 lg:col-span-3">
-            <Field label="Notes">
-              <input name="notes" className={inputCls} />
+      {canLog && (
+        <details className="rounded-xl border border-line bg-bg-2 p-4">
+          <summary className="cursor-pointer text-sm font-medium text-ink">Add a booked call</summary>
+          <form action={addBookedCallAction} className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <input type="hidden" name="client_id" value={client.id} />
+            <Field label="Contact name">
+              <input name="contact_name" className={inputCls} />
             </Field>
-          </div>
-          <Field label="External id" help="From the CRM, for dedupe.">
-            <input name="external_id" className={inputCls} />
-          </Field>
-          <div className="sm:col-span-2 lg:col-span-4">
-            <SubmitButton pendingLabel="Adding">Add call</SubmitButton>
-          </div>
-        </form>
-      </details>
+            <Field label="Phone">
+              <input name="contact_phone" className={inputCls} />
+            </Field>
+            <Field label="Email">
+              <input name="contact_email" type="email" className={inputCls} />
+            </Field>
+            <Field label="Service requested">
+              <input name="service_requested" className={inputCls} />
+            </Field>
+            <Field label="Booked at">
+              <input name="booked_at" type="datetime-local" className={inputCls} />
+            </Field>
+            <Field label="Appointment for">
+              <input name="booked_for" type="datetime-local" className={inputCls} />
+            </Field>
+            <Field label="Source">
+              <select name="source" defaultValue="manual" className={selectCls}>
+                {SOURCES.map((x) => (
+                  <option key={x} value={x}>
+                    {humanize(x)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Status">
+              <select name="status" defaultValue="booked" className={selectCls}>
+                {STATUSES.map((x) => (
+                  <option key={x} value={x}>
+                    {humanize(x)}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <div className="sm:col-span-2 lg:col-span-3">
+              <Field label="Notes">
+                <input name="notes" className={inputCls} />
+              </Field>
+            </div>
+            <Field label="External id" help="From the CRM, for dedupe.">
+              <input name="external_id" className={inputCls} />
+            </Field>
+            <div className="sm:col-span-2 lg:col-span-4">
+              <SubmitButton pendingLabel="Adding">Add call</SubmitButton>
+            </div>
+          </form>
+        </details>
+      )}
 
       {calls.some((c) => !c.reviewed_at) && (
         <p className="text-sm text-ink-2">
           {calls.filter((c) => !c.reviewed_at).length} appointment{calls.filter((c) => !c.reviewed_at).length === 1 ? "" : "s"} from the CRM
-          waiting for your review. Nothing counts toward the guarantee until you confirm it.
+          waiting for {canReview ? "your" : "a manager's"} review. Nothing counts toward the guarantee until {canReview ? "you confirm" : "it is confirmed"}.
         </p>
       )}
 
@@ -123,7 +140,7 @@ export function CallsPanel({ client, calls }: { client: Client; calls: BookedCal
                 {[c.contact_phone, c.contact_email].filter(Boolean).join(" · ")}
                 {c.notes ? ` · ${c.notes}` : ""}
               </p>
-              {!c.reviewed_at && (
+              {canReview && !c.reviewed_at && (
                 <form action={updateBookedCallAction} className="mt-2">
                   <input type="hidden" name="client_id" value={client.id} />
                   <input type="hidden" name="call_id" value={c.id} />
@@ -149,33 +166,35 @@ export function CallsPanel({ client, calls }: { client: Client; calls: BookedCal
                   <span className="ml-3 text-xs text-ink-4">Or decide with the full form below.</span>
                 </form>
               )}
-              <form action={updateBookedCallAction} className="mt-2 grid gap-2 sm:grid-cols-[10rem_8rem_10rem_1fr_auto]">
-                <input type="hidden" name="client_id" value={client.id} />
-                <input type="hidden" name="call_id" value={c.id} />
-                <input type="hidden" name="external_id" value={c.external_id ?? ""} />
-                <select name="status" defaultValue={c.status} className={selectCls + " py-2"}>
-                  {STATUSES.map((x) => (
-                    <option key={x} value={x}>
-                      {humanize(x)}
-                    </option>
-                  ))}
-                </select>
-                <select name="qualified" defaultValue={c.qualified ? "yes" : "no"} className={selectCls + " py-2"}>
-                  <option value="yes">Qualified</option>
-                  <option value="no">Disqualify</option>
-                </select>
-                <select name="disqualified_reason" defaultValue={c.disqualified_reason ?? "other"} className={selectCls + " py-2"}>
-                  {DQ.map((x) => (
-                    <option key={x} value={x}>
-                      {humanize(x)}
-                    </option>
-                  ))}
-                </select>
-                <input name="notes" defaultValue={c.notes ?? ""} placeholder="Notes" className={inputCls + " py-2"} />
-                <SubmitButton variant="secondary" pendingLabel="...">
-                  Save
-                </SubmitButton>
-              </form>
+              {canReview && (
+                <form action={updateBookedCallAction} className="mt-2 grid gap-2 sm:grid-cols-[10rem_8rem_10rem_1fr_auto]">
+                  <input type="hidden" name="client_id" value={client.id} />
+                  <input type="hidden" name="call_id" value={c.id} />
+                  <input type="hidden" name="external_id" value={c.external_id ?? ""} />
+                  <select name="status" defaultValue={c.status} className={selectCls + " py-2"}>
+                    {STATUSES.map((x) => (
+                      <option key={x} value={x}>
+                        {humanize(x)}
+                      </option>
+                    ))}
+                  </select>
+                  <select name="qualified" defaultValue={c.qualified ? "yes" : "no"} className={selectCls + " py-2"}>
+                    <option value="yes">Qualified</option>
+                    <option value="no">Disqualify</option>
+                  </select>
+                  <select name="disqualified_reason" defaultValue={c.disqualified_reason ?? "other"} className={selectCls + " py-2"}>
+                    {DQ.map((x) => (
+                      <option key={x} value={x}>
+                        {humanize(x)}
+                      </option>
+                    ))}
+                  </select>
+                  <input name="notes" defaultValue={c.notes ?? ""} placeholder="Notes" className={inputCls + " py-2"} />
+                  <SubmitButton variant="secondary" pendingLabel="...">
+                    Save
+                  </SubmitButton>
+                </form>
+              )}
             </li>
           ))}
         </ul>

@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { getSubscriptions } from "@/lib/admin-data";
 import { listOrders, paymentMethodLabel } from "@/lib/orders-data";
 import { offerName } from "@/config/products";
@@ -7,7 +7,7 @@ import { PageHeader, Panel, DataTable, fmtDateTime, fmtMoney, txt } from "@/comp
 export const dynamic = "force-dynamic";
 
 export default async function SubscriptionsPage() {
-  await requireAdmin();
+  await requireAdminCapability("billing.view");
   const [subs, orders] = await Promise.all([getSubscriptions(), listOrders()]);
   const bnpl = orders.filter((o) => o.payment_method_type && o.payment_method_type !== "card" && o.payment_method_type !== "link").length;
 

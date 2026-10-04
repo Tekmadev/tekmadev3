@@ -1,5 +1,5 @@
 import { Calculator, Mail, Users, TrendingDown } from "lucide-react";
-import { requireAdmin } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { getLeadMagnetSubmissions, getLeadMagnetStats } from "@/lib/lead-magnet-data";
 import { getLeadMagnet } from "@/config/lead-magnets";
 import { formatDollars, type LeakAnswers, type LeakResult } from "@/lib/revenue-leak";
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  * signal on the site. Sorting by it is the fastest route to the next call.
  */
 export default async function AdminToolsPage() {
-  await requireAdmin();
+  await requireAdminCapability("tools.view");
   const [rows, stats] = await Promise.all([getLeadMagnetSubmissions(200), getLeadMagnetStats()]);
 
   return (

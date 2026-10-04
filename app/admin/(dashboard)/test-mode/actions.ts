@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { requireOwner } from "@/lib/admin";
+import { requireAdminCapability } from "@/lib/admin";
 import { testModeConfigured } from "@/lib/stripe-mode";
 import { setTestModeSwitch } from "@/lib/test-mode";
 import { getTestModeStatus, purgeTestData, setupTestCatalog } from "@/lib/test-mode-data";
@@ -11,7 +11,7 @@ const PAGE = "/admin/test-mode";
 
 /** Test mode for this browser only, for two hours. Refused until the sandbox is fully set up. */
 export async function switchTestModeAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("testmode.write");
   const on = formData.get("on") === "1";
   if (on) {
     if (!testModeConfigured()) redirect(`${PAGE}?e=keys`);
@@ -23,7 +23,7 @@ export async function switchTestModeAction(formData: FormData) {
 }
 
 export async function setupTestCatalogAction() {
-  await requireOwner();
+  await requireAdminCapability("testmode.write");
   if (!testModeConfigured()) redirect(`${PAGE}?e=keys`);
   const result = await setupTestCatalog();
   if (!result.ok) {
@@ -35,7 +35,7 @@ export async function setupTestCatalogAction() {
 }
 
 export async function purgeTestDataAction(formData: FormData) {
-  await requireOwner();
+  await requireAdminCapability("testmode.write");
   if (formData.get("confirm") !== "on") redirect(`${PAGE}?e=confirm`);
   const r = await purgeTestData();
   revalidatePath(PAGE);
