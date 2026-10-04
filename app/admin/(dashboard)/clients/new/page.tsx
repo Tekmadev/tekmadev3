@@ -10,7 +10,7 @@ import { createClientAction } from "../actions";
 export const dynamic = "force-dynamic";
 
 export default async function NewClientPage({ searchParams }: { searchParams: Promise<{ e?: string }> }) {
-  await requireAdminCapability("clients.create");
+  const ctx = await requireAdminCapability("clients.create");
   const { e } = await searchParams;
 
   return (
@@ -53,8 +53,8 @@ export default async function NewClientPage({ searchParams }: { searchParams: Pr
               <option value="">No plan yet</option>
             </select>
           </Field>
-          <Field label="Assigned strategist" htmlFor="assigned_strategist" help="Email shown to the client as their contact.">
-            <input id="assigned_strategist" name="assigned_strategist" type="email" className={inputCls} />
+          <Field label="Assigned strategist" htmlFor="assigned_strategist" help="Email shown to the client as their contact. You by default.">
+            <input id="assigned_strategist" name="assigned_strategist" type="email" defaultValue={ctx.email} className={inputCls} />
           </Field>
           <label className="flex min-h-11 items-center gap-3 text-sm text-ink-2 sm:col-span-2">
             <input type="checkbox" name="send_invite" defaultChecked className="h-4 w-4 accent-[var(--color-gold)]" />
