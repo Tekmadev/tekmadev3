@@ -14,6 +14,7 @@ You are building **Tekmadev Admin**, a native Android app (React Native, shipped
 4. Work in the phases in section 13. Finish each phase completely (working, typed, tested on an Android emulator or device, screenshots taken) before starting the next. Show the owner the screenshots at the end of each phase.
 5. The server API the app talks to (section 4) is being built separately in the website repo. You cannot see that repo. Build against the contract in section 11 with a **mock adapter** (realistic fixtures, same types, same error codes), switchable to the live API with one env flag. If the contract is missing something you need, do not invent a server behaviour: add it to `docs/api-requests.md` with the exact shape you want, and keep going with the mock.
 6. Ask the owner before anything that costs money, publishes anything, or needs his accounts (Expo account, Firebase project, signing keys).
+7. The website admin keeps changing. The owner will paste **update prompts** titled "Prompt for the Tekmadev Admin app". Apply each one fully (screens, copy, API contract, mock fixtures), and log it in `docs/decisions.md`. Every update is also listed in the change log (section 14) of the newest copy of this brief.
 
 ## 1. What Tekmadev is, and who uses this app
 
@@ -811,3 +812,10 @@ This app becomes the founder's control centre for automations that do not exist 
 Quality bar for every phase: TypeScript with no `any` in app code, no warnings in the console, 60fps scrolling on long lists (FlashList), no layout jumps when data loads, every screen checked in light and dark, with font scale 1.3, with TalkBack, offline, and with reduced motion on. Unit tests for formatting (money, Toronto dates), the deep link mapper, the loader keyframe math, and the API error mapping.
 
 When you finish a phase, give the owner: what was built, screenshots (light and dark), anything that is mocked, and what you need from him next.
+
+## 14. Change log
+
+Newest last. Each entry matches an update prompt the owner may already have pasted.
+
+- **2026-09-30**: Brief written.
+- **2026-09-30**: Blog images upload to Supabase Storage instead of pasted links. New endpoint `POST /blog/media` (section 11). Blog editor: Upload on the cover and social image fields, "Insert image" in the body toolbar (section 8.11).
