@@ -15,8 +15,13 @@ import { instant } from "../data";
 export const LEAD_STATUSES = ["new", "booked", "contacted", "qualified", "won", "lost", "cancelled"] as const;
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
-/** Statuses a person may set by hand. Booked and cancelled come from the booking calendar. */
-export const SETTABLE_STATUSES = ["new", "contacted", "qualified", "won", "lost"] as const;
+/**
+ * Statuses a person may set by hand. Cancelled comes from the booking
+ * calendar. Booked may be set by hand on a lead with no calendar booking (a
+ * call booked by phone or DM: docs/admin-api/staff.md); on a lead the
+ * calendar booked, the calendar owns it (see isCalendarLead).
+ */
+export const SETTABLE_STATUSES = ["new", "booked", "contacted", "qualified", "won", "lost"] as const;
 export type SettableStatus = (typeof SETTABLE_STATUSES)[number];
 
 /** `outreach` is a lead added by hand in the app (POST /leads). */
@@ -78,6 +83,7 @@ export const LEAD_BASE_COLUMNS = [
   "revenue_band",
   "message",
   "booking_start",
+  "booking_uid",
   "utm_source",
   "utm_medium",
   "utm_campaign",
@@ -91,7 +97,12 @@ export const LEAD_BASE_COLUMNS = [
 /** Added by 20261003000004_lead_outreach.sql. */
 export const LEAD_OUTREACH_COLUMNS = "follow_up_at,assigned_to";
 
-export const LEAD_COLUMNS = `${LEAD_BASE_COLUMNS},${LEAD_OUTREACH_COLUMNS}`;
+/** Added by 20261003000400_staff_management.sql. */
+export const LEAD_STAFF_COLUMNS = "found_by,booked_by";
+
+/** Every column, then fallbacks for databases without the newer migrations (newest first). */
+export const LEAD_COLUMNS = `${LEAD_BASE_COLUMNS},${LEAD_OUTREACH_COLUMNS},${LEAD_STAFF_COLUMNS}`;
+export const LEAD_OUTREACH_ONLY_COLUMNS = `${LEAD_BASE_COLUMNS},${LEAD_OUTREACH_COLUMNS}`;
 
 export type LeadRow = {
   id: string;
@@ -107,6 +118,7 @@ export type LeadRow = {
   revenue_band: string | null;
   message: string | null;
   booking_start: string | null;
+  booking_uid: string | null;
   utm_source: string | null;
   utm_medium: string | null;
   utm_campaign: string | null;
@@ -118,7 +130,19 @@ export type LeadRow = {
   /** Absent until the outreach migration is applied. */
   follow_up_at?: string | null;
   assigned_to?: string | null;
+  /** Absent until the staff management migration is applied. */
+  found_by?: string | null;
+  booked_by?: string | null;
 };
+
+/**
+ * Whether the booking calendar owns this lead's booked and cancelled states:
+ * a Cal booking row, or any lead a Cal booking was attached to. Its status
+ * drives the CRM's booked-call reminders, so nobody sets "booked" on it by hand.
+ */
+export function isCalendarLead(row: Pick<LeadRow, "source" | "booking_uid">): boolean {
+  return (row.source ?? "cal_booking") === "cal_booking" || Boolean(row.booking_uid && row.booking_uid.trim());
+}
 
 /* ------------------------------------------------------------------ */
 /* API shape                                                           */
@@ -149,6 +173,11 @@ export type Lead = {
   assignedTo: StaffRef | null;
   /** Who added the lead by hand (source outreach), else null. */
   addedBy: StaffRef | null;
+  /* Commission credit (docs/admin-api/staff.md): extra keys, ignored by older app builds. */
+  /** Who found it and added it by hand (credit role finder), else null. */
+  foundBy: StaffRef | null;
+  /** Who first moved it to booked or logged the booking (credit role booker), else null. */
+  bookedBy: StaffRef | null;
 };
 
 /** What a lead's row needs from other tables. */
@@ -206,5 +235,8 @@ export function toLead(row: LeadRow, links: LeadLinks): Lead {
     followUpAt: instant(row.follow_up_at ?? null),
     assignedTo: staffRef(row.assigned_to, links.names),
     addedBy: source === OUTREACH_SOURCE ? staffRef(row.added_by, links.names) : null,
+    // Before the staff migration (found_by absent), whoever added an outreach lead found it.
+    foundBy: staffRef(row.found_by === undefined && source === OUTREACH_SOURCE ? row.added_by : row.found_by, links.names),
+    bookedBy: staffRef(row.booked_by, links.names),
   };
 }

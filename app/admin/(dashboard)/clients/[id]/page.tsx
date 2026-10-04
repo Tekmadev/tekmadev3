@@ -35,6 +35,11 @@ import { TeamPanel } from "@/components/admin/clients/TeamPanel";
 import { ActivityPanel } from "@/components/admin/clients/ActivityPanel";
 import { CrmLocationPanel } from "@/components/admin/clients/CrmLocationPanel";
 import { getCrmLocationForClient } from "@/lib/crm/admin-data";
+import { CreditPanel, type PanelCredit, type PanelPerson } from "@/components/admin/clients/CreditPanel";
+import { StaffDataNotReady, defaultCredits, readClientCredits, teamMembers, type CreditInput, type CreditRow } from "@/lib/staff-credit";
+import { getCommissionSplit } from "@/lib/site-settings";
+import { leadCreditPeople } from "@/lib/staff-admin";
+import { CREDITS_NOT_READY } from "@/lib/admin-api/staff";
 import { deleteClientAction, goLiveAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +55,7 @@ const SECTIONS = [
   ["agreements", "Agreements"],
   ["calls", "Calls"],
   ["crm", "CRM"],
+  ["credit", "Credit"],
   ["team", "Team"],
   ["account", "Account"],
   ["activity", "Activity"],
@@ -92,6 +98,12 @@ export default async function ClientDetailPage({
   const hidden = hiddenActivityPrefixes({ can });
   const visibleActivity = activity.filter((a) => !hidden.some((prefix) => a.event.startsWith(prefix)));
   const assetsWithUrls = await Promise.all(assets.map(async (a) => ({ ...a, url: await signedAssetUrl(a.storage_path, 60 * 30) })));
+
+  // Commission credit: every row with clients.credits.view, else only your own (activity.own).
+  const seesAllCredit = can("clients.credits.view");
+  const seesCredit = seesAllCredit || can("activity.own");
+  const editsCredit = can("clients.credits.edit");
+  const credit = seesCredit ? await loadCredit(client.id, client.lead_id, { all: seesAllCredit, viewer: ctx.email, edits: editsCredit }) : null;
 
   const progress = taskProgress(tasks);
   const planEnds = subscriptionEndsAt(subscription);
@@ -174,7 +186,7 @@ export default async function ClientDetailPage({
       </section>
 
       <nav className="sticky top-0 z-20 -mx-5 flex snap-x gap-2 overflow-x-auto border-b border-line bg-bg/90 px-5 py-2 backdrop-blur sm:-mx-8 sm:px-8">
-        {SECTIONS.filter(([key]) => key !== "crm" || seesCrm).map(([key, label]) => (
+        {SECTIONS.filter(([key]) => (key !== "crm" || seesCrm) && (key !== "credit" || credit)).map(([key, label]) => (
           <a key={key} href={`#${key}`} className="shrink-0 snap-start rounded-full border border-line-strong px-3 py-1.5 text-xs text-ink-3 hover:text-ink">
             {label}
           </a>
@@ -294,6 +306,24 @@ export default async function ClientDetailPage({
         </Panel>
       )}
 
+      {credit && (
+        <Panel title={credit.scope === "all" ? "Credit" : "Your credit"}>
+          <div id="credit" className="scroll-mt-28">
+            <CreditPanel
+              clientId={client.id}
+              scope={credit.scope}
+              credits={credit.credits}
+              updatedAt={credit.updatedAt}
+              lead={credit.lead}
+              notReady={credit.notReady}
+              canEdit={editsCredit && !credit.notReady}
+              team={credit.team}
+              suggestion={credit.suggestion}
+            />
+          </div>
+        </Panel>
+      )}
+
       <Panel title="Team">
         <div id="team" className="scroll-mt-28">
           <TeamPanel members={members} clientId={client.id} canManage={can("clients.members")} />
@@ -332,4 +362,60 @@ export default async function ClientDetailPage({
       </p>
     </div>
   );
+}
+
+/**
+ * The Credit card's data, by the admin API's rules (lib/admin-api/staff/credits.ts):
+ * every row for `clients.credits.view`, only the viewer's own rows otherwise.
+ * Before the staff management migration the card says so instead of failing.
+ */
+async function loadCredit(
+  clientId: string,
+  leadId: string | null,
+  opts: { all: boolean; viewer: string; edits: boolean },
+): Promise<{
+  scope: "all" | "own";
+  credits: PanelCredit[];
+  updatedAt: string | null;
+  lead: { label: string; foundBy: PanelPerson | null; bookedBy: PanelPerson | null } | null;
+  notReady: string | null;
+  team: PanelPerson[];
+  suggestion: CreditInput[];
+}> {
+  const [rowsOrProblem, names, leads] = await Promise.all([
+    readClientCredits(clientId).catch((err: unknown): string => {
+      if (err instanceof StaffDataNotReady) return CREDITS_NOT_READY;
+      console.error("[credits] read failed", err instanceof Error ? err.message : String(err));
+      return "Could not load the credits just now. Reload to try again.";
+    }),
+    teamMembers().catch(() => new Map<string, string | null>()),
+    leadId ? leadCreditPeople([leadId]) : Promise.resolve(new Map<string, never>()),
+  ]);
+  const person = (email: string | null): PanelPerson | null => (email ? { email, name: names.get(email) ?? null } : null);
+  const source = leadId ? leads.get(leadId) : undefined;
+  const lead = source ? { label: source.label, foundBy: person(source.foundBy), bookedBy: person(source.bookedBy) } : null;
+  const scope = opts.all ? "all" : "own";
+
+  if (typeof rowsOrProblem === "string") {
+    return { scope, credits: [], updatedAt: null, lead, notReady: rowsOrProblem, team: [], suggestion: [] };
+  }
+  const visible: CreditRow[] = opts.all ? rowsOrProblem : rowsOrProblem.filter((r) => r.staff_email === opts.viewer);
+  const updatedAt = visible.reduce<string | null>((best, r) => (!best || Date.parse(r.updated_at) >= Date.parse(best) ? r.updated_at : best), null);
+  const team = opts.edits
+    ? [...names.entries()]
+        .map(([email, name]) => ({ email, name }))
+        .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email, "en"))
+    : [];
+  // Offered in the editor when the client has no credits: what creating it from the lead would have set.
+  const suggestion = opts.edits && visible.length === 0 && source ? defaultCredits(source.foundBy, source.bookedBy, await getCommissionSplit()) : [];
+
+  return {
+    scope,
+    credits: visible.map((r) => ({ email: r.staff_email, name: names.get(r.staff_email) ?? null, role: r.role, share: r.share })),
+    updatedAt,
+    lead,
+    notReady: null,
+    team,
+    suggestion,
+  };
 }

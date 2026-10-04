@@ -32,6 +32,7 @@ import {
   Wallet,
   SlidersHorizontal,
   ChevronDown,
+  Trophy,
 } from "lucide-react";
 import { signOutAction } from "@/app/admin/actions";
 import { NotificationBell, useAdminNotifications } from "@/components/admin/NotificationBell";
@@ -50,6 +51,8 @@ type NavItem = {
   capability?: Capability;
   /** Shows the live unread count next to the label. */
   unreadBadge?: boolean;
+  /** The label for a role without this capability ("My activity" for staff, who only see their own). */
+  labelWithout?: { capability: Capability; label: string };
 };
 
 type NavGroup = { id: string; label: string; icon: LucideIcon; items: NavItem[] };
@@ -73,6 +76,13 @@ const GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/analytics", label: "Analytics", icon: BarChart3, capability: "analytics.view" },
       { href: "/admin/ads", label: "Ads", icon: Megaphone, capability: "ads.view" },
+      {
+        href: "/admin/activity",
+        label: "Team activity",
+        icon: Trophy,
+        capability: "activity.own",
+        labelWithout: { capability: "team.activity", label: "My activity" },
+      },
     ],
   },
   {
@@ -197,7 +207,9 @@ export function Sidebar({
         )}
       >
         <Icon className={cn(nested ? "h-4 w-4" : "h-[18px] w-[18px]", active ? "text-gold" : "text-ink-4")} />
-        <span className="flex-1">{item.label}</span>
+        <span className="flex-1">
+          {item.labelWithout && !capabilities.includes(item.labelWithout.capability) ? item.labelWithout.label : item.label}
+        </span>
         {item.unreadBadge && inbox.summary.unread > 0 && (
           <span
             className={

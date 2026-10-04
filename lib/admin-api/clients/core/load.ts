@@ -2,6 +2,7 @@ import { getTierMeta } from "@/config/pricing";
 import { getProductMeta, offerName } from "@/config/products";
 import { dbError, instant, isUuid, money, notFound, requireDb, type ApiContext } from "@/lib/admin-api";
 import { loadClientSections, loadPeople, type ClientSections, type People } from "@/lib/admin-api/clients/sections";
+import { bundleCredits, type ApiCredit } from "@/lib/admin-api/staff/credits";
 import { careIsSetUp, type Client, type ClientMember } from "@/lib/clients-data";
 import type { ClientIntake, ClientOnboarding, OnboardingTask } from "@/lib/onboarding-data";
 import { getLatestOrderForClient, paymentMethodLabel } from "@/lib/orders-data";
@@ -265,6 +266,8 @@ export type ApiBundle = {
   billing: ApiBilling | null;
   onboarding: { run: ApiRun; tasks: ApiTask[] } | null;
   intake: ApiIntake | null;
+  /** Who gets credit for this client (docs/admin-api/staff.md): every row with clients.credits.view, else only the caller's own. */
+  credits: ApiCredit[];
 } & ClientSections;
 
 /**
@@ -274,7 +277,8 @@ export type ApiBundle = {
  * calls and the guarantee, the CRM mapping, people, the first activity page)
  * come from lib/admin-api/clients/sections. Billing only for roles with
  * `clients.billing` (null otherwise); the CRM mapping key only with
- * `clients.crm`.
+ * `clients.crm`; `credits` filtered by `clients.credits.view` (staff see
+ * only their own rows).
  */
 export async function loadBundle(ctx: ApiContext, client: Client): Promise<ApiBundle> {
   const [members, run, intake, billing, sections] = await Promise.all([
@@ -285,11 +289,13 @@ export async function loadBundle(ctx: ApiContext, client: Client): Promise<ApiBu
     loadClientSections(ctx, client),
   ]);
   const [tasks, people] = await Promise.all([run ? tasksOfRun(run.id) : Promise.resolve([] as OnboardingTask[]), loadPeople(ctx, members)]);
+  const credits = await bundleCredits(ctx, client, people);
   return {
     client: toClient(client, contactNameOf(client, members)),
     billing,
     onboarding: run ? { run: toRun(run, tasks), tasks: tasks.map((t) => toTask(t, people)) } : null,
     intake: intake ? toIntake(intake, people) : null,
+    credits,
     ...sections,
   };
 }

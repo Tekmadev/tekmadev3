@@ -17,6 +17,13 @@ import { ApiError, MESSAGES } from "./errors";
  *   Staff    leads and outreach, analytics, onboarding help; marketing,
  *            pricing and coupons view only; never money.
  *
+ * Staff management (owner decision 2026-10-03, docs/admin-api/staff.md):
+ * owners and managers change roles (`team.role`), pause access
+ * (`team.pause`), read everyone's activity and credits (`team.activity`) and
+ * edit a client's credits (`clients.credits.*`); everyone reads their own
+ * activity and credit rows (`activity.own`); only owners set the default
+ * commission split (`commission.settings`).
+ *
  * Session endpoints (me, meta, search, devices, profile) need no capability:
  * any staff member may call them, and search filters its own results with the
  * `*.view` rows below. GET /me sends the caller's list (capabilitiesFor), and
@@ -142,6 +149,24 @@ export const PERMISSIONS = {
   "team.remove": O,
   /** Create or promote an owner (POST /team with role owner). Owners only. */
   "team.owners": O,
+  /**
+   * Change a member's role (PATCH /team/:email `role`). Managers switch people
+   * between manager and staff; making or changing an owner also needs
+   * `team.owners`. Env owners are locked; nobody changes their own role.
+   */
+  "team.role": OM,
+  /** Pause or resume a member's access (PATCH /team/:email `paused`). Managers pause managers and staff, never owners. */
+  "team.pause": OM,
+  /** Everyone's activity scoreboard and credits (GET /team/activity). */
+  "team.activity": OM,
+  /** Your own activity and your own credit rows (GET /me/activity; your rows in a client's credits). */
+  "activity.own": OMS,
+  /** Every credit row on a client (GET /clients/:id/credits, the bundle's `credits`). */
+  "clients.credits.view": OM,
+  /** Edit a client's credits (PUT /clients/:id/credits). */
+  "clients.credits.edit": OM,
+  /** The default finder / booker split (PUT /settings/commission). Owners only. */
+  "commission.settings": O,
 } as const satisfies Record<string, readonly AdminRole[]>;
 
 export type Capability = keyof typeof PERMISSIONS;
@@ -178,8 +203,9 @@ export function isOwnerOnly(capability: Capability): boolean {
 
 /**
  * The 403 for a capability the caller lacks. Owner-only sections answer
- * `owner_only` "That section is owner only." (the contract's code); anything
- * else a role may not do answers `forbidden` "Your role cannot do that.".
+ * `owner_only` "That section is owner only." (the contract's code; today
+ * `team.remove`, `team.owners` and `commission.settings`); anything else a
+ * role may not do answers `forbidden` "Your role cannot do that.".
  */
 export function forbiddenError(capability: Capability): ApiError {
   return isOwnerOnly(capability)

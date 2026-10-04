@@ -6,13 +6,15 @@ Roles (owner decision 2026-10-03):
 
 - **Owner**: everything.
 - **Manager**: nearly the owner's power: everything except removing team members (`team.remove`) and creating or promoting owners (`team.owners`). Managers add managers and staff.
-- **Staff**: leads and outreach, analytics, onboarding help; marketing (blog, email campaigns and templates, links with QR), pricing and coupons view only (coupons: share deal links too); never money (no revenue on Home, no Subscriptions, no client billing), never email subscribers, Ads, CRM, Loader, Test mode or Team. Staff read only the Leads and Clients Inbox categories, and never owner-audience rows.
+- **Staff**: leads and outreach, analytics, onboarding help; marketing (blog, email campaigns and templates, links with QR), pricing and coupons view only (coupons: share deal links too); never money (no revenue on Home, no Subscriptions, no client billing), never email subscribers, Ads, CRM, Loader, Test mode or Team. Staff read only the Leads and Clients Inbox categories, and never owner-audience rows. Staff see their own activity and their own credit rows, never anyone else's.
 
 The app keeps the same table as its fallback for a `GET /me` without `capabilities` (`src/auth/capabilities.ts` in the app repo, mirrored by the mock in `src/api/mock/permissions.ts`). Keep the names and rows identical.
 
 Session endpoints (`GET /me`, `GET /meta`, `GET /search`, `POST /devices`, `DELETE /devices/:id`, `PATCH /profile`) need no capability: any staff member may call them. `GET /me` sends the caller's `capabilities` (every name below that their role holds), and the app shows and hides everything from that list. Search only returns the types the caller may view (`clients.view`, `leads.view`, `email.subscribers.view`, `blog.view`, `coupons.view`, `links.view`) and test clients only with `testdata.view`.
 
-A missing capability answers 403: `owner_only` "That section is owner only." when only owners hold it (today `team.remove` and `team.owners`), otherwise `forbidden` "Your role cannot do that.".
+A missing capability answers 403: `owner_only` "That section is owner only." when only owners hold it (today `team.remove`, `team.owners` and `commission.settings`), otherwise `forbidden` "Your role cannot do that.".
+
+A team member whose access is paused gets 403 `paused` "Your access is paused. Ask an owner or manager." on every request, before any capability check ([staff.md](staff.md)).
 
 ### Owner-audience Inbox rows
 
@@ -20,7 +22,9 @@ Events marked `audience: "owner"` in `lib/admin-notify.ts` (Stripe and checkout 
 
 ### Team rules
 
-`team.view` and `team.write` let owners and managers see the team and add members; managers may only add managers and staff (`POST /team` with role `owner` answers 403 `owner_only` without `team.owners`). Only owners remove members (`team.remove`). Env owners (`ADMIN_EMAILS`) are locked: `DELETE /team/:email` answers 422 `owner` for them, whoever asks, and `GET /team` reports them `envOwner: true`. The same rules are in `lib/admin-users.ts` for the web Team page: `grantableRoles(role)`, `mayRemoveTeamMembers(role)`, and `addManager({ actorRole })` / `removeAdmin(email, { actorRole })` refuse what the role may not do (including a manager re-granting an existing owner as something else).
+`team.view` and `team.write` let owners and managers see the team and add members; managers may only add managers and staff (`POST /team` with role `owner` answers 403 `owner_only` without `team.owners`). Only owners remove members (`team.remove`). Env owners (`ADMIN_EMAILS`) are locked: `DELETE /team/:email` answers 422 `owner` for them, whoever asks, and `GET /team` reports them `envOwner: true`.
+
+`team.role` and `team.pause` (owners and managers) change a role and pause or resume access with `PATCH /team/:email`: managers move people between manager and staff and pause managers and staff, never owners (403 `owner_only`); making an owner needs `team.owners`; env owners answer 422 `locked`, yourself 422 `self`. `team.activity` shows everyone's activity and credits, `activity.own` your own; `clients.credits.view` and `clients.credits.edit` cover a client's credits (staff see only their own rows); `commission.settings` (owners) sets the default split. The rules and copy are in [staff.md](staff.md); the web Team page uses `updateTeamAccess()` in `lib/admin-users.ts`. The same rules are in `lib/admin-users.ts` for the web Team page: `grantableRoles(role)`, `mayRemoveTeamMembers(role)`, and `addManager({ actorRole })` / `removeAdmin(email, { actorRole })` refuse what the role may not do (including a manager re-granting an existing owner as something else).
 
 ## Home
 
@@ -156,6 +160,13 @@ Events marked `audience: "owner"` in `lib/admin-notify.ts` (Stripe and checkout 
 | `team.write` | yes | yes | no | Add team members. Managers add managers and staff; adding an owner also needs `team.owners`. |
 | `team.remove` | yes | no | no | Remove a team member (DELETE /team/:email). Owners only. Env owners are locked for everyone. |
 | `team.owners` | yes | no | no | Create or promote an owner (POST /team with role owner). Owners only. |
+| `team.role` | yes | yes | no | Change a role (PATCH /team/:email `role`). Managers switch people between manager and staff; an owner's role also needs `team.owners`. |
+| `team.pause` | yes | yes | no | Pause or resume access (PATCH /team/:email `paused`). Managers pause managers and staff, never owners. |
+| `team.activity` | yes | yes | no | Everyone's activity and credits (GET /team/activity). |
+| `activity.own` | yes | yes | yes | Your own activity and your own credit rows (GET /me/activity). |
+| `clients.credits.view` | yes | yes | no | Every credit row on a client (GET /clients/:id/credits, the bundle's `credits`), credit activity entries, GET /settings/commission. |
+| `clients.credits.edit` | yes | yes | no | Edit a client's credits (PUT /clients/:id/credits). |
+| `commission.settings` | yes | no | no | Set the default finder / booker split (PUT /settings/commission). Owners only. |
 
 ## Using it in a route
 

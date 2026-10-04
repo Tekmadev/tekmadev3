@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { signInAction } from "@/app/admin/actions";
+import { PAUSED_MESSAGE } from "@/lib/admin";
 import { PasswordField } from "@/components/admin/PasswordField";
 import { PendingSubmit } from "@/components/PendingSubmit";
 
 const ERRORS: Record<string, string> = {
   "1": "Wrong email or password.",
   denied: "That account is not allowed here.",
+  paused: PAUSED_MESSAGE,
   config: "Login is not configured yet.",
 };
 

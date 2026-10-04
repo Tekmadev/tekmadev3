@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ownerEmails } from "@/lib/admin";
+import { staffSchemaMissing } from "@/lib/staff-constants";
 import type { ApiContext } from "../auth";
 import { decodeCursor, keysetFilter, pgQuote, toPage, type Page } from "../cursor";
 import { dbError, instant, isUuid, requireDb } from "../data";
@@ -10,7 +11,9 @@ import { CONTACT_KINDS, MESSAGES, type TouchKind } from "./input";
 import {
   LEAD_BASE_COLUMNS,
   LEAD_COLUMNS,
+  LEAD_OUTREACH_ONLY_COLUMNS,
   OUTREACH_SOURCE,
+  isCalendarLead,
   storedValuesFor,
   storedValuesNotNew,
   toLead,
@@ -42,6 +45,36 @@ function outreachSchemaMissing(error: DbError): boolean {
 }
 
 const OUTREACH_NOT_READY = "Outreach needs a database update first. Ask the owner to apply the lead outreach migration.";
+
+/**
+ * Reads lead columns, newest schema first: without the staff management
+ * migration (found_by, booked_by) it reads the outreach columns, and without
+ * the outreach migration the base columns (or answers 503 when the request
+ * needs outreach).
+ */
+async function selectLeadColumns<T>(
+  run: (columns: string) => PromiseLike<{ data: T; error: DbError }>,
+  opts: { needsOutreach?: boolean } = {},
+): Promise<{ data: T; error: DbError }> {
+  let res = await run(LEAD_COLUMNS);
+  if (res.error && staffSchemaMissing(res.error)) res = await run(LEAD_OUTREACH_ONLY_COLUMNS);
+  if (res.error && outreachSchemaMissing(res.error)) {
+    if (opts.needsOutreach) throw notConfigured(OUTREACH_NOT_READY);
+    res = await run(LEAD_BASE_COLUMNS);
+  }
+  return res;
+}
+
+/** The staff management columns a write may carry; dropped (and not recorded) before that migration. */
+const STAFF_WRITE_KEYS = ["found_by", "booked_by", "booked_at"] as const;
+
+function withoutStaffKeys<T extends Record<string, unknown>>(row: T): T {
+  const out: Record<string, unknown> = { ...row };
+  for (const key of STAFF_WRITE_KEYS) delete out[key];
+  return out as T;
+}
+
+const hasStaffKeys = (row: Record<string, unknown>) => STAFF_WRITE_KEYS.some((key) => key in row);
 
 /** A uuid that is the same for the same caller and Idempotency-Key, so a retried create can never write twice. */
 function idFor(kind: string, ctx: ApiContext, key: string | null): string {
@@ -124,7 +157,7 @@ async function hydrate(db: SupabaseClient, ctx: ApiContext, rows: LeadRow[]): Pr
     staffNames(
       db,
       ctx,
-      rows.flatMap((r) => [r.assigned_to ?? "", r.source === OUTREACH_SOURCE ? r.added_by ?? "" : ""]),
+      rows.flatMap((r) => [r.assigned_to ?? "", r.source === OUTREACH_SOURCE ? r.added_by ?? "" : "", r.found_by ?? "", r.booked_by ?? ""]),
     ),
   ]);
   if (clients.error) throw dbError("lead clients", clients.error);
@@ -140,10 +173,9 @@ async function hydrate(db: SupabaseClient, ctx: ApiContext, rows: LeadRow[]): Pr
   });
 }
 
-/** One row by id with every column, falling back to the base columns before the outreach migration. */
+/** One row by id with every column, falling back to older column sets before the newer migrations. */
 async function readLeadRow(db: SupabaseClient, id: string): Promise<LeadRow | null> {
-  let res = await db.from("leads").select(LEAD_COLUMNS).eq("id", id).maybeSingle();
-  if (res.error && outreachSchemaMissing(res.error)) res = await db.from("leads").select(LEAD_BASE_COLUMNS).eq("id", id).maybeSingle();
+  const res = await selectLeadColumns((columns) => db.from("leads").select(columns).eq("id", id).maybeSingle());
   if (res.error) throw dbError("lead read", res.error);
   return (res.data as unknown as LeadRow | null) ?? null;
 }
@@ -237,11 +269,7 @@ export async function listLeads(ctx: ApiContext, query: LeadListQuery): Promise<
       .limit(query.limit + 1);
   };
 
-  let res = await run(LEAD_COLUMNS);
-  if (res.error && outreachSchemaMissing(res.error)) {
-    if (usesOutreach) throw notConfigured(OUTREACH_NOT_READY);
-    res = await run(LEAD_BASE_COLUMNS);
-  }
+  const res = await selectLeadColumns(run, { needsOutreach: usesOutreach });
   if (res.error) throw dbError("leads list", res.error);
 
   const rows = (res.data ?? []) as unknown as LeadRow[];
@@ -270,7 +298,9 @@ export type CreateLeadInput = {
 
 /**
  * A lead added by hand (source "outreach"). One email is one lead: an email
- * already on a lead is a 409, so touches land on the lead that exists.
+ * already on a lead is a 409, so touches land on the lead that exists. The
+ * caller found it (`found_by`, their finder credit), and booked it too when
+ * it is added as "booked" (`booked_by`).
  */
 export async function createOutreachLead(ctx: ApiContext, input: CreateLeadInput, idempotencyKey: string | null): Promise<Lead> {
   const db = requireDb();
@@ -296,10 +326,11 @@ export async function createOutreachLead(ctx: ApiContext, input: CreateLeadInput
   const assignedTo = input.assignedTo === undefined ? ctx.email : input.assignedTo;
   if (assignedTo) await assertAssignable(ctx, assignedTo);
 
-  const { error } = await db.from("leads").insert({
+  const status = input.status ?? "new";
+  const row: Record<string, unknown> = {
     id,
     source: OUTREACH_SOURCE,
-    status: input.status ?? "new",
+    status,
     name: input.name ?? null,
     email,
     phone: input.phone ?? null,
@@ -311,7 +342,15 @@ export async function createOutreachLead(ctx: ApiContext, input: CreateLeadInput
     form: { added_by: ctx.email, via: "admin_app" },
     follow_up_at: input.followUpAt ?? null,
     assigned_to: assignedTo,
-  });
+    found_by: ctx.email,
+    ...(status === "booked" ? { booked_by: ctx.email, booked_at: new Date().toISOString() } : {}),
+  };
+  let { error } = await db.from("leads").insert(row);
+  if (error && staffSchemaMissing(error)) {
+    // Before the staff management migration: the lead still goes in, without who found or booked it.
+    console.warn("[admin-api] lead create without found_by: the staff management migration is not applied");
+    ({ error } = await db.from("leads").insert(withoutStaffKeys(row)));
+  }
   if (error) {
     if (error.code === "23505") {
       // Two retries raced: the other one wrote it.
@@ -335,18 +374,44 @@ export type LeadPatch = {
   assignedTo?: string | null;
 };
 
-/** The columns a patch writes, leaving out a status the lead already shows (so "rescheduled" stays). */
-function patchColumns(current: LeadRow, patch: LeadPatch): Record<string, string | null> {
+/**
+ * 400 `status` for "booked" on a lead the booking calendar owns (a Cal
+ * booking, or a lead a booking was attached to) that does not already show
+ * booked: its status drives the CRM's booked-call reminders. Sending "booked"
+ * to a lead that already shows it changes nothing but records the booker.
+ */
+function assertBookable(current: LeadRow, status: SettableStatus | undefined): void {
+  if (status === "booked" && isCalendarLead(current) && toLeadStatus(current.status) !== "booked") {
+    throw badRequest("status", MESSAGES.bookedByCalendar, { status: MESSAGES.bookedByCalendar });
+  }
+}
+
+/**
+ * The columns a patch writes, leaving out a status the lead already shows (so
+ * "rescheduled" stays). "booked" also records the caller as the booker when
+ * nobody is yet (the first person to book it keeps the credit).
+ */
+function patchColumns(current: LeadRow, patch: LeadPatch, by: string): Record<string, string | null> {
   const update: Record<string, string | null> = {};
   if (patch.status !== undefined && patch.status !== toLeadStatus(current.status)) update.status = patch.status;
   if (patch.followUpAt !== undefined) update.follow_up_at = patch.followUpAt;
   if (patch.assignedTo !== undefined) update.assigned_to = patch.assignedTo;
+  // booked_by is undefined (not read) before the staff management migration: nothing to record then.
+  if (patch.status === "booked" && current.booked_by === null) {
+    update.booked_by = by;
+    update.booked_at = new Date().toISOString();
+  }
   return update;
 }
 
 async function writeLead(db: SupabaseClient, id: string, update: Record<string, string | null>): Promise<void> {
   if (Object.keys(update).length === 0) return;
-  const { data, error } = await db.from("leads").update(update).eq("id", id).select("id");
+  let { data, error } = await db.from("leads").update(update).eq("id", id).select("id");
+  if (error && staffSchemaMissing(error) && hasStaffKeys(update)) {
+    const rest = withoutStaffKeys(update);
+    if (Object.keys(rest).length === 0) return;
+    ({ data, error } = await db.from("leads").update(rest).eq("id", id).select("id"));
+  }
   if (error) {
     if (outreachSchemaMissing(error)) throw notConfigured(OUTREACH_NOT_READY);
     throw dbError("lead update", error);
@@ -354,14 +419,18 @@ async function writeLead(db: SupabaseClient, id: string, update: Record<string, 
   if (!data || data.length === 0) throw notFound("That lead");
 }
 
-/** Partial: only the keys sent change; null clears the follow-up or the assignee. */
+/**
+ * Partial: only the keys sent change; null clears the follow-up or the
+ * assignee. "booked" records the caller as the booker the first time.
+ */
 export async function updateLead(ctx: ApiContext, id: string, patch: LeadPatch): Promise<Lead> {
   if (!isUuid(id)) throw notFound("That lead");
   const db = requireDb();
   const current = await readLeadRow(db, id);
   if (!current) throw notFound("That lead");
+  assertBookable(current, patch.status);
   if (patch.assignedTo) await assertAssignable(ctx, patch.assignedTo);
-  await writeLead(db, id, patchColumns(current, patch));
+  await writeLead(db, id, patchColumns(current, patch, ctx.email));
   return requireLead(ctx, id);
 }
 
@@ -443,6 +512,8 @@ export type LogTouchInput = {
  * POST /leads/:id/touches. Writes the touch, then the lead: the status sent,
  * or "contacted" when a call, email, DM or meeting is logged on a "new" lead,
  * and the follow-up when one is sent. Answers the touch and the updated lead.
+ * A touch with status "booked" is the booking: the caller becomes the booker
+ * when nobody is yet.
  *
  * The touch id comes from the Idempotency-Key, so a retry after a timeout finds
  * the touch it already wrote instead of logging the call twice.
@@ -457,6 +528,7 @@ export async function logTouch(
   const db = requireDb();
   const current = await readLeadRow(db, leadId);
   if (!current) throw notFound("That lead");
+  assertBookable(current, input.status);
 
   const id = idFor("touch", ctx, idempotencyKey);
   const { error } = await db.from("lead_touches").insert({
@@ -481,7 +553,7 @@ export async function logTouch(
   }
 
   const status = input.status ?? (CONTACT_KINDS.includes(input.kind) && toLeadStatus(current.status) === "new" ? "contacted" : undefined);
-  await writeLead(db, leadId, patchColumns(current, { status, followUpAt: input.followUpAt }));
+  await writeLead(db, leadId, patchColumns(current, { status, followUpAt: input.followUpAt }, ctx.email));
 
   const [touchRes, lead] = await Promise.all([
     db.from("lead_touches").select(TOUCH_COLUMNS).eq("id", id).single(),

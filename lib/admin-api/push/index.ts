@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { resolveRole, type AdminRole } from "@/lib/admin";
+import { PAUSED, resolveRole, type AdminRole, type RoleResolution } from "@/lib/admin";
 import { listAdminDevices } from "@/lib/admin-devices";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import { ApiError, MESSAGES } from "../errors";
@@ -205,9 +205,10 @@ async function recipientsFor(db: SupabaseClient, row: NotificationRecord): Promi
   if (devices.length === 0) return [];
 
   // One role per person, resolved like every sign-in (env owners, then the admins table).
+  // A paused person gets no pushes: their phones stay registered and ring again once resumed.
   const people = new Map<string, string>();
   for (const d of devices) if (!people.has(d.user_id)) people.set(d.user_id, d.user_email);
-  const roles = new Map<string, AdminRole | null>();
+  const roles = new Map<string, RoleResolution>();
   await Promise.all(
     [...people].map(async ([userId, email]) => {
       try {
@@ -220,7 +221,7 @@ async function recipientsFor(db: SupabaseClient, row: NotificationRecord): Promi
   );
   const allowed = [...people.keys()].filter((userId) => {
     const role = roles.get(userId);
-    return !!role && mayReceive(role, row);
+    return !!role && role !== PAUSED && mayReceive(role, row);
   });
   if (allowed.length === 0) return [];
 
@@ -467,7 +468,8 @@ async function resendShorter(db: SupabaseClient, tickets: readonly TicketRow[]):
   const byNotification = new Map<string, TicketRow[]>();
   for (const t of tickets) byNotification.set(t.notification_id, [...(byNotification.get(t.notification_id) ?? []), t]);
 
-  for (const [notificationId, group] of byNotification) {
+  for (const [notificationId, sent] of byNotification) {
+    let group = sent;
     let build: (token: string) => ExpoMessage;
     if (notificationId === TEST_NOTIFICATION_ID) {
       build = testMessage;
@@ -475,6 +477,9 @@ async function resendShorter(db: SupabaseClient, tickets: readonly TicketRow[]):
       const { data, error } = await db.from("admin_notifications").select(ROW_COLUMNS).eq("id", notificationId).maybeSingle();
       if (error || !data) continue;
       const row = data as NotificationRecord;
+      // The first send was minutes ago: a role change, a pause or Quiet since then wins.
+      const still = new Set((await recipientsFor(db, row)).map((d) => d.id));
+      group = group.filter((t) => still.has(t.device_id));
       build = (token) => shortRowMessage(row, token);
     }
     const targets = group

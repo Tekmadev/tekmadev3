@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isAllowedAdmin } from "@/lib/admin";
+import { PAUSED, resolveRole } from "@/lib/admin";
 
 export async function signInAction(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
@@ -16,11 +16,13 @@ export async function signInAction(formData: FormData) {
   if (error || !data.user) redirect("/admin/login?e=1");
 
   // Even with valid credentials, only a team member (owner, manager or staff)
-  // gets in; a client portal login is signed straight back out. What each role
-  // may then open is decided page by page (lib/admin.ts requireAdminCapability).
-  if (!(await isAllowedAdmin(data.user.email))) {
+  // gets in; a client portal login is signed straight back out, and so is a
+  // member whose access is paused (with its own message). What each role may
+  // then open is decided page by page (lib/admin.ts requireAdminCapability).
+  const role = await resolveRole(data.user.email);
+  if (!role || role === PAUSED) {
     await supabase.auth.signOut();
-    redirect("/admin/login?e=denied");
+    redirect(role === PAUSED ? "/admin/login?e=paused" : "/admin/login?e=denied");
   }
 
   redirect("/admin");

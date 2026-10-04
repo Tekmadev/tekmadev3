@@ -44,6 +44,8 @@ type Lead = {
   followUpAt: string | null;     // ISO instant of the next planned contact; null: none planned
   assignedTo: StaffRef | null;   // who owns the lead; null: nobody
   addedBy: StaffRef | null;      // who added it by hand (source "outreach" only)
+  foundBy: StaffRef | null;      // who found it (finder credit), staff.md
+  bookedBy: StaffRef | null;     // who first booked it (booker credit), staff.md
 };
 ```
 
@@ -63,7 +65,7 @@ The website stores more status values than the app's seven. The API folds them s
 
 ### Settable statuses
 
-A person may set `new`, `contacted`, `qualified`, `won` or `lost`. `booked` and `cancelled` mirror the booking calendar (the Cal webhook writes them, and they drive the CRM's booked-call reminders), so the API refuses them: 400 `status` "Booked and cancelled come from the booking calendar. Pick another status.".
+A person may set `new`, `booked`, `contacted`, `qualified`, `won` or `lost` (staff management, [staff.md](staff.md) section 3). `cancelled` mirrors the booking calendar, so the API refuses it: 400 `status` "Cancelled comes from the booking calendar. Pick another status.". `booked` may be set by hand on a lead with no calendar booking (a call booked by phone or DM), and records the first person who did as the lead's `bookedBy`. On a lead the calendar owns (source `cal_booking`, or a lead a Cal booking was attached to) the calendar sets booked, because that status drives the CRM's booked-call reminders: sending `booked` to one that already shows booked only records the booker, and to one that shows anything else is 400 `status` "This lead booked through the calendar, so the calendar sets booked. Pick another status.".
 
 ## 2. `GET /leads`: two more filters
 
@@ -102,7 +104,7 @@ Adds a lead by hand. Source is always `outreach`.
 - Rules: a name or a business, and an email or a phone. Blank strings count as not given.
 - One email is one lead. An email already on any lead (any casing) is 409 `duplicate`; find that lead and log the touch on it.
 - Answers **201** with the full `Lead`. A retry with the same Idempotency-Key answers the same lead (the lead id is derived from the key, so even without the replay table the lead is written once).
-- The person adding the lead is recorded (`addedBy`).
+- The person adding the lead is recorded (`addedBy`), and is the lead's `foundBy` (their finder credit, [staff.md](staff.md)).
 - With CRM outbound sync on, a lead with an email becomes a CRM contact like every other lead (source "outreach", no tags, no newsletter consent).
 
 ## 4. `PATCH /leads/:id`
@@ -182,7 +184,8 @@ leadTouchKinds: { value: TouchKind; label: string }[];  // Call, Email, DM, Meet
 | 400 | `need` | Unknown lead need. | |
 | 400 | `revenue` | Unknown revenue band. | |
 | 400 | `status` | Unknown lead status. | |
-| 400 | `status` | Booked and cancelled come from the booking calendar. Pick another status. | |
+| 400 | `status` | Cancelled comes from the booking calendar. Pick another status. | |
+| 400 | `status` | This lead booked through the calendar, so the calendar sets booked. Pick another status. | `booked` on a calendar lead that does not show booked |
 | 400 | `follow_up_at` | Enter a valid follow-up time. | not an ISO instant with a zone, before 2020 or over ten years out |
 | 400 | `assigned_to` | Pick someone on the team. | not an email, or not on the team |
 | 400 | `kind` | Pick a call, email, DM, meeting or other. | |

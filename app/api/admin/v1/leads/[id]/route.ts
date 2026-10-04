@@ -21,7 +21,9 @@ const patchBody = z.object({
 /**
  * PATCH /leads/:id { status?, followUpAt?, assignedTo? } -> the full Lead.
  * Partial: only the keys sent change; null clears the follow-up or the
- * assignee. Booked and cancelled are not settable (they mirror the calendar).
+ * assignee. Booked records the caller as the booker the first time; a
+ * calendar lead can only be set to booked when it already shows booked.
+ * Cancelled is not settable (it mirrors the calendar).
  */
 export const PATCH = route({ method: "PATCH", capability: "leads.update", body: patchBody }, async (ctx, { body, params }) =>
   updateLead(ctx, params.id, body),

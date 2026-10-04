@@ -1,4 +1,5 @@
-import { badRequest, businessRule, conflict, dbError, notFound, requireDb, unavailable, type ApiContext } from "@/lib/admin-api";
+import { badRequest, businessRule, conflict, dbError, isUuid, notFound, requireDb, unavailable, type ApiContext } from "@/lib/admin-api";
+import { StaffDataNotReady, creditClientFromLead } from "@/lib/staff-credit";
 import { loadGuarantee, type ApiGuarantee } from "@/lib/admin-api/clients/sections";
 import { provisionClient } from "@/lib/client-provisioning";
 import {
@@ -67,6 +68,8 @@ import { EMAIL, FieldCheck, INPUT, isEmail, isTimeZone, type JsonObject } from "
 
 export const REQUIRED = "Business name and a valid email are required.";
 export const EMAIL_TAKEN = "Another client already uses that email.";
+export const LEAD_GONE = "That lead no longer exists.";
+export const LEAD_CONVERTED = "That lead is already a client. Open it from the lead.";
 export const RUN_COMPLETE = "This onboarding is complete. A completed run cannot be reopened.";
 
 const label = (list: readonly { value: string; label: string }[], value: string) => list.find((o) => o.value === value)?.label ?? value;
@@ -80,6 +83,55 @@ const likeExact = (value: string) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 export type CreateClientOutcome = { client: ApiClient; reused: boolean; invite: "sent" | "failed" | "skipped" };
 
+type SourceLead = { id: string; found_by: string | null; booked_by: string | null };
+
+/**
+ * The lead a client is created from (POST /clients `leadId`), with who found
+ * and booked it. Null with no `leadId`. 400 `lead_id` when it does not exist,
+ * 409 `lead_converted` when another client already came from it.
+ */
+async function sourceLeadFor(ctx: ApiContext, leadId: string | null | undefined, email: string): Promise<SourceLead | null> {
+  if (!leadId) return null;
+  ctx.require("leads.convert");
+  const db = requireDb();
+  if (!isUuid(leadId)) throw badRequest("lead_id", LEAD_GONE, { leadId: LEAD_GONE });
+  let lead = await db.from("leads").select("id,found_by,booked_by").eq("id", leadId).maybeSingle();
+  // Before the staff management migration: the lead still links, with nobody to credit.
+  if (lead.error && /found_by|booked_by/.test(lead.error.message ?? "")) {
+    lead = await db.from("leads").select("id").eq("id", leadId).maybeSingle();
+  }
+  if (lead.error) throw dbError("source lead read", lead.error);
+  const row = lead.data as { id: string; found_by?: string | null; booked_by?: string | null } | null;
+  if (!row) throw badRequest("lead_id", LEAD_GONE, { leadId: LEAD_GONE });
+
+  // One lead, one client: another (not trashed) client already made from it is a 409.
+  const { data: others, error } = await db.from("clients").select("id,primary_email,is_test").eq("lead_id", leadId).is("deleted_at", null);
+  if (error) throw dbError("lead client read", error);
+  const other = ((others ?? []) as { id: string; primary_email: string | null; is_test: boolean | null }[]).find(
+    (c) => (c.primary_email ?? "").trim().toLowerCase() !== email,
+  );
+  if (other) throw conflict("lead_converted", LEAD_CONVERTED, { leadId: LEAD_CONVERTED });
+  return { id: row.id, found_by: row.found_by ?? null, booked_by: row.booked_by ?? null };
+}
+
+/**
+ * Links a client to the lead it came from (when it has no lead yet) and
+ * gives it the lead's default credits (when it has none yet). Credits are a
+ * bonus on top of the create: before the staff management migration, or on a
+ * failed write, the client is still created and the failure is logged.
+ */
+async function linkSourceLead(ctx: ApiContext, client: Client, lead: SourceLead): Promise<Client> {
+  let linked = client;
+  if (!client.lead_id) linked = await updateClient(client.id, { lead_id: lead.id }, ctx.email);
+  try {
+    await creditClientFromLead({ clientId: client.id, leadId: lead.id, foundBy: lead.found_by, bookedBy: lead.booked_by, by: ctx.email });
+  } catch (err) {
+    if (err instanceof StaffDataNotReady) console.warn("[admin-api] client created without credits: the staff management migration is not applied");
+    else console.error("[admin-api] default credits failed", err instanceof Error ? err.message : String(err));
+  }
+  return linked;
+}
+
 /**
  * New client by hand. One client per email: an existing live client with the
  * email is reused and updated (business name, and contact name, phone, plan,
@@ -87,6 +139,10 @@ export type CreateClientOutcome = { client: ApiClient; reused: boolean; invite: 
  * for anyone else the email is taken (409). Provisioning is the website's own
  * (lib/client-provisioning.ts): the client row, its owner login, the checklist
  * run from the plan's active templates, and the portal invite when asked.
+ *
+ * `leadId` ("Create client from this lead", docs/admin-api/staff.md) links the
+ * client to that lead and copies the lead's finder and booker to the client's
+ * credits with the default split (only when it has none yet).
  */
 export async function createClientByStaff(ctx: ApiContext, body: JsonObject): Promise<CreateClientOutcome> {
   const check = new FieldCheck(body);
@@ -98,6 +154,7 @@ export async function createClientByStaff(ctx: ApiContext, body: JsonObject): Pr
   const planId = check.oneOf("planId", PLAN_IDS, "Pick a plan from the list.", true);
   const strategist = check.email("assignedStrategist", 200);
   const sendInvite = check.flag("sendInvite");
+  const leadId = check.text("leadId", 64);
   check.done();
   if (!businessName) throw badRequest("required", REQUIRED, { businessName: "Enter the business name." });
 
@@ -106,6 +163,7 @@ export async function createClientByStaff(ctx: ApiContext, body: JsonObject): Pr
   // Never reveal or touch a test client for someone who cannot see test data.
   if (test && !ctx.can("testdata.view")) throw conflict("email_taken", EMAIL_TAKEN, { email: EMAIL_TAKEN });
   const existing = live ?? test;
+  const sourceLead = await sourceLeadFor(ctx, leadId, email);
 
   const result = await provisionClient({
     client_id: existing?.id ?? null,
@@ -114,6 +172,7 @@ export async function createClientByStaff(ctx: ApiContext, body: JsonObject): Pr
     name: name ?? null,
     phone: phone ?? null,
     plan_id: planId ?? null,
+    lead_id: sourceLead?.id ?? null,
     actor_type: "admin",
     actor_email: ctx.email,
     send_invite: sendInvite === true,
@@ -121,6 +180,7 @@ export async function createClientByStaff(ctx: ApiContext, body: JsonObject): Pr
   });
 
   let client = result.client;
+  if (sourceLead) client = await linkSourceLead(ctx, client, sourceLead);
   const reused = !result.createdClient;
   if (reused) {
     const patch: Partial<Client> = {};

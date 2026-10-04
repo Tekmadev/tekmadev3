@@ -125,6 +125,11 @@ export const ADMIN_EVENTS = {
   // Team (owner only)
   "team.admin_added": { category: "team", severity: "info", audience: "owner", label: "Team member added" },
   "team.admin_removed": { category: "team", severity: "warning", audience: "owner", label: "Team member removed" },
+  "team.admin_role_changed": { category: "team", severity: "info", audience: "owner", label: "Team role changed" },
+  "team.admin_paused": { category: "team", severity: "warning", audience: "owner", label: "Team member paused" },
+  "team.admin_resumed": { category: "team", severity: "info", audience: "owner", label: "Team member resumed" },
+  // Who gets credit for a client by default: a record of who changed the split and when.
+  "settings.commission_changed": { category: "team", severity: "info", audience: "owner", label: "Commission split changed" },
   // It changes what every buyer pays, so the inbox keeps a record of who flipped it and when.
   "settings.sales_tax_changed": { category: "system", severity: "warning", audience: "owner", label: "Sales tax switched" },
   "settings.crm_changed": { category: "system", severity: "info", audience: "owner", label: "CRM sync setting changed" },

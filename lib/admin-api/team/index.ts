@@ -2,10 +2,21 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ownerEmails, type AdminRole } from "@/lib/admin";
-import { TEAM_MESSAGES, addManager, listAdmins, removeAdmin, type AdminUser } from "@/lib/admin-users";
+import { TEAM_MESSAGES, addManager, listAdmins, removeAdmin, updateTeamAccess, type AdminUser } from "@/lib/admin-users";
 import type { ApiContext } from "../auth";
-import { ApiError, MESSAGES as API_MESSAGES, badRequest, businessRule, conflict, notFound, unavailable, validationError } from "../errors";
+import {
+  ApiError,
+  MESSAGES as API_MESSAGES,
+  badRequest,
+  businessRule,
+  conflict,
+  notConfigured,
+  notFound,
+  unavailable,
+  validationError,
+} from "../errors";
 import { dbError, instant } from "../data";
+import { forbiddenError } from "../permissions";
 
 /**
  * The team for the admin API (GET /team, POST /team, DELETE /team/:email),
@@ -25,6 +36,10 @@ import { dbError, instant } from "../data";
  * The two owner-only rules answer 403 `owner_only` "That section is owner
  * only." to managers and staff; a missing `team.view` or `team.write` answers
  * 403 `forbidden`. Env owners (ADMIN_EMAILS) are locked: nobody removes them.
+ *
+ * Staff management (docs/admin-api/staff.md): PATCH /team/:email changes a
+ * role (`team.role`) or pauses and resumes access (`team.pause`), by the rules
+ * in lib/admin-users.ts updateTeamAccess.
  */
 
 /**
@@ -51,12 +66,19 @@ export type TeamMemberView = {
   lastSignInAt: string | null;
   addedAt: string;
   envOwner: boolean;
+  /** Access paused: cannot sign in, gets no pushes (staff management). Always false for env owners. */
+  paused: boolean;
+  /** When it was paused; null when not paused. */
+  pausedAt: string | null;
+  /** Who paused them; null when not paused. */
+  pausedBy: { email: string; name: string | null } | null;
 };
 
 /** Env owners, then other owners, then everyone else (managers and staff together). */
 const GROUP: Record<AdminRole, number> = { owner: 1, manager: 2, staff: 2 };
 
-function memberView(a: AdminUser, fallbackAddedAt: string): TeamMemberView {
+function memberView(a: AdminUser, fallbackAddedAt: string, names: ReadonlyMap<string, string | null>): TeamMemberView {
+  const pausedBy = a.paused ? a.pausedBy : null;
   return {
     email: a.email,
     name: a.name?.trim() || null,
@@ -65,6 +87,9 @@ function memberView(a: AdminUser, fallbackAddedAt: string): TeamMemberView {
     // An env owner who never made an account has no add date; they sort first either way.
     addedAt: instant(a.createdAt) ?? fallbackAddedAt,
     envOwner: a.source === "env",
+    paused: a.paused,
+    pausedAt: a.paused ? instant(a.pausedAt) : null,
+    pausedBy: pausedBy ? { email: pausedBy, name: names.get(pausedBy) ?? null } : null,
   };
 }
 
@@ -83,9 +108,10 @@ export async function listTeam(): Promise<TeamMemberView[]> {
     throw unavailable();
   }
   const now = new Date().toISOString();
+  const names = new Map(admins.map((a) => [a.email, a.name?.trim() || null]));
   const rank = (m: TeamMemberView) => (m.envOwner ? 0 : GROUP[m.role]);
   return admins
-    .map((a) => memberView(a, now))
+    .map((a) => memberView(a, now, names))
     .sort((a, b) => rank(a) - rank(b) || time(a.addedAt) - time(b.addedAt) || a.email.localeCompare(b.email));
 }
 
@@ -176,6 +202,76 @@ export async function addTeamMember(db: SupabaseClient, input: NewTeamMember, by
   return added;
 }
 
+/** A path email: Next.js hands dynamic segments over decoded; decode again only if a %xx survived. */
+function pathEmail(raw: string): string {
+  let email = raw;
+  if (/%[0-9a-f]{2}/i.test(email)) {
+    try {
+      email = decodeURIComponent(email);
+    } catch {
+      /* keep it as sent */
+    }
+  }
+  return email.trim().toLowerCase();
+}
+
+/* ------------------------------------------------------------------ */
+/* PATCH /team/:email                                                  */
+/* ------------------------------------------------------------------ */
+
+const PAUSED_INPUT = "Send paused as true or false.";
+
+/** `{ role?, paused? }`: only what is sent changes. Unknown keys are ignored. */
+export const teamPatchSchema = z.object({
+  role: z.enum(ROLES, { error: MESSAGES.role }).optional(),
+  paused: z.boolean({ error: PAUSED_INPUT }).optional(),
+});
+export type TeamPatch = z.output<typeof teamPatchSchema>;
+
+/**
+ * PATCH /team/:email: change a role and/or pause or resume access, by the
+ * team rules (lib/admin-users.ts updateTeamAccess), then answer the member as
+ * GET /team shows them. A body with neither key changes nothing and answers
+ * the member (404 when not on the team).
+ *
+ *   403 forbidden   role without team.role, paused without team.pause
+ *   403 owner_only  role "owner", or any change to an owner, without team.owners
+ *   422 locked      an env owner (ADMIN_EMAILS)
+ *   404 not_found   not on the team
+ *   422 self        your own role, or pausing yourself
+ *   503             pausing before the staff management migration is applied
+ */
+export async function updateTeamMember(rawEmail: string, patch: TeamPatch, ctx: ApiContext): Promise<TeamMemberView> {
+  const email = pathEmail(rawEmail);
+  if (patch.role !== undefined || patch.paused !== undefined) {
+    const res = await updateTeamAccess({ email, role: patch.role, paused: patch.paused, actorEmail: ctx.email, actorRole: ctx.role });
+    if (!res.ok) {
+      switch (res.code) {
+        case "forbidden":
+          throw forbiddenError(patch.role !== undefined && !ctx.can("team.role") ? "team.role" : "team.pause");
+        case "owner_only":
+          throw new ApiError(403, "owner_only", API_MESSAGES.ownerOnly);
+        case "locked":
+          throw businessRule("locked", res.error);
+        case "not_found":
+          throw notFound("That team member");
+        case "self":
+          throw businessRule("self", res.error);
+        case "not_ready":
+          throw notConfigured(res.error);
+        default:
+          throw new ApiError(500, "unavailable", res.error);
+      }
+    }
+    revalidatePath("/admin/team");
+  }
+
+  const team = await listTeam();
+  const member = team.find((m) => m.email === email);
+  if (!member) throw notFound("That team member");
+  return member;
+}
+
 /* ------------------------------------------------------------------ */
 /* DELETE /team/:email                                                 */
 /* ------------------------------------------------------------------ */
@@ -192,16 +288,7 @@ export async function removeTeamMember(
   by: string,
   actorRole?: AdminRole,
 ): Promise<{ email: string; deleted: true }> {
-  let email = rawEmail;
-  // Next.js hands dynamic segments over decoded; decode again only if a %xx survived.
-  if (/%[0-9a-f]{2}/i.test(email)) {
-    try {
-      email = decodeURIComponent(email);
-    } catch {
-      /* keep it as sent */
-    }
-  }
-  email = email.trim().toLowerCase();
+  const email = pathEmail(rawEmail);
 
   if (ownerEmails().includes(email)) throw businessRule("owner", MESSAGES.owner);
   if (!email || !(await onTeam(db, email))) throw notFound("That team member");

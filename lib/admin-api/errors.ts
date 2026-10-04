@@ -21,6 +21,8 @@ export type Envelope<T> = SuccessEnvelope<T> | FailureEnvelope;
 export const MESSAGES = {
   unauthorized: "Sign in again.",
   notStaff: "That account is not allowed here.",
+  /** 403 `paused`: an owner or manager paused this person's access (the app signs out with this message). */
+  paused: "Your access is paused. Ask an owner or manager.",
   ownerOnly: "That section is owner only.",
   forbidden: "Your role cannot do that.",
   notFound: "That item no longer exists.",

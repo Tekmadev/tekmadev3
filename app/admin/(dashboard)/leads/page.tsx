@@ -2,6 +2,8 @@ import { requireAdminCapability } from "@/lib/admin";
 import { getLeads } from "@/lib/admin-data";
 import { GROW_LEAD_SOURCE, GROW_PATH, needLabel, revenueBandLabel } from "@/config/grow";
 import { PageHeader, Panel, DataTable, Badge, fmtDateTime, txt } from "@/components/admin/ui";
+import { leadCreditPeople } from "@/lib/staff-admin";
+import { teamMembers } from "@/lib/staff-credit";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +11,7 @@ const TYPE_LABELS: Record<string, string> = {
   portal_signup: "Portal sign-up",
   cal_booking: "Booked call",
   lead_magnet: "Free tool",
+  outreach: "Outreach",
   [GROW_LEAD_SOURCE]: "Lead form",
 };
 
@@ -26,6 +29,19 @@ export default async function LeadsPage() {
   await requireAdminCapability("leads.view");
   const leads = await getLeads();
   const formLeads = leads.filter((r) => r.source === GROW_LEAD_SOURCE);
+  // Commission credit on each lead (docs/admin-api/staff.md section 3): who found it, who booked it.
+  const [credit, names] = await Promise.all([
+    leadCreditPeople(leads.map((r) => String(r.id ?? ""))),
+    teamMembers().catch(() => new Map<string, string | null>()),
+  ]);
+  const person = (email: string | null | undefined) =>
+    email ? (
+      <span title={email} className="whitespace-nowrap">
+        {names.get(email) || email}
+      </span>
+    ) : (
+      "-"
+    );
 
   return (
     <div className="flex flex-col gap-8">
@@ -40,7 +56,7 @@ export default async function LeadsPage() {
           as booked here, with the call time.
         </p>
         <DataTable
-          head={["When", "Name", "Business", "Needs", "Revenue", "Phone", "Email", "Status", "Call", "Source", "Note"]}
+          head={["When", "Name", "Business", "Needs", "Revenue", "Phone", "Email", "Status", "Call", "Booked by", "Source", "Note"]}
           rows={formLeads.map((r) => {
             const href = websiteHref(r.website);
             return [
@@ -68,6 +84,7 @@ export default async function LeadsPage() {
                 {txt(r.status)}
               </Badge>,
               fmtDateTime(r.booking_start),
+              person(credit.get(String(r.id))?.bookedBy),
               [txt(r.utm_source), r.utm_campaign ? txt(r.utm_campaign) : null].filter((v) => v && v !== "-").join(" / ") || "-",
               <span key="m" className="block max-w-xs whitespace-pre-wrap text-ink-3">
                 {txt(r.message)}
@@ -80,7 +97,7 @@ export default async function LeadsPage() {
 
       <Panel title="All leads">
         <DataTable
-          head={["When", "Type", "Name", "Email", "Phone", "Status", "Booking", "Source", "Campaign"]}
+          head={["When", "Type", "Name", "Email", "Phone", "Status", "Booking", "Found by", "Booked by", "Source", "Campaign"]}
           rows={leads.map((r) => [
             fmtDateTime(r.created_at),
             TYPE_LABELS[String(r.source)] ?? txt(r.source),
@@ -89,6 +106,8 @@ export default async function LeadsPage() {
             txt(r.phone),
             txt(r.status),
             fmtDateTime(r.booking_start),
+            person(credit.get(String(r.id))?.foundBy),
+            person(credit.get(String(r.id))?.bookedBy),
             txt(r.utm_source),
             txt(r.utm_campaign),
           ])}

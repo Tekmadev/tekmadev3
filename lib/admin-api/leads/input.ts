@@ -8,7 +8,8 @@ import { LEAD_NEEDS, LEAD_REVENUE_BANDS, SETTABLE_STATUSES } from "./shape";
 
 export const MESSAGES = {
   status: "Unknown lead status.",
-  statusFromCalendar: "Booked and cancelled come from the booking calendar. Pick another status.",
+  statusFromCalendar: "Cancelled comes from the booking calendar. Pick another status.",
+  bookedByCalendar: "This lead booked through the calendar, so the calendar sets booked. Pick another status.",
   followUpAt: "Enter a valid follow-up time.",
   assignedTo: "Pick someone on the team.",
   need: "Unknown lead need.",
@@ -57,9 +58,9 @@ export function instantInput(message: string) {
     }, message);
 }
 
-/** A status a person may set (booked and cancelled get their own message). */
+/** A status a person may set (cancelled gets its own message; booked on a calendar lead is refused by the handler). */
 export const statusInput = z.enum(SETTABLE_STATUSES, {
-  error: (issue) => (issue.input === "booked" || issue.input === "cancelled" ? MESSAGES.statusFromCalendar : MESSAGES.status),
+  error: (issue) => (issue.input === "cancelled" ? MESSAGES.statusFromCalendar : MESSAGES.status),
 });
 
 /** A follow-up time: an instant, or null (or "") to clear it. */

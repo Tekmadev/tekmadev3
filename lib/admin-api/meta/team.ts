@@ -1,3 +1,4 @@
+import { ACTIVITY_RANGES, ACTIVITY_RANGE_LABELS, CREDIT_ROLES, CREDIT_ROLE_HELP, CREDIT_ROLE_LABELS } from "@/lib/staff-constants";
 import { defineMetaFragment } from "./types";
 
 /**
@@ -6,6 +7,9 @@ import { defineMetaFragment } from "./types";
  * choice. The copy is the owner decision of 2026-10-03 (docs/api-requests/team.md
  * in the app repo), narrowest role first because the add sheet defaults to it.
  * What each role may do is lib/admin-api/permissions.ts.
+ *
+ * Staff management (docs/admin-api/staff.md) adds `creditRoles` (the credits
+ * editor) and `activityRanges` (the activity board's range picker).
  */
 export const metaFragment = defineMetaFragment(() => ({
   teamRoles: [
@@ -18,4 +22,6 @@ export const metaFragment = defineMetaFragment(() => ({
     { value: "manager", label: "Manager", help: "Everything except removing team members or making owners.", tone: "neutral" },
     { value: "owner", label: "Owner", help: "Full access, can manage the team.", tone: "gold" },
   ],
+  creditRoles: CREDIT_ROLES.map((value) => ({ value, label: CREDIT_ROLE_LABELS[value], help: CREDIT_ROLE_HELP[value] })),
+  activityRanges: ACTIVITY_RANGES.map((value) => ({ value, label: ACTIVITY_RANGE_LABELS[value] })),
 }));

@@ -40,30 +40,67 @@ export function ownerEmails(): string[] {
 }
 
 /**
- * Resolves the role for an email: env owners first, then the admins table.
- * Returns null when the email is not allowed into the dashboard at all (a
- * client portal login, for one).
+ * What resolveRole answers for a team member whose access an owner or manager
+ * paused (`admins.paused_at` set, docs/admin-api/staff.md). They stay on the
+ * team with their role and everything they did, but cannot use the web admin
+ * or the app and get no pushes until someone resumes them. Env owners can
+ * never be paused.
  */
-export async function resolveRole(email: string | null | undefined): Promise<AdminRole | null> {
+export const PAUSED = "paused" as const;
+
+/** A role, "paused" (on the team, access paused), or null (not on the team). */
+export type RoleResolution = AdminRole | typeof PAUSED | null;
+
+/** The copy a paused person sees, on the web login and from the admin API (403 `paused`). */
+export const PAUSED_MESSAGE = "Your access is paused. Ask an owner or manager.";
+
+type AdminRow = { role: string | null; paused_at: string | null };
+
+/** A missing column means the staff management migration is not applied yet: read without it. */
+function missingPausedColumn(error: { code?: string; message?: string } | null): boolean {
+  return Boolean(error && (error.code === "42703" || error.code === "PGRST204" || /paused_at/.test(error.message ?? "")));
+}
+
+async function readAdminRow(db: NonNullable<ReturnType<typeof getSupabaseAdmin>>, email: string): Promise<AdminRow | null> {
+  const full = await db.from("admins").select("role,paused_at").eq("email", email).maybeSingle();
+  if (!full.error) return (full.data as AdminRow | null) ?? null;
+  // Any other failure denies, as it always has: an unreadable allowlist lets nobody in.
+  if (!missingPausedColumn(full.error)) return null;
+  const basic = await db.from("admins").select("role").eq("email", email).maybeSingle();
+  const row = basic.data as { role: string | null } | null;
+  return row ? { role: row.role, paused_at: null } : null;
+}
+
+/**
+ * Resolves the role for an email: env owners first, then the admins table.
+ * Returns "paused" for a team member whose access is paused, and null when
+ * the email is not allowed into the dashboard at all (a client portal login,
+ * for one). Callers that let someone in must treat "paused" as a refusal
+ * with PAUSED_MESSAGE.
+ */
+export async function resolveRole(email: string | null | undefined): Promise<RoleResolution> {
   if (!email) return null;
   const e = email.toLowerCase();
 
+  // Env owners are locked: never paused, never removed.
   if (ownerEmails().includes(e)) return "owner";
 
   const db = getSupabaseAdmin();
   if (!db) return null; // no allowlist source available => deny
 
-  const { data } = await db.from("admins").select("role").eq("email", e).maybeSingle();
+  const data = await readAdminRow(db, e);
   if (!data) return null;
+  if (data.paused_at) return PAUSED;
   if (data.role === "owner") return "owner";
   if (data.role === "staff") return "staff";
   return "manager";
 }
 
 /**
- * Whether this email is on the team at all (any role). Signing in to the web
- * admin needs this; the portal uses it to keep team logins out of client
- * accounts.
+ * Whether this email is on the team at all (any role, paused included). The
+ * portal uses it to keep team logins out of client accounts, so a paused
+ * member stays out of the portal too. Letting someone into the admin needs
+ * resolveRole, which tells a paused member apart.
  */
 export async function isAllowedAdmin(email: string | null | undefined): Promise<boolean> {
   return (await resolveRole(email)) !== null;
@@ -78,7 +115,8 @@ function contextFor(user: User, role: AdminRole): AdminContext {
  * Returns the signed-in admin (user + role), or redirects to the login page.
  * Use at the top of every protected server component / action. Defends in
  * depth: a valid Supabase session is not enough, the email must also resolve
- * to a role (env owner or admins-table row).
+ * to a role (env owner or admins-table row). A paused member lands on the
+ * login page with PAUSED_MESSAGE (`?e=paused`).
  */
 export async function requireAdmin(): Promise<AdminContext> {
   const supabase = await createSupabaseServerClient();
@@ -90,6 +128,7 @@ export async function requireAdmin(): Promise<AdminContext> {
   if (!user) redirect("/admin/login");
 
   const role = await resolveRole(user.email);
+  if (role === PAUSED) redirect("/admin/login?e=paused");
   if (!role) redirect("/admin/login?e=denied");
 
   return contextFor(user, role);
@@ -98,7 +137,7 @@ export async function requireAdmin(): Promise<AdminContext> {
 /**
  * The signed-in admin, or null. For API routes and checks that must not
  * redirect. Same two conditions as requireAdmin: a valid session AND an email
- * that resolves to a role.
+ * that resolves to a role (a paused member gets null).
  */
 export async function getAdminContext(): Promise<AdminContext | null> {
   const supabase = await createSupabaseServerClient();
@@ -108,7 +147,7 @@ export async function getAdminContext(): Promise<AdminContext | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
   const role = await resolveRole(user.email);
-  if (!role) return null;
+  if (!role || role === PAUSED) return null;
   return contextFor(user, role);
 }
 
@@ -128,7 +167,7 @@ export async function getAdminContextFromBearer(authorization: string | null): P
   } = await db.auth.getUser(token);
   if (!user) return null;
   const role = await resolveRole(user.email);
-  if (!role) return null;
+  if (!role || role === PAUSED) return null;
   return contextFor(user, role);
 }
 

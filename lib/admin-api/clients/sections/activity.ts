@@ -70,6 +70,8 @@ export const SECTION_ACTIVITY_EVENTS: { value: string; label: string }[] = [
   { value: "member.disabled", label: "Person turned off" },
   { value: "note", label: "Internal note" },
   { value: "update", label: "Update to client" },
+  { value: "credits.created", label: "Credits set from the lead" },
+  { value: "credits.updated", label: "Credits changed" },
 ].filter((option, i, all) => all.findIndex((o) => o.value === option.value) === i);
 
 const ACTOR_KIND: Record<ClientActivity["actor_type"], ApiActivity["actor"]["kind"]> = { admin: "staff", client: "client", system: "system" };
@@ -107,12 +109,15 @@ export function activityView(row: ClientActivity, people: People): ApiActivity {
  * care plan events carry amounts, refunds and subscription states
  * ("Order partially refunded (12.00 CAD)", "Webline Care set up. First charge
  * ..."), so they need `clients.billing`; CRM plumbing ("CRM account set to
- * ...") needs `clients.crm`, like the bundle's crmLocation.
+ * ...") needs `clients.crm`, like the bundle's crmLocation. Credit changes
+ * name everyone's shares, so they need `clients.credits.view` (staff only
+ * ever see their own credit rows, never anyone else's).
  */
 export function hiddenActivityPrefixes(ctx: Pick<ApiContext, "can">): string[] {
   const hidden: string[] = [];
   if (!ctx.can("clients.billing")) hidden.push("billing.", "care.");
   if (!ctx.can("clients.crm")) hidden.push("crm.");
+  if (!ctx.can("clients.credits.view")) hidden.push("credits.");
   return hidden;
 }
 

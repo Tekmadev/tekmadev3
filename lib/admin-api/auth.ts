@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import type { User } from "@supabase/supabase-js";
-import { resolveRole, type AdminRole } from "@/lib/admin";
+import { PAUSED, resolveRole, type AdminRole } from "@/lib/admin";
 import { getSupabaseAdmin } from "@/lib/supabase";
 import type { Viewer } from "@/lib/admin-notifications-data";
 import { ApiError, MESSAGES, notConfigured } from "./errors";
@@ -14,6 +14,8 @@ import { can, requireCapability, type Capability } from "./permissions";
  *   no token, or a token Supabase rejects   401 unauthorized "Sign in again."
  *   a valid account that is not on staff    403 not_staff "That account is not allowed here."
  *     (client portal users share the Supabase user pool and land here)
+ *   a team member whose access is paused     403 paused "Your access is paused. Ask an owner or manager."
+ *     (never a 401: the app signs out and shows this message)
  *   Supabase unreachable                    500 unavailable (never a 401: the app would sign out)
  *
  * The role comes from lib/admin.ts resolveRole: owners named in ADMIN_EMAILS,
@@ -77,6 +79,7 @@ export async function authenticate(req: NextRequest): Promise<ApiContext> {
   if (!user) throw unauthorized();
 
   const role = await resolveRole(user.email);
+  if (role === PAUSED) throw new ApiError(403, "paused", MESSAGES.paused);
   if (!role) throw new ApiError(403, "not_staff", MESSAGES.notStaff);
 
   const email = (user.email ?? "").toLowerCase();
