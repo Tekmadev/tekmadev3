@@ -1,21 +1,6 @@
 import { z } from "zod";
 import { pageQuery, route } from "@/lib/admin-api";
-import {
-  LEAD_MESSAGES as M,
-  LEAD_NEEDS,
-  LEAD_SOURCES,
-  LEAD_STATUSES,
-  assigneeInput,
-  createOutreachLead,
-  emailInput,
-  followUpInput,
-  listLeads,
-  needInput,
-  optionalText,
-  phoneInput,
-  revenueInput,
-  statusInput,
-} from "@/lib/admin-api/leads";
+import { LEAD_NEEDS, LEAD_SOURCES, LEAD_STATUSES, createLeadBody, createOutreachLead, listLeads } from "@/lib/admin-api/leads";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,31 +43,12 @@ export const GET = route({ method: "GET", capability: "leads.view", query: listQ
   listLeads(ctx, query),
 );
 
-const createBody = z
-  .object({
-    name: optionalText(120, M.nameLong),
-    business: optionalText(200, M.businessLong),
-    email: emailInput,
-    phone: phoneInput,
-    website: optionalText(300, M.websiteLong),
-    need: needInput,
-    revenue: revenueInput,
-    message: optionalText(5000, M.messageLong),
-    status: statusInput.optional(),
-    followUpAt: followUpInput,
-    assignedTo: assigneeInput,
-  })
-  .superRefine((b, issue) => {
-    if (!b.name && !b.business) issue.addIssue({ code: "custom", path: ["name"], message: M.name });
-    if (!b.email && !b.phone) issue.addIssue({ code: "custom", path: ["email"], message: M.contact });
-  });
-
 /**
  * POST /leads (Idempotency-Key) -> 201 Lead. A lead added by hand: source
  * "outreach", assigned to the caller unless `assignedTo` says otherwise.
  * 409 `duplicate` when the email is already on a lead.
  */
 export const POST = route(
-  { method: "POST", capability: "leads.create", body: createBody, idempotent: true, status: 201 },
+  { method: "POST", capability: "leads.create", body: createLeadBody, idempotent: true, status: 201 },
   async (ctx, { body, req }) => createOutreachLead(ctx, body, req.headers.get("idempotency-key")),
 );
