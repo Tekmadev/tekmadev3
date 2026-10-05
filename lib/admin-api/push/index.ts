@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { PAUSED, resolveRole, type AdminRole, type RoleResolution } from "@/lib/admin";
 import { listAdminDevices } from "@/lib/admin-devices";
 import { getSupabaseAdmin } from "@/lib/supabase";
+import type { AdminPushTarget } from "@/lib/admin-notify";
 import { ApiError, MESSAGES } from "../errors";
 import { requireDb } from "../data";
 import { can, readsOwnerAudience } from "../permissions";
@@ -33,7 +34,11 @@ import { TEST_NOTIFICATION_ID, rowMessage, shortRowMessage, testMessage, type Pu
  *     never to staff, whatever the category ("Client deleted" sits in Clients);
  *   - test rows go to whoever holds `testdata.view` (owners and managers);
  *   - the person has Push on for that category and the category is not Quiet
- *     for them (admin_notification_prefs; defaults: push on, not quiet).
+ *     for them (admin_notification_prefs; defaults: push on, not quiet);
+ *   - when the writer narrowed the push (notifyAdmins `push`), the person is
+ *     in `only` and not in `except`. Inbox rows are shared, so this is the one
+ *     way to ring a single person ("Demo ready" rings the salesperson who
+ *     asked for it); the row itself stays readable by everyone allowed it.
  *
  * A bump pushes again with the same tag and collapseId (the row id), so the
  * phone replaces the earlier entry instead of piling up.
@@ -194,14 +199,25 @@ export function mayReceive(role: AdminRole, row: Pick<NotificationRecord, "categ
   return true;
 }
 
+const lowerEmail = (v: string | null | undefined) => (v ?? "").trim().toLowerCase();
+
+/** Whether a phone's owner is in the writer's narrowed audience (none given: everyone). */
+export function inPushTarget(email: string, target?: AdminPushTarget): boolean {
+  const e = lowerEmail(email);
+  if (target?.except?.some((x) => lowerEmail(x) === e)) return false;
+  if (target?.only && !target.only.some((x) => lowerEmail(x) === e)) return false;
+  return true;
+}
+
 /** The phones that should ring for this row. Empty on any doubt (never push past a Quiet we could not read). */
-async function recipientsFor(db: SupabaseClient, row: NotificationRecord): Promise<DeviceRef[]> {
+async function recipientsFor(db: SupabaseClient, row: NotificationRecord, target?: AdminPushTarget): Promise<DeviceRef[]> {
+  if (target?.only && target.only.length === 0) return [];
   const { data, error } = await db.from("admin_devices").select("id,user_id,user_email,token");
   if (error) {
     log("reading phones failed", error.message);
     return [];
   }
-  const devices = (data ?? []) as DeviceRef[];
+  const devices = ((data ?? []) as DeviceRef[]).filter((d) => inPushTarget(d.user_email, target));
   if (devices.length === 0) return [];
 
   // One role per person, resolved like every sign-in (env owners, then the admins table).
@@ -250,8 +266,8 @@ async function recipientsFor(db: SupabaseClient, row: NotificationRecord): Promi
 
 const ROW_COLUMNS = "id,event_key,category,severity,audience,is_test,title,body,action_url";
 
-/** Push one Inbox row (new or bumped) to every phone that should ring. Never throws. */
-export async function pushNotificationRow(notificationId: string): Promise<DeliveryReport | null> {
+/** Push one Inbox row (new or bumped) to every phone that should ring (narrowed by `target`). Never throws. */
+export async function pushNotificationRow(notificationId: string, target?: AdminPushTarget): Promise<DeliveryReport | null> {
   try {
     const db = getSupabaseAdmin();
     if (!db) return null;
@@ -262,7 +278,7 @@ export async function pushNotificationRow(notificationId: string): Promise<Deliv
     }
     if (!data) return null;
     const row = data as NotificationRecord;
-    const devices = await recipientsFor(db, row);
+    const devices = await recipientsFor(db, row, target);
     if (devices.length === 0) return null;
     const report = await deliver(
       db,
@@ -299,12 +315,13 @@ function inBackground(task: () => Promise<void>): void {
 
 /**
  * Called by lib/admin-notify.ts after it writes or bumps a row. Returns at
- * once: the push goes out after the response. Never throws.
+ * once: the push goes out after the response. Never throws. `target` narrows
+ * who rings (notifyAdmins `push`).
  */
-export function queueAdminPush(notificationId: string): void {
+export function queueAdminPush(notificationId: string, target?: AdminPushTarget): void {
   try {
     inBackground(async () => {
-      await pushNotificationRow(notificationId);
+      await pushNotificationRow(notificationId, target);
       await checkPushReceipts();
     });
   } catch (err) {

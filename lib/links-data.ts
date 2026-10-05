@@ -29,7 +29,7 @@ export type LinkClickRow = {
  * silently never resolve; we block them at creation time to avoid dead links.
  */
 export const RESERVED_SLUGS = new Set([
-  "admin", "api", "start", "privacy", "terms", "cookies", "guides", "unsubscribe",
+  "admin", "api", "start", "privacy", "terms", "cookies", "account-deletion", "guides", "unsubscribe",
   "case-studies", "tools", "blog", "webline", "about", "auth", "portal", "grow",
   "llms.txt", "sitemap.xml", "robots.txt", "manifest.webmanifest",
   "opengraph-image", "twitter-image", "favicon.ico", "not-found",

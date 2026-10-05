@@ -91,7 +91,16 @@ export const business = {
   },
   legalDates: {
     effective: "2026-05-16",
-    lastUpdated: "2026-09-29",
+    /** Privacy Policy (and the consent records stamped with its version). */
+    lastUpdated: "2026-10-05",
+    /**
+     * Terms of Service, Cookie Policy and the client agreements (config/agreements.ts
+     * uses it as the agreement version, so moving it asks clients to accept again).
+     * Move it only when one of those documents changes.
+     */
+    termsLastUpdated: "2026-09-29",
+    /** The /account-deletion page was first published on this date; the older documents keep `effective`. */
+    accountDeletionEffective: "2026-10-05",
   },
   phone: {
     tel: _phoneTel,
@@ -527,6 +536,7 @@ export const footerColumns = [
       { label: "Privacy", href: "/privacy" },
       { label: "Terms", href: "/terms" },
       { label: "Cookies", href: "/cookies" },
+      { label: "Account deletion", href: "/account-deletion" },
     ],
   },
 ];

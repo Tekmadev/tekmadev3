@@ -275,3 +275,33 @@ export async function creditClientFromLead(opts: {
   });
   return credits;
 }
+
+/**
+ * The default credits for a client created directly, with no lead (owner
+ * decision 2026-10-05): the person who created it found it and booked it, so
+ * they are both finder and booker by the split, 100 together. Written only
+ * when the client has no credits yet, and logged as the internal activity
+ * entry "credits.created". Owners and managers can change them afterwards as
+ * for any client. Answers the credits written (empty when none were).
+ */
+export async function creditClientToCreator(opts: { clientId: string; by: string }): Promise<CreditInput[]> {
+  const creator = clean(opts.by);
+  if (!creator) return [];
+  const credits = defaultCredits(creator, creator, await getCommissionSplit());
+  if (credits.length === 0) return [];
+  const written = await writeClientCredits(opts.clientId, credits, creator, true);
+  if (!written) return [];
+  const names = await teamMembers().catch(() => new Map<string, string | null>());
+  await logActivity({
+    client_id: opts.clientId,
+    actor_type: "admin",
+    actor_email: creator,
+    event: "credits.created",
+    entity_type: "client",
+    entity_id: opts.clientId,
+    summary: `Credits set to the person who added the client: ${creditSummary(credits, names)}.`,
+    visibility: "internal",
+    data: { after: credits, direct: true },
+  });
+  return credits;
+}

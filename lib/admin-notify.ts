@@ -91,6 +91,11 @@ export const ADMIN_EVENTS = {
   "onboarding.asset_uploaded": { category: "clients", severity: "info", label: "Files uploaded" },
   "onboarding.agreement_signed": { category: "clients", severity: "success", label: "Agreement signed" },
   "guarantee.met": { category: "clients", severity: "success", label: "Guarantee met" },
+  // Demo requests (docs/admin-api/demos.md). "Demo requested" is for the people who build demos
+  // (demos.manage: owners and managers, which is exactly the owner audience). "Demo ready" is for
+  // the salesperson who asked: every role reads it in Clients, and only they get the push.
+  "demo.requested": { category: "clients", severity: "info", audience: "owner", label: "Demo requested" },
+  "demo.ready": { category: "clients", severity: "success", label: "Demo ready" },
 
   // Audience. Written by a database trigger on subscriber_events, listed here so
   // clients of this catalogue know every key that can appear. Owner only, like
@@ -184,7 +189,18 @@ export type AdminNotifyInput = {
   collapse?: boolean;
   /** Machine-readable details: amounts in cents, currency, emails, ids. */
   data?: Record<string, unknown>;
+  /**
+   * Which phones ring, by team member email. The Inbox row itself is shared
+   * (everyone who may read its category and audience sees it); this only
+   * narrows the push. `only`: just these people. `except`: never these people
+   * (whoever did it). Absent: everyone who may see the row. Either way a person
+   * still needs to be allowed the row and to have push on for its category.
+   */
+  push?: AdminPushTarget;
 };
+
+/** Narrows the phone push of one notification to some people (lowercased emails). */
+export type AdminPushTarget = { only?: readonly string[]; except?: readonly string[] };
 
 const clip = (v: string | null | undefined, max: number) => {
   const t = (v ?? "").trim();
@@ -215,11 +231,11 @@ const WRITE_TIMEOUT_MS = 3000;
  * this file stays a leaf, and fire and forget: the push goes out after the
  * response, and a push problem never reaches the caller.
  */
-async function pushToPhones(id: unknown): Promise<void> {
+async function pushToPhones(id: unknown, target?: AdminPushTarget): Promise<void> {
   if (typeof id !== "string" || !id) return;
   try {
     const { queueAdminPush } = await import("@/lib/admin-api/push");
-    queueAdminPush(id);
+    queueAdminPush(id, target);
   } catch (err) {
     console.error("[admin-notify] push not queued", err instanceof Error ? err.message : String(err));
   }
@@ -257,7 +273,7 @@ export async function notifyAdmins(input: AdminNotifyInput): Promise<void> {
         .select("id")
         .abortSignal(AbortSignal.timeout(WRITE_TIMEOUT_MS));
       if (error) console.error("[admin-notify] insert failed", input.event, error.message);
-      else await pushToPhones(inserted?.[0]?.id);
+      else await pushToPhones(inserted?.[0]?.id, input.push);
       return;
     }
 
@@ -272,7 +288,7 @@ export async function notifyAdmins(input: AdminNotifyInput): Promise<void> {
     }
     // A new row: tell the phones.
     if ((data ?? []).length > 0) {
-      await pushToPhones(data?.[0]?.id);
+      await pushToPhones(data?.[0]?.id, input.push);
       return;
     }
     // Nothing came back, so the key already existed. For a burst key that is
@@ -283,7 +299,7 @@ export async function notifyAdmins(input: AdminNotifyInput): Promise<void> {
         .abortSignal(AbortSignal.timeout(WRITE_TIMEOUT_MS));
       if (bumpError) console.error("[admin-notify] bump failed", input.event, bumpError.message);
       // A bump is news again: push it (same tag, so it replaces the entry on the phone).
-      else await pushToPhones(bumpedId);
+      else await pushToPhones(bumpedId, input.push);
     }
   } catch (err) {
     console.error("[admin-notify] threw", input.event, err instanceof Error ? err.message : String(err));

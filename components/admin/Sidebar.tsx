@@ -33,6 +33,7 @@ import {
   SlidersHorizontal,
   ChevronDown,
   Trophy,
+  MonitorPlay,
 } from "lucide-react";
 import { signOutAction } from "@/app/admin/actions";
 import { NotificationBell, useAdminNotifications } from "@/components/admin/NotificationBell";
@@ -91,6 +92,7 @@ const GROUPS: NavGroup[] = [
     icon: Users,
     items: [
       { href: "/admin/leads", label: "Leads", icon: UserRound, capability: "leads.view" },
+      { href: "/admin/demos", label: "Demos", icon: MonitorPlay, capability: "demos.view" },
       { href: "/admin/tools", label: "Free tools", icon: Calculator, capability: "tools.view" },
       { href: "/admin/clients", label: "Clients", icon: Building2, capability: "clients.view" },
       { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard, capability: "billing.view" },

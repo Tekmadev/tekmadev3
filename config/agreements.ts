@@ -30,7 +30,7 @@ export const AGREEMENTS: Record<"service_agreement" | "webline_agreement", Agree
   service_agreement: {
     kind: "service_agreement",
     title: `${business.name} Service Agreement`,
-    version: business.legalDates.lastUpdated,
+    version: business.legalDates.termsLastUpdated,
     url: `${business.url}/terms`,
     summary: [
       "We build and run your growth system as described in your plan. You keep ownership of every account we get access to.",
@@ -44,7 +44,7 @@ export const AGREEMENTS: Record<"service_agreement" | "webline_agreement", Agree
   webline_agreement: {
     kind: "order_form",
     title: `${business.name} Webline Agreement`,
-    version: business.legalDates.lastUpdated,
+    version: business.legalDates.termsLastUpdated,
     url: `${business.url}/terms#one-time-packages`,
     summary: [
       "Webline is a fixed-scope website: custom design, up to 5 pages with the copy written for you, and the SEO, GEO, and AEO foundation, launched on your domain. The build fee is paid once at checkout.",

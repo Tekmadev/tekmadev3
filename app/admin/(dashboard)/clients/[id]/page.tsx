@@ -40,6 +40,7 @@ import { StaffDataNotReady, defaultCredits, readClientCredits, teamMembers, type
 import { getCommissionSplit } from "@/lib/site-settings";
 import { leadCreditPeople } from "@/lib/staff-admin";
 import { CREDITS_NOT_READY } from "@/lib/admin-api/staff";
+import { DemoRequestsCard } from "@/components/admin/demos/DemoRequestsCard";
 import { deleteClientAction, goLiveAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +55,7 @@ const SECTIONS = [
   ["approvals", "Approvals"],
   ["agreements", "Agreements"],
   ["calls", "Calls"],
+  ["demos", "Demos"],
   ["crm", "CRM"],
   ["credit", "Credit"],
   ["team", "Team"],
@@ -66,7 +68,7 @@ export default async function ClientDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ created?: string; saved?: string; live?: string; invite?: string; e?: string; invited?: string }>;
+  searchParams: Promise<{ created?: string; saved?: string; live?: string; invite?: string; e?: string; invited?: string; reused?: string }>;
 }) {
   const ctx = await requireAdminCapability("clients.view");
   const can = (capability: Capability) => adminCan(ctx, capability);
@@ -133,7 +135,18 @@ export default async function ClientDetailPage({
         </a>
       </PageHeader>
 
-      {sp.created === "1" && <Notice kind="ok">Client created{sp.invite === "failed" ? ", but the invite email failed. Use Resend invite under Team." : " and invited."}</Notice>}
+      {sp.created === "1" && (
+        <Notice kind="ok">
+          {sp.reused === "1" ? "That email is already this client." : "Client created"}
+          {sp.invite === "failed"
+            ? `${sp.reused === "1" ? " The" : ", but the"} invite email failed. Use Resend invite under Team.`
+            : sp.invite === "sent"
+              ? `${sp.reused === "1" ? " Invite sent." : " and invited."}`
+              : sp.reused === "1"
+                ? ""
+                : "."}
+        </Notice>
+      )}
       {sp.saved === "1" && <Notice kind="ok">Saved.</Notice>}
       {sp.live === "1" && <Notice kind="ok">Live. {client.guarantee_eligible ? "Guarantee clock started." : ""}</Notice>}
       {sp.invited === "1" && <Notice kind="ok">Invite sent.</Notice>}
@@ -142,7 +155,7 @@ export default async function ClientDetailPage({
       {sp.e?.startsWith("crm_") && (
         <Notice kind="err">
           {{
-            crm_location: "That does not look like a sub-account location id. It is letters and numbers only, copied from GoHighLevel.",
+            crm_location: "That does not look like a sub-account location id. It is letters and numbers only, copied from the CRM.",
             crm_calendar: "One of the calendar ids does not look right. Paste only the ids, separated by commas or new lines.",
             crm_taken: "That sub-account is already mapped to another client, or it is our own. Unlink it there first.",
             crm_own: "That is Tekmadev's own sub-account. Its appointments are our sales calls and never count for a client.",
@@ -186,7 +199,7 @@ export default async function ClientDetailPage({
       </section>
 
       <nav className="sticky top-0 z-20 -mx-5 flex snap-x gap-2 overflow-x-auto border-b border-line bg-bg/90 px-5 py-2 backdrop-blur sm:-mx-8 sm:px-8">
-        {SECTIONS.filter(([key]) => (key !== "crm" || seesCrm) && (key !== "credit" || credit)).map(([key, label]) => (
+        {SECTIONS.filter(([key]) => (key !== "crm" || seesCrm) && (key !== "credit" || credit) && (key !== "demos" || can("demos.view"))).map(([key, label]) => (
           <a key={key} href={`#${key}`} className="shrink-0 snap-start rounded-full border border-line-strong px-3 py-1.5 text-xs text-ink-3 hover:text-ink">
             {label}
           </a>
@@ -297,6 +310,8 @@ export default async function ClientDetailPage({
           <CallsPanel client={client} calls={calls} canLog={can("clients.calls.log")} canReview={can("clients.calls.review")} />
         </div>
       </Panel>
+
+      <DemoRequestsCard clientId={client.id} businessName={client.business_name} area={client.service_area} />
 
       {seesCrm && (
         <Panel title="CRM account">

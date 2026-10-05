@@ -10,6 +10,7 @@ Everything shared lives in `lib/admin-api/`:
 | `auth.ts` | Bearer auth: Supabase access token, then the role from `lib/admin.ts` `resolveRole` |
 | `permissions.ts` | The capability matrix (see [permissions.md](permissions.md)) |
 | `staff/`, `team/` | Staff management: roles, pausing, the activity board, client credits, the default split (see [staff.md](staff.md)) |
+| `demos/` | Demo requests: a salesperson asks for a demo website, an owner or manager builds it (see [demos.md](demos.md)); shared with the web admin's `/admin/demos` |
 | `errors.ts` | `ok()`, `fail()`, `ApiError` and shortcuts, shared copy, zod errors to `fields` |
 | `cursor.ts` | Opaque keyset cursors, `pageQuery`, `toPage()`, `keysetFilter()` |
 | `data.ts` | `requireDb()`, `dbError()`, `instant()`, `money()`, `isUuid()` |
@@ -246,10 +247,11 @@ where key = 'mobile_app';
 | `20261003000201_admin_api_inbox.sql` | `admin_notification_unreads`, `admin_push_tickets`, the `admin_api_notification_*` functions and `admin_api_top_links`; replaces the web inbox functions with the same signatures and results (needs 0003) |
 | `20261003000300_ads_campaigns_breakdown.sql` | `ad_campaigns` (campaign status from the Meta sync) and `ads_breakdown()` |
 | `20261003000400_staff_management.sql` | Staff management ([staff.md](staff.md)): `admins.paused_at` / `paused_by`, `leads.found_by` / `booked_by` / `booked_at` (found_by backfilled for outreach leads), `client_credits`, the `site_settings` row `commission`, `admin_api_set_client_credits()`, `admin_api_staff_activity()`, `admin_api_staff_credits()` (needs 0004) |
+| `20261005000100_demo_requests.sql` | Demo requests ([demos.md](demos.md)): `demo_requests` and `demo_request_events`, their indexes and `updated_at` trigger |
 
 All new tables have RLS on with no policies (service role only), like every other table, and every new function is executable by `service_role` only. Every file is additive and safe to run twice.
 
-Until a file is applied, the endpoints that need it degrade as follows: without 0001 adding a staff member fails; without 0002 creates run without replay protection (logged); without 0003 phones cannot register and no push is sent; without 0004 outreach writes and filters answer 503 `not_configured`; without 0141 (when the live `link_clicks` has no `id`) `GET /links/clicks` answers 500; without 0201 `GET /overview` and every `/notifications` endpoint answer 500; without 0300 `GET /ads` answers 500; without 0400 pausing, credits and the activity board answer 503 and nothing records who found or booked a lead (everything else keeps working, see [staff.md](staff.md) section 8). Apply them all before the app switches to live.
+Until a file is applied, the endpoints that need it degrade as follows: without 0001 adding a staff member fails; without 0002 creates run without replay protection (logged); without 0003 phones cannot register and no push is sent; without 0004 outreach writes and filters answer 503 `not_configured`; without 0141 (when the live `link_clicks` has no `id`) `GET /links/clicks` answers 500; without 0201 `GET /overview` and every `/notifications` endpoint answer 500; without 0300 `GET /ads` answers 500; without 0400 pausing, credits and the activity board answer 503 and nothing records who found or booked a lead (everything else keeps working, see [staff.md](staff.md) section 8); without 20261005000100 every `/demos` endpoint answers 503 `not_configured` ([demos.md](demos.md) section 7). Apply them all before the app switches to live.
 
 ## Switching the app to live
 

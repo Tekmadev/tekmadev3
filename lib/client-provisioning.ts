@@ -36,6 +36,7 @@ import { formatMoney } from "@/lib/money";
 import { weblineWelcomeEmail, type WelcomeEmail } from "@/lib/mail/welcome";
 import { portalInviteEmail, type PortalInvitePurpose } from "@/lib/mail/portal-invite";
 import { sendMail } from "@/lib/mail/send";
+import { linkDemoRequestsToClient } from "@/lib/admin-api/demos/link";
 
 /**
  * Turns a paid checkout (or an admin's "add client") into a working portal
@@ -183,6 +184,10 @@ export async function provisionClient(input: ProvisionInput): Promise<ProvisionR
     if (input.phone && !client.primary_phone) patch.primary_phone = input.phone;
     if (Object.keys(patch).length) client = await updateClient(client.id, patch, input.actor_email ?? undefined);
   }
+
+  // A lead that became this client: its demo requests show on the client too
+  // (docs/admin-api/demos.md). Never throws, and a no-op once they are linked.
+  if (client.lead_id) await linkDemoRequestsToClient(client.lead_id, client.id);
 
   // 2. Link the Stripe billing record (subscription or one-time order).
   if (input.subscription_id) {
