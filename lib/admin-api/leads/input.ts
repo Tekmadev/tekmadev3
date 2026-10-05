@@ -112,3 +112,26 @@ export const touchAtInput = z
     else if (ms < Date.now() - 366 * 86_400_000) ctx.addIssue({ code: "custom", message: MESSAGES.atOld });
   })
   .optional();
+
+/**
+ * POST /leads body: a lead added by hand. Shared by the API route and the web
+ * admin's Add lead form, so both accept and refuse exactly the same input.
+ */
+export const createLeadBody = z
+  .object({
+    name: optionalText(120, MESSAGES.nameLong),
+    business: optionalText(200, MESSAGES.businessLong),
+    email: emailInput,
+    phone: phoneInput,
+    website: optionalText(300, MESSAGES.websiteLong),
+    need: needInput,
+    revenue: revenueInput,
+    message: optionalText(5000, MESSAGES.messageLong),
+    status: statusInput.optional(),
+    followUpAt: followUpInput,
+    assignedTo: assigneeInput,
+  })
+  .superRefine((b, issue) => {
+    if (!b.name && !b.business) issue.addIssue({ code: "custom", path: ["name"], message: MESSAGES.name });
+    if (!b.email && !b.phone) issue.addIssue({ code: "custom", path: ["email"], message: MESSAGES.contact });
+  });

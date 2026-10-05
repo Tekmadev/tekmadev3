@@ -1,7 +1,12 @@
+import Link from "next/link";
 import { requireAdminCapability } from "@/lib/admin";
 import { getLeads } from "@/lib/admin-data";
+import { can } from "@/lib/admin-api/permissions";
+import { listLeads, type Lead } from "@/lib/admin-api/leads";
+import { webApiContext } from "@/lib/admin-web-context";
 import { GROW_LEAD_SOURCE, GROW_PATH, needLabel, revenueBandLabel } from "@/config/grow";
-import { PageHeader, Panel, DataTable, Badge, fmtDateTime, txt } from "@/components/admin/ui";
+import { PageHeader, Panel, DataTable, Badge, Notice, fmtDateTime, txt } from "@/components/admin/ui";
+import { btnPrimary, btnSecondary, inputCls } from "@/components/portal/ui";
 import { leadCreditPeople } from "@/lib/staff-admin";
 import { teamMembers } from "@/lib/staff-credit";
 
@@ -25,8 +30,20 @@ function websiteHref(v: unknown): string | null {
   }
 }
 
-export default async function LeadsPage() {
-  await requireAdminCapability("leads.view");
+export default async function LeadsPage({ searchParams }: { searchParams: Promise<{ added?: string; q?: string }> }) {
+  const admin = await requireAdminCapability("leads.view");
+  const { added, q: rawQ } = await searchParams;
+  const q = (rawQ ?? "").trim().slice(0, 100);
+  const canAdd = can(admin.role, "leads.create");
+  // Search goes through the same shared list as the app (name, business, email, phone; role rules included).
+  const matches: Lead[] | null = q
+    ? await listLeads(webApiContext(admin), { q, limit: 25 })
+        .then((page) => page.items)
+        .catch((err) => {
+          console.error("[admin] lead search failed", err);
+          return null;
+        })
+    : [];
   const leads = await getLeads();
   const formLeads = leads.filter((r) => r.source === GROW_LEAD_SOURCE);
   // Commission credit on each lead (docs/admin-api/staff.md section 3): who found it, who booked it.
@@ -49,6 +66,68 @@ export default async function LeadsPage() {
         title="Leads"
         subtitle={`${leads.length} most recent lead forms, bookings, tool submissions and portal sign-ups`}
       />
+
+      {added && <Notice kind="ok">Lead added.</Notice>}
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        {canAdd && (
+          <Link href="/admin/leads/new" className={`${btnPrimary} w-full sm:w-auto`}>
+            Add lead
+          </Link>
+        )}
+        <form action="/admin/leads" method="get" role="search" className="flex w-full gap-2 sm:max-w-md">
+          <label htmlFor="lead-search" className="sr-only">
+            Search leads
+          </label>
+          <input
+            id="lead-search"
+            name="q"
+            type="search"
+            defaultValue={q}
+            placeholder="Name, business, email or phone"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="search"
+            className={inputCls}
+          />
+          <button type="submit" className={`${btnSecondary} shrink-0`}>
+            Search
+          </button>
+        </form>
+      </div>
+
+      {q && (
+        <Panel title={matches ? `Matches for "${q}" (${matches.length})` : `Matches for "${q}"`}>
+          {matches === null ? (
+            <Notice kind="err">Could not search leads. Try again.</Notice>
+          ) : matches.length === 0 ? (
+            <p className="text-sm text-ink-4">No lead matches that.</p>
+          ) : (
+            <ul className="flex flex-col divide-y divide-line">
+              {matches.map((l) => (
+                <li key={l.id} className="flex flex-col gap-1 py-3 text-sm sm:flex-row sm:items-center sm:gap-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words font-medium text-ink">{l.business || l.name || l.email}</p>
+                    <p className="break-words text-ink-3">
+                      {[l.business ? l.name : null, l.email].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-ink-3">
+                    {l.phone && (
+                      <a href={`tel:${l.phone.replace(/[^\d+]/g, "")}`} className="inline-flex min-h-11 items-center text-gold hover:underline">
+                        {l.phone}
+                      </a>
+                    )}
+                    <Badge>{txt(l.status)}</Badge>
+                    {l.assignedTo && <span>Assigned to {l.assignedTo.name || l.assignedTo.email}</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      )}
 
       <Panel title={`Lead forms (${formLeads.length})`}>
         <p className="-mt-1 mb-4 text-sm text-ink-3">
