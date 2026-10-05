@@ -34,6 +34,8 @@ import { portalUrl } from "@/lib/portal-host";
 import { getDisplayProduct } from "@/lib/products-data";
 import { formatMoney } from "@/lib/money";
 import { weblineWelcomeEmail, type WelcomeEmail } from "@/lib/mail/welcome";
+import { portalInviteEmail, type PortalInvitePurpose } from "@/lib/mail/portal-invite";
+import { sendMail } from "@/lib/mail/send";
 
 /**
  * Turns a paid checkout (or an admin's "add client") into a working portal
@@ -75,27 +77,41 @@ export type ProvisionResult = {
 export type InviteResult = { ok: true; mode: "invite" | "recovery" } | { ok: false; error: string };
 
 /**
- * Sends the "set your password" email. New auth users get the Invite
- * template; existing ones get the Reset template (same landing page). Both
- * point at the portal host so the session cookie lands on the right domain.
+ * Sends the "set your password" invite. Supabase only makes the one-time link
+ * (generateLink sends nothing); the email is ours (lib/mail/portal-invite.ts)
+ * and goes out through the same mailer as every other client email, so it
+ * reads as an invite every time. New auth users get an invite link; someone
+ * who already has a login (a resend) gets a recovery link in the same email.
+ * The link opens /auth/confirm on the portal host, which verifies the token
+ * hash on the server so the session cookie lands on the right domain, and
+ * sends them to set their password. A link nobody received is harmless: it
+ * expires, and a failed send is reported so the admin can resend. `purpose`
+ * only words the email: "reset" for someone who already joined.
  */
-export async function sendPortalInvite(email: string, name?: string | null): Promise<InviteResult> {
+export async function sendPortalInvite(email: string, name?: string | null, purpose: PortalInvitePurpose = "invite"): Promise<InviteResult> {
   const supabase = db();
   const redirectTo = portalUrl("/auth/confirm");
   const target = email.trim().toLowerCase();
 
-  const { error } = await supabase.auth.admin.inviteUserByEmail(target, {
-    data: name ? { name } : undefined,
-    redirectTo,
+  let mode: "invite" | "recovery" = "invite";
+  let { data, error } = await supabase.auth.admin.generateLink({
+    type: "invite",
+    email: target,
+    options: { data: name ? { name } : undefined, redirectTo },
   });
-  if (!error) return { ok: true, mode: "invite" };
-
-  if (/already|exist|registered/i.test(error.message)) {
-    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(target, { redirectTo });
-    if (resetErr) return { ok: false, error: resetErr.message };
-    return { ok: true, mode: "recovery" };
+  if (error && /already|exist|registered/i.test(error.message)) {
+    mode = "recovery";
+    ({ data, error } = await supabase.auth.admin.generateLink({ type: "recovery", email: target, options: { redirectTo } }));
   }
-  return { ok: false, error: error.message };
+  const tokenHash = data?.properties?.hashed_token;
+  if (error || !tokenHash) return { ok: false, error: error?.message ?? "The invite link could not be created" };
+
+  const link = `${redirectTo}?token_hash=${encodeURIComponent(tokenHash)}&type=${mode}`;
+  const firstName = name?.trim().split(/\s+/)[0] || null;
+  const mail = portalInviteEmail({ link, firstName, purpose });
+  const sent = await sendMail({ to: target, subject: mail.subject, html: mail.html, tags: mail.tags });
+  if (!sent.ok) return { ok: false, error: sent.skipped ? sent.reason : sent.error };
+  return { ok: true, mode };
 }
 
 export async function provisionClient(input: ProvisionInput): Promise<ProvisionResult> {

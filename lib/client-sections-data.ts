@@ -337,12 +337,12 @@ export async function saveClientCrmMapping(input: {
 // ---------------------------------------------------------------------------
 
 /**
- * Sends a portal person their link again: the invite (new auth users) or the
- * reset email (existing ones, see sendPortalInvite), and the activity line.
- * `kind` only words the activity line: "reset" for people who already joined.
+ * Sends a portal person their link again (see sendPortalInvite), and the
+ * activity line. `kind` words the email and the activity line: "reset" for
+ * people who already joined, "invite" for everyone else.
  */
 export async function sendMemberLink(member: ClientMember, by: string, kind: "invite" | "reset" = "invite"): Promise<InviteResult> {
-  const result = await sendPortalInvite(member.email, member.name);
+  const result = await sendPortalInvite(member.email, member.name, kind);
   await logActivity({
     client_id: member.client_id,
     actor_type: "admin",
