@@ -91,7 +91,7 @@ export const business = {
   },
   legalDates: {
     effective: "2026-05-16",
-    lastUpdated: "2026-09-29",
+    lastUpdated: "2026-10-06",
   },
   phone: {
     tel: _phoneTel,
@@ -359,7 +359,7 @@ export type FAQ = { q: string; a: string };
 export const faqs: FAQ[] = [
   {
     q: "What does “30 booked appointments in 60 days or you don’t pay” actually mean?",
-    a: "Exactly what it says. We build and install the system, then go to work filling your calendar. If you don’t have 30 qualified appointments on your calendar within 60 days of go-live, we keep working for free and pause your monthly billing until you do. A sales call, a quote, a site visit, a consult: if it is a real prospect who booked through the system we built, it counts. You keep everything we’ve built either way. “Qualified” is defined together upfront.",
+    a: "Exactly what it says. We build and install the system, then go to work filling your calendar. If you don’t have 30 qualified appointments on your calendar within 60 days of go-live, we keep working for free and pause your monthly billing until you do. A sales call, a quote, a site visit, a consult: if it is a real prospect who booked through the system we built, it counts. You keep everything we’ve built either way. “Qualified” is defined together upfront. The guarantee comes with Grow and Let’s Talk at standard pricing: any discount on the setup or monthly fee, from a coupon, a deal link or a promotion, means the plan runs without it.",
   },
   {
     q: "How is this different from an agency?",

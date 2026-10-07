@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Check, ChevronDown, ShieldCheck, X } from "lucide-react";
+import { Check, ChevronDown, ShieldCheck, ShieldOff, X } from "lucide-react";
 import { Section, Eyebrow } from "@/components/Section";
 import { cn } from "@/lib/cn";
 import { INSTALL_NAME, PROMO } from "@/config/pricing";
@@ -98,7 +98,7 @@ export function PricingTiers({
         <div className="mx-auto mt-10 flex max-w-2xl items-center justify-center gap-3 rounded-2xl border border-gold/40 bg-gold/[0.08] px-5 py-4 text-center text-sm text-ink">
           <ShieldCheck className="h-4 w-4 shrink-0 text-gold-deep" />
           <span>
-            <strong>Startup deal applied.</strong> {dealInfo}
+            <strong>Startup deal applied.</strong> {dealInfo} Discounted plans run without the 30-in-60 guarantee.
           </span>
         </div>
       )}
@@ -233,12 +233,20 @@ function TierCard({
         )}
       </div>
 
-      {tier.guarantee && (
-        <div className="mt-5 flex items-center gap-2 rounded-xl border border-gold/30 bg-gold/[0.06] px-3.5 py-2.5 text-sm text-ink-2">
-          <ShieldCheck className="h-4 w-4 shrink-0 text-gold-deep" />
-          <span>30 booked calls in 60 days, or we work free and pause your billing until you hit it.</span>
-        </div>
-      )}
+      {/* Any discount voids the guarantee (Terms, Section 4), and a deal link
+          always discounts, so the card must not promise it under a deal. */}
+      {tier.guarantee &&
+        (dealActive && tier.cta.type === "checkout" ? (
+          <div className="mt-5 flex items-center gap-2 rounded-xl border border-line bg-bg-2 px-3.5 py-2.5 text-sm text-ink-3">
+            <ShieldOff className="h-4 w-4 shrink-0 text-ink-4" />
+            <span>With this deal, the plan runs without the 30-in-60 guarantee.</span>
+          </div>
+        ) : (
+          <div className="mt-5 flex items-center gap-2 rounded-xl border border-gold/30 bg-gold/[0.06] px-3.5 py-2.5 text-sm text-ink-2">
+            <ShieldCheck className="h-4 w-4 shrink-0 text-gold-deep" />
+            <span>30 booked calls in 60 days, or we work free and pause your billing until you hit it.</span>
+          </div>
+        ))}
 
       <div className="my-7 h-px w-full bg-line" />
 

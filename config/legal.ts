@@ -429,7 +429,28 @@ export const termsOfService: LegalDoc = {
         },
         {
           type: "p",
-          text: "The guarantee is conditioned on the Client:",
+          text: "The guarantee comes only with the Growth System plans that include it, as shown on our pricing page and in the Order Form, bought at our standard setup fee (\"Build & Install\") and our standard monthly fee.",
+        },
+        {
+          type: "p",
+          text: "What voids the guarantee. The guarantee does not apply to an engagement, and the Client has no claim under it, if any of the following is true:",
+        },
+        {
+          type: "ul",
+          items: [
+            "Discounted fees. The setup fee, the monthly fee, or both were reduced in any way: a coupon or promotion code, a deal link, a waived or reduced setup fee, a free or discounted month, a credit, or a negotiated price below our standard fees, whether applied at checkout, on an invoice, or in an Order Form. This applies even when the discount covers only one of the two fees or only one billing period. The only exception is an Order Form that states in writing that the guarantee still applies despite the discount.",
+            "Unmet conditions. The Client does not meet one or more of the conditions listed below.",
+            "Unpaid fees. An invoice for the engagement is more than 15 days past due at any point during the 60-day period.",
+            "Changed plan. The Client pauses or cancels the plan, or moves to a plan without the guarantee, before the 60-day period ends.",
+          ],
+        },
+        {
+          type: "p",
+          text: "Bonuses included with a plan at no extra charge, such as a website included with every plan during a launch offer, are not discounts and do not affect the guarantee. When the guarantee does not apply, the Client still receives the Growth System described in the Order Form at the fees agreed: only the guarantee in this Section falls away.",
+        },
+        {
+          type: "p",
+          text: "The guarantee is also conditioned on the Client:",
         },
         {
           type: "ul",
@@ -459,7 +480,7 @@ export const termsOfService: LegalDoc = {
           type: "ul",
           items: [
             "A one-time setup fee (shown on our pricing page and at checkout as \"Build & Install\") and a recurring monthly fee, as set out in the Order Form. The setup fee covers the design, build, and installation of the growth system and the assets delivered to the Client, which the Client retains, and is non-refundable.",
-            "A performance guarantee: if the system does not produce 30 Qualified Bookings within 60 days of go-live, Tekmadev will not invoice further fees for that period and will continue to operate the system at no additional charge until the target is reached, as set out in Section 4 and the Order Form.",
+            "A performance guarantee, on plans that include it and are bought at standard fees: if the system does not produce 30 Qualified Bookings within 60 days of go-live, Tekmadev will not invoice further fees for that period and will continue to operate the system at no additional charge until the target is reached, as set out in Section 4 and the Order Form. Any discount on the setup fee or the monthly fee voids the guarantee (Section 4).",
             "Fees are quoted in Canadian dollars (CAD) unless otherwise stated and are exclusive of applicable taxes (HST, GST, QST), which will be added where applicable.",
             "Website packages (Section 5A) have a build fee paid in full at checkout and, where stated, a required monthly hosting and care plan billed to the Client's card. Where a buy-now-pay-later option (such as Afterpay, Klarna, or Affirm) is offered at checkout, the instalment agreement covers the build fee only, is between the Client and that provider, and is subject to the provider's terms and approval; Tekmadev receives the full build fee at checkout.",
           ],
