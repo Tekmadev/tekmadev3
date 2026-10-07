@@ -91,16 +91,21 @@ export const business = {
   },
   legalDates: {
     effective: "2026-05-16",
-    /** Privacy Policy (and the consent records stamped with its version). */
-    lastUpdated: "2026-10-05",
+    /**
+     * Privacy Policy (and the consent records stamped with its version). Production
+     * has "2026-10-06" for the text without Section 12 (the app and team members),
+     * so this text needs a later version: move it to the day it goes live.
+     */
+    lastUpdated: "2026-10-07",
     /**
      * Terms of Service, Cookie Policy and the client agreements (config/agreements.ts
      * uses it as the agreement version, so moving it asks clients to accept again).
-     * Move it only when one of those documents changes.
+     * Move it only when one of those documents changes. "2026-10-06": the owner's
+     * guarantee terms (standard pricing only), already live and accepted as that version.
      */
-    termsLastUpdated: "2026-09-29",
-    /** The /account-deletion page was first published on this date; the older documents keep `effective`. */
-    accountDeletionEffective: "2026-10-05",
+    termsLastUpdated: "2026-10-06",
+    /** The /account-deletion page's first publish date (move it to the day it goes live); the older documents keep `effective`. */
+    accountDeletionEffective: "2026-10-07",
   },
   phone: {
     tel: _phoneTel,
@@ -368,7 +373,7 @@ export type FAQ = { q: string; a: string };
 export const faqs: FAQ[] = [
   {
     q: "What does “30 booked appointments in 60 days or you don’t pay” actually mean?",
-    a: "Exactly what it says. We build and install the system, then go to work filling your calendar. If you don’t have 30 qualified appointments on your calendar within 60 days of go-live, we keep working for free and pause your monthly billing until you do. A sales call, a quote, a site visit, a consult: if it is a real prospect who booked through the system we built, it counts. You keep everything we’ve built either way. “Qualified” is defined together upfront.",
+    a: "Exactly what it says. We build and install the system, then go to work filling your calendar. If you don’t have 30 qualified appointments on your calendar within 60 days of go-live, we keep working for free and pause your monthly billing until you do. A sales call, a quote, a site visit, a consult: if it is a real prospect who booked through the system we built, it counts. You keep everything we’ve built either way. “Qualified” is defined together upfront. The guarantee comes with Grow and Let’s Talk at standard pricing: any discount on the setup or monthly fee, from a coupon, a deal link or a promotion, means the plan runs without it.",
   },
   {
     q: "How is this different from an agency?",

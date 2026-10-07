@@ -313,7 +313,7 @@ const templates = [
     heading: "Your Build & Install is on us.",
     blocks: (k) => [
       lead("This week only, we are waiving the Build & Install fee for new clients and applying a launch discount on top, automatically."),
-      p("You get the full done-for-you system: the AI answering layer, the 12 touch follow-up, the CRM wiring, and weekly tuning. Same guarantee, none of the upfront build cost."),
+      p("You get the full done-for-you system: the AI answering layer, the 12 touch follow-up, the CRM wiring, and weekly tuning, with none of the upfront build cost. One trade-off to know: discounted plans run without our 30 booked calls in 60 days guarantee."),
       callout("Free Build & Install + auto-applied promo", "Applied at checkout when you start this week. No code to remember."),
       p("Spots are limited because every install is done by hand and done right. If your calendar has room to grow, claim it before Sunday."),
       button("Claim the offer", trackClick(k, "promo-start", DEST.start)),
