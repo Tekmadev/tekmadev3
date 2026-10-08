@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PAUSED, resolveRole } from "@/lib/admin";
+import { can } from "@/lib/admin-api/permissions";
 
 export async function signInAction(formData: FormData) {
   const email = String(formData.get("email") || "").trim();
@@ -25,7 +26,9 @@ export async function signInAction(formData: FormData) {
     redirect(role === PAUSED ? "/admin/login?e=paused" : "/admin/login?e=denied");
   }
 
-  redirect("/admin");
+  // Staff land on Leads, where their day starts; owners and managers (who see
+  // the team's activity) keep Overview.
+  redirect(can(role, "team.activity") ? "/admin" : "/admin/leads");
 }
 
 export async function signOutAction() {

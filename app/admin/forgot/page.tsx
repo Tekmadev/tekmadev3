@@ -10,9 +10,12 @@ export default async function ForgotPassword({
   searchParams: Promise<{ sent?: string; e?: string }>;
 }) {
   const { sent, e } = await searchParams;
+  // The reset page sends an expired or used link back here with e=expired.
+  const error = e === "expired" ? "That reset link has expired. Send a new one." : e ? "Enter a valid email address." : null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-5">
+    // dvh and safe-area padding: the home-screen app draws under the status bar.
+    <main className="flex min-h-dvh items-center justify-center pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]">
       <div className="w-full max-w-sm">
         <h1 className="font-display text-2xl font-bold text-ink">Reset your password</h1>
         <p className="mt-2 text-sm text-ink-3">Enter your email and we will send you a reset link.</p>
@@ -29,11 +32,13 @@ export default async function ForgotPassword({
               required
               placeholder="Email"
               autoComplete="email"
-              className="rounded-xl border border-line-strong bg-surface px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-gold"
+              autoCapitalize="none"
+              spellCheck={false}
+              className="rounded-xl border border-line-strong bg-surface px-4 py-3 text-base text-ink outline-none transition-colors focus:border-gold lg:text-sm"
             />
-            {e && <p className="text-sm text-signal">Enter a valid email address.</p>}
+            {error && <p className="text-sm text-signal">{error}</p>}
             <PendingSubmit
-              className="mt-1 rounded-full bg-ink px-6 py-3 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
+              className="mt-1 min-h-11 rounded-full bg-ink px-6 py-3 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
             >
               Send reset link
             </PendingSubmit>
@@ -42,7 +47,7 @@ export default async function ForgotPassword({
 
         <Link
           href="/admin/login"
-          className="mt-4 inline-block text-sm text-ink-3 transition-colors hover:text-ink"
+          className="mt-2 inline-flex min-h-11 items-center text-sm text-ink-3 transition-colors hover:text-ink"
         >
           Back to sign in
         </Link>

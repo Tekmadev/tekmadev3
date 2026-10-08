@@ -31,20 +31,26 @@ function refresh(id?: string) {
   if (id) revalidatePath(`/admin/demos/${id}`);
 }
 
-/** The new request form. Opens the request on success. */
+/**
+ * The new request form. Opens the request on success. With "Already built?
+ * Demo link" (demos.manage, else createDemo's 403) it is saved ready to show,
+ * and the request page says so.
+ */
 export async function createDemoAction(_prev: DemoFormState, formData: FormData): Promise<DemoFormState> {
   const ctx = await requireAdminCapability("demos.request");
   let id: string;
+  let ready: boolean;
   try {
     const body = demoCreateBodyFromForm(formData);
     const input = parseDemoCreate(body);
     const demo = await createDemo(demoActorFor(ctx), input, demoIdempotencyKey(body, null));
     id = demo.id;
+    ready = demo.status === "ready";
   } catch (err) {
     return problem(err);
   }
   refresh(id);
-  redirect(`/admin/demos/${id}?ok=created`);
+  redirect(`/admin/demos/${id}?ok=${ready ? "built" : "created"}`);
 }
 
 /** Edit the details (business, wants, needed by). */

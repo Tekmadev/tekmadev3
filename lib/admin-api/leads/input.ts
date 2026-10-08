@@ -1,5 +1,7 @@
 import { z } from "zod";
-import { LEAD_NEEDS, LEAD_REVENUE_BANDS, SETTABLE_STATUSES } from "./shape";
+import { pageQuery } from "../cursor";
+import { validationError } from "../errors";
+import { LEAD_NEEDS, LEAD_REVENUE_BANDS, LEAD_SOURCES, LEAD_STATUSES, SETTABLE_STATUSES } from "./shape";
 
 /**
  * zod pieces shared by the lead routes (POST /leads, PATCH /leads/:id,
@@ -23,6 +25,8 @@ export const MESSAGES = {
   websiteLong: "Keep the website to 300 characters or fewer.",
   messageLong: "Keep the note to 5,000 characters or fewer.",
   duplicate: "That email is already a lead. Find it in Leads and log the touch there.",
+  /** 403 `forbidden` on PATCH /leads/:id: staff editing the details of a lead they did not find and do not own. */
+  editNotYours: "You can only edit leads you found or that are assigned to you.",
   kind: "Pick a call, email, DM, meeting or other.",
   outcomeLong: "Keep the outcome to 200 characters or fewer.",
   noteLong: "Keep the note to 5,000 characters or fewer.",
@@ -114,19 +118,38 @@ export const touchAtInput = z
   .optional();
 
 /**
+ * A lead's details, with the same rules and limits on create (POST /leads)
+ * and edit (PATCH /leads/:id): trimmed, blank or null clears, absent leaves
+ * it. Email is lowercased; website is any text (a site or a social handle).
+ */
+export const leadDetailFields = {
+  name: optionalText(120, MESSAGES.nameLong),
+  business: optionalText(200, MESSAGES.businessLong),
+  email: emailInput,
+  phone: phoneInput,
+  website: optionalText(300, MESSAGES.websiteLong),
+  need: needInput,
+  message: optionalText(5000, MESSAGES.messageLong),
+};
+
+/** The detail keys of PATCH /leads/:id (sending any of them is an edit: see updateLead). */
+export const LEAD_DETAIL_KEYS = ["name", "business", "email", "phone", "website", "need", "message"] as const;
+export type LeadDetailKey = (typeof LEAD_DETAIL_KEYS)[number];
+
+/**
  * POST /leads body: a lead added by hand. Shared by the API route and the web
  * admin's Add lead form, so both accept and refuse exactly the same input.
  */
 export const createLeadBody = z
   .object({
-    name: optionalText(120, MESSAGES.nameLong),
-    business: optionalText(200, MESSAGES.businessLong),
-    email: emailInput,
-    phone: phoneInput,
-    website: optionalText(300, MESSAGES.websiteLong),
-    need: needInput,
+    name: leadDetailFields.name,
+    business: leadDetailFields.business,
+    email: leadDetailFields.email,
+    phone: leadDetailFields.phone,
+    website: leadDetailFields.website,
+    need: leadDetailFields.need,
     revenue: revenueInput,
-    message: optionalText(5000, MESSAGES.messageLong),
+    message: leadDetailFields.message,
     status: statusInput.optional(),
     followUpAt: followUpInput,
     assignedTo: assigneeInput,
@@ -135,3 +158,79 @@ export const createLeadBody = z
     if (!b.name && !b.business) issue.addIssue({ code: "custom", path: ["name"], message: MESSAGES.name });
     if (!b.email && !b.phone) issue.addIssue({ code: "custom", path: ["email"], message: MESSAGES.contact });
   });
+
+/* ------------------------------------------------------------------ */
+/* The route schemas, shared with the web admin                        */
+/* ------------------------------------------------------------------ */
+
+const M = MESSAGES;
+
+/** An enum query value; an empty value is the same as none. */
+const optionalEnum = <const T extends readonly [string, ...string[]]>(values: T, message: string) =>
+  z.preprocess((v) => (v === "" ? undefined : v), z.enum(values, message).optional());
+
+const UNKNOWN_ASSIGNEE = "Unknown assignee.";
+
+/**
+ * GET /leads query. Identical to the route's schema (proven in the
+ * leadswebtest harness, by errors and by source text). The route still has its
+ * own copy; switch it to import this one when app/api is free.
+ */
+export const leadListQuery = z.object({
+  ...pageQuery,
+  q: z
+    .string()
+    .optional()
+    .transform((v) => v?.trim().slice(0, 100) || undefined),
+  source: optionalEnum(LEAD_SOURCES, "Unknown lead source."),
+  status: optionalEnum(LEAD_STATUSES, "Unknown lead status."),
+  need: optionalEnum(LEAD_NEEDS, "Unknown lead need."),
+  /** "me", "none" or a staff email (outreach). */
+  assigned: z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z
+      .string()
+      .trim()
+      .toLowerCase()
+      .refine((v) => v === "me" || v === "none" || z.email().safeParse(v).success, UNKNOWN_ASSIGNEE)
+      .optional(),
+  ),
+  /** The follow-up queue (outreach): due, upcoming or any, soonest first. */
+  followUp: optionalEnum(["due", "upcoming", "any"], "Unknown follow-up filter."),
+});
+
+/**
+ * PATCH /leads/:id body: the route's own schema (it imports this one) and the
+ * web admin's. Status, follow-up and assignee, plus the lead's details (edit
+ * lead, owner decision 2026-10-08) with the field rules of POST /leads. The
+ * two rules on the whole lead (a name or a business, an email or a phone),
+ * who may edit the details and one email per lead are updateLead's: they
+ * depend on the lead as it is stored.
+ */
+export const leadPatchBody = z.object({
+  ...leadDetailFields,
+  status: statusInput.optional(),
+  followUpAt: followUpInput,
+  assignedTo: assigneeInput,
+});
+
+/**
+ * POST /leads/:id/touches body. Identical to the route's schema (proven in the
+ * leadswebtest harness, by errors and by source text). The route still has its
+ * own copy; switch it to import this one when app/api is free.
+ */
+export const leadTouchBody = z.object({
+  kind: touchKindInput,
+  outcome: optionalText(200, M.outcomeLong),
+  note: optionalText(5000, M.noteLong),
+  at: touchAtInput,
+  status: statusInput.optional(),
+  followUpAt: followUpInput,
+});
+
+/** safeParse, else throw validationError(error): the same 400 (code, message, fields) the route sends. */
+export function parseLeadInput<S extends z.ZodType>(schema: S, raw: unknown): z.output<S> {
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) throw validationError(parsed.error);
+  return parsed.data as z.output<S>;
+}

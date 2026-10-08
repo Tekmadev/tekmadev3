@@ -10,7 +10,7 @@ import { DEMO_STATUSES, type DemoBusiness, type DemoStatus } from "./shape";
  *
  * Field problems answer one 400 `validation` with every bad field in `fields`,
  * under the contract's flat keys: businessName, businessType, area, offer,
- * website, brand, customers, wants, neededBy, and for PATCH demoUrl,
+ * website, brand, customers, wants, neededBy, demoUrl, and for PATCH
  * builderEmail, builderNote. `message` is the first problem's copy.
  */
 
@@ -53,6 +53,12 @@ export type DemoCreateInput = {
   business: DemoBusiness;
   wants: string | null;
   neededBy: string | null;
+  /**
+   * Already built: the demo's link, so the request starts ready (demos.manage
+   * only, the handler's 403). Present only when a link was sent: without one
+   * the request hashes exactly as before the shortcut.
+   */
+  demoUrl?: string;
 };
 
 export type DemoPatchInput = {
@@ -214,9 +220,11 @@ function readBusiness(p: Problems, raw: unknown, partial: boolean): Partial<Demo
 const idText = (v: unknown): string | null => (typeof v === "string" && v.trim() !== "" ? v.trim().toLowerCase() : null);
 
 /**
- * POST /demos: `{ clientId?, leadId?, business, wants?, neededBy?, idempotencyKey }`.
+ * POST /demos: `{ clientId?, leadId?, business, wants?, neededBy?, demoUrl?, idempotencyKey }`.
  * Exactly one of clientId / leadId, else 400 `target`; then every field rule
- * (400 `validation`). Whether the client or lead exists is the handler's 404.
+ * (400 `validation`; demoUrl by the same https rule and copy as PATCH, null or
+ * "" is no link). Whether the caller may send a link (403) and whether the
+ * client or lead exists (404) are the handler's.
  */
 export function parseDemoCreate(body: Record<string, unknown>): DemoCreateInput {
   const clientId = idText(body.clientId);
@@ -227,6 +235,7 @@ export function parseDemoCreate(body: Record<string, unknown>): DemoCreateInput 
   const business = readBusiness(p, body.business, false);
   const wants = has(body, "wants") ? optional(p, "wants", body.wants, DEMO_LIMITS.wants, DEMO_MESSAGES.wants) : null;
   const neededBy = has(body, "neededBy") ? dateValue(p, body.neededBy) : null;
+  const demoUrl = has(body, "demoUrl") ? urlValue(p, body.demoUrl) : null;
   p.done();
   return {
     clientId,
@@ -242,6 +251,7 @@ export function parseDemoCreate(body: Record<string, unknown>): DemoCreateInput 
     },
     wants: wants ?? null,
     neededBy: neededBy ?? null,
+    ...(demoUrl ? { demoUrl } : {}),
   };
 }
 

@@ -38,11 +38,14 @@ export const GET = route({ method: "GET", capability: "demos.view", query: listQ
 );
 
 /**
- * POST /demos { clientId? | leadId?, business, wants?, neededBy?, idempotencyKey } -> 201 DemoRequest.
+ * POST /demos { clientId? | leadId?, business, wants?, neededBy?, demoUrl?, idempotencyKey } -> 201 DemoRequest.
  * Exactly one of clientId / leadId (400 `target`), field problems 400
- * `validation` with `fields`, an unknown client or lead 404. The same
- * idempotencyKey (or Idempotency-Key header) with the same body answers the
- * first result; with a different body 409 `idempotency_conflict`.
+ * `validation` with `fields`, a link without `demos.manage` 403 `forbidden`,
+ * an unknown client or lead 404. With `demoUrl` (already built) the request
+ * starts ready, the caller as builder, and "Demo ready" goes out instead of
+ * "Demo requested". The same idempotencyKey (or Idempotency-Key header) with
+ * the same body answers the first result; with a different body (the link
+ * included) 409 `idempotency_conflict`.
  */
 export const POST = route(
   { method: "POST", capability: "demos.request", body: demoBody, idempotent: true, status: 201 },

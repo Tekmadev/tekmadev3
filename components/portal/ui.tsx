@@ -5,10 +5,13 @@ import { cn } from "@/lib/cn";
 /**
  * Portal UI kit. Mobile-first: everything stacks on small screens and only
  * spreads out from `sm` / `md` up. Touch targets are at least 44px tall.
+ *
+ * Inputs stay 16px (text-base) below lg: iPhone Safari zooms into any field
+ * smaller than that, and a phone in landscape is wider than sm.
  */
 
 export const inputCls =
-  "w-full rounded-xl border border-line-strong bg-surface px-4 py-3 text-base text-ink outline-none transition-colors focus:border-gold sm:text-sm";
+  "w-full rounded-xl border border-line-strong bg-surface px-4 py-3 text-base text-ink outline-none transition-colors focus:border-gold lg:text-sm";
 
 export const selectCls = inputCls + " appearance-none";
 

@@ -27,6 +27,8 @@ export const dynamic = "force-dynamic";
 
 const OK: Record<string, string> = {
   created: "Demo requested. The owners and managers who build demos have been told.",
+  /** Added with "Already built? Demo link": ready to show from the start. */
+  built: "Saved as ready to show.",
   shown: "Marked as shown.",
   cancelled: "Request cancelled.",
 };

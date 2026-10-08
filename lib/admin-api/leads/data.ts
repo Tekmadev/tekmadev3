@@ -7,12 +7,15 @@ import type { ApiContext } from "../auth";
 import { decodeCursor, keysetFilter, pgQuote, toPage, type Page } from "../cursor";
 import { dbError, instant, isUuid, requireDb } from "../data";
 import { ApiError, badRequest, conflict, notConfigured, notFound } from "../errors";
-import { CONTACT_KINDS, MESSAGES, type TouchKind } from "./input";
+import { CONTACT_KINDS, LEAD_DETAIL_KEYS, MESSAGES, type LeadDetailKey, type TouchKind } from "./input";
 import {
   LEAD_BASE_COLUMNS,
   LEAD_COLUMNS,
   LEAD_OUTREACH_ONLY_COLUMNS,
   OUTREACH_SOURCE,
+  assigneeEmail,
+  finderEmail,
+  formBusiness,
   isCalendarLead,
   storedValuesFor,
   storedValuesNotNew,
@@ -73,8 +76,6 @@ function withoutStaffKeys<T extends Record<string, unknown>>(row: T): T {
   for (const key of STAFF_WRITE_KEYS) delete out[key];
   return out as T;
 }
-
-const hasStaffKeys = (row: Record<string, unknown>) => STAFF_WRITE_KEYS.some((key) => key in row);
 
 /** A uuid that is the same for the same caller and Idempotency-Key, so a retried create can never write twice. */
 function idFor(kind: string, ctx: ApiContext, key: string | null): string {
@@ -138,12 +139,34 @@ async function staffNames(db: SupabaseClient, ctx: ApiContext, emails: Iterable<
 }
 
 /* ------------------------------------------------------------------ */
+/* Who may edit a lead's details                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Edit lead (owner decision 2026-10-08), under `leads.update`: owners and
+ * managers edit the details of any lead; staff only of a lead they found
+ * (`found_by`, or `form.added_by` on an outreach lead before the staff
+ * migration) or that is assigned to them (`assigned_to`). Status, follow-up
+ * and assignee keep the plain `leads.update` rule. No capability of its own:
+ * the role table stays as it is (permissions.ts).
+ */
+export function canEditLead(ctx: ApiContext, row: Pick<LeadRow, "source" | "found_by" | "added_by" | "assigned_to">): boolean {
+  if (!ctx.can("leads.update")) return false;
+  if (ctx.role === "owner" || ctx.role === "manager") return true;
+  const me = ctx.email.trim().toLowerCase();
+  return !!me && (finderEmail(row) === me || assigneeEmail(row) === me);
+}
+
+/* ------------------------------------------------------------------ */
 /* Lead rows to API leads                                              */
 /* ------------------------------------------------------------------ */
 
 type ClientLink = { id: string; lead_id: string; business_name: string | null; is_test: boolean | null };
 
-/** Rows to API leads: the client each became (test clients only for testdata.view) and staff names. */
+/**
+ * Rows to API leads: the client each became (test clients only for
+ * testdata.view), staff names, and whether the caller may edit each one.
+ */
 async function hydrate(db: SupabaseClient, ctx: ApiContext, rows: LeadRow[]): Promise<Lead[]> {
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
@@ -169,7 +192,11 @@ async function hydrate(db: SupabaseClient, ctx: ApiContext, rows: LeadRow[]): Pr
   }
   return rows.map((row) => {
     const client = clientFor.get(row.id);
-    return toLead(row, { client: client ? { id: client.id, businessName: client.business_name } : null, names });
+    return toLead(row, {
+      client: client ? { id: client.id, businessName: client.business_name } : null,
+      names,
+      canEdit: canEditLead(ctx, row),
+    });
   });
 }
 
@@ -210,6 +237,8 @@ export type LeadListQuery = {
   /** "me", "none" or a staff email. */
   assigned?: string;
   followUp?: FollowUpFilter;
+  /** Web due view only (never set by a route): with a follow-up filter, only follow-ups before this instant. */
+  dueBefore?: string;
   cursor?: string;
   limit: number;
 };
@@ -260,6 +289,7 @@ export async function listLeads(ctx: ApiContext, query: LeadListQuery): Promise<
       const now = new Date().toISOString();
       if (query.followUp === "due") req = req.lte("follow_up_at", now);
       else if (query.followUp === "upcoming") req = req.gt("follow_up_at", now);
+      if (query.dueBefore) req = req.lt("follow_up_at", query.dueBefore);
     }
     if (groups.length === 1) req = req.or(groups[0]);
     else if (groups.length > 1) req = req.or(`and(${groups.map((g) => `or(${g})`).join(",")})`);
@@ -280,6 +310,21 @@ export async function listLeads(ctx: ApiContext, query: LeadListQuery): Promise<
 /* ------------------------------------------------------------------ */
 /* POST /leads                                                         */
 /* ------------------------------------------------------------------ */
+
+/**
+ * One email is one lead: 409 `duplicate` when another lead (any casing) has
+ * this lowercased email. `exceptId` is the lead being edited. ILIKE finds the
+ * casing the Cal webhook kept; the exact check drops `_` wildcard matches
+ * (the same approach as lib/crm/outbox.ts).
+ */
+async function assertEmailFree(db: SupabaseClient, email: string, exceptId?: string): Promise<void> {
+  const { data, error } = await db.from("leads").select("id,email").ilike("email", email).limit(50);
+  if (error) throw dbError("lead duplicate check", error);
+  const rows = (data ?? []) as { id: string; email: string | null }[];
+  if (rows.some((r) => r.id !== exceptId && (r.email ?? "").trim().toLowerCase() === email)) {
+    throw conflict("duplicate", MESSAGES.duplicate, { email: MESSAGES.duplicate });
+  }
+}
 
 export type CreateLeadInput = {
   name?: string | null;
@@ -313,15 +358,7 @@ export async function createOutreachLead(ctx: ApiContext, input: CreateLeadInput
   }
 
   const email = input.email ?? null;
-  if (email) {
-    // ILIKE finds the casing the Cal webhook kept; the exact check drops `_` wildcard matches
-    // (the same approach as lib/crm/outbox.ts).
-    const { data, error } = await db.from("leads").select("id,email").ilike("email", email).limit(50);
-    if (error) throw dbError("lead duplicate check", error);
-    if (((data ?? []) as { email: string | null }[]).some((r) => (r.email ?? "").trim().toLowerCase() === email)) {
-      throw conflict("duplicate", MESSAGES.duplicate, { email: MESSAGES.duplicate });
-    }
-  }
+  if (email) await assertEmailFree(db, email);
 
   const assignedTo = input.assignedTo === undefined ? ctx.email : input.assignedTo;
   if (assignedTo) await assertAssignable(ctx, assignedTo);
@@ -368,11 +405,65 @@ export async function createOutreachLead(ctx: ApiContext, input: CreateLeadInput
 /* PATCH /leads/:id                                                    */
 /* ------------------------------------------------------------------ */
 
-export type LeadPatch = {
+/** The details PATCH /leads/:id may edit (leadDetailFields): null clears one, absent leaves it. */
+export type LeadDetails = { [K in LeadDetailKey]?: string | null };
+
+export type LeadPatch = LeadDetails & {
   status?: SettableStatus;
   followUpAt?: string | null;
   assignedTo?: string | null;
 };
+
+/** The column behind each detail key. */
+const DETAIL_COLUMNS: Record<LeadDetailKey, keyof LeadRow & string> = {
+  name: "name",
+  business: "business_name",
+  email: "email",
+  phone: "phone",
+  website: "website",
+  need: "need",
+  message: "message",
+};
+
+/** Trimmed text, or null when blank. */
+const stored = (v: string | null | undefined): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
+
+/** Whether the patch carries any detail (an edit, which needs canEditLead). */
+const editsDetails = (patch: LeadPatch): boolean => LEAD_DETAIL_KEYS.some((key) => patch[key] !== undefined);
+
+/**
+ * The detail columns a patch changes. A value the lead already has is left
+ * out (an email in another casing too), so a form that sends every field
+ * writes only what was edited and never checks the lead's own email.
+ */
+function detailColumns(current: LeadRow, patch: LeadPatch): Record<string, string | null> {
+  const update: Record<string, string | null> = {};
+  for (const key of LEAD_DETAIL_KEYS) {
+    const next = patch[key];
+    if (next === undefined) continue;
+    const column = DETAIL_COLUMNS[key];
+    const was = stored(current[column] as string | null | undefined);
+    const same = key === "email" ? (was?.toLowerCase() ?? null) === next : was === next;
+    if (!same) update[column] = next;
+  }
+  return update;
+}
+
+/**
+ * After an edit the lead must still have a name or a business, and an email
+ * or a phone: POST /leads's two rules, with the same codes and copy. A key
+ * not sent keeps what the lead shows (a business from the form counts).
+ */
+function assertComplete(current: LeadRow, patch: LeadPatch): void {
+  const after = <K extends LeadDetailKey>(key: K, shown: string | null) => (patch[key] !== undefined ? patch[key] ?? null : shown);
+  const fields: Record<string, string> = {};
+  if (!after("name", stored(current.name)) && !after("business", stored(current.business_name) ?? formBusiness(current))) {
+    fields.name = MESSAGES.name;
+  }
+  if (!after("email", stored(current.email)) && !after("phone", stored(current.phone))) fields.email = MESSAGES.contact;
+  if (fields.name) throw badRequest("name", MESSAGES.name, fields);
+  if (fields.email) throw badRequest("email", MESSAGES.contact, fields);
+}
 
 /**
  * 400 `status` for "booked" on a lead the booking calendar owns (a Cal
@@ -388,30 +479,33 @@ function assertBookable(current: LeadRow, status: SettableStatus | undefined): v
 
 /**
  * The columns a patch writes, leaving out a status the lead already shows (so
- * "rescheduled" stays). "booked" also records the caller as the booker when
- * nobody is yet (the first person to book it keeps the credit).
+ * "rescheduled" stays). The booker is not one of them: recordBooker writes it.
  */
-function patchColumns(current: LeadRow, patch: LeadPatch, by: string): Record<string, string | null> {
+function patchColumns(current: LeadRow, patch: LeadPatch): Record<string, string | null> {
   const update: Record<string, string | null> = {};
   if (patch.status !== undefined && patch.status !== toLeadStatus(current.status)) update.status = patch.status;
   if (patch.followUpAt !== undefined) update.follow_up_at = patch.followUpAt;
   if (patch.assignedTo !== undefined) update.assigned_to = patch.assignedTo;
-  // booked_by is undefined (not read) before the staff management migration: nothing to record then.
-  if (patch.status === "booked" && current.booked_by === null) {
-    update.booked_by = by;
-    update.booked_at = new Date().toISOString();
-  }
   return update;
+}
+
+/**
+ * "booked" records the caller as the booker when nobody is yet: the first
+ * person to book the lead keeps the credit. The write only lands while
+ * booked_by is still empty, so when two people book at once the later one
+ * changes nothing, and the lead read back afterwards shows who holds the
+ * credit. booked_by is undefined (not read) before the staff management
+ * migration: nothing to record then.
+ */
+async function recordBooker(db: SupabaseClient, id: string, current: LeadRow, status: SettableStatus | undefined, by: string): Promise<void> {
+  if (status !== "booked" || current.booked_by !== null) return;
+  const { error } = await db.from("leads").update({ booked_by: by, booked_at: new Date().toISOString() }).eq("id", id).is("booked_by", null);
+  if (error && !staffSchemaMissing(error)) throw dbError("lead booker", error);
 }
 
 async function writeLead(db: SupabaseClient, id: string, update: Record<string, string | null>): Promise<void> {
   if (Object.keys(update).length === 0) return;
-  let { data, error } = await db.from("leads").update(update).eq("id", id).select("id");
-  if (error && staffSchemaMissing(error) && hasStaffKeys(update)) {
-    const rest = withoutStaffKeys(update);
-    if (Object.keys(rest).length === 0) return;
-    ({ data, error } = await db.from("leads").update(rest).eq("id", id).select("id"));
-  }
+  const { data, error } = await db.from("leads").update(update).eq("id", id).select("id");
   if (error) {
     if (outreachSchemaMissing(error)) throw notConfigured(OUTREACH_NOT_READY);
     throw dbError("lead update", error);
@@ -420,17 +514,32 @@ async function writeLead(db: SupabaseClient, id: string, update: Record<string, 
 }
 
 /**
- * Partial: only the keys sent change; null clears the follow-up or the
- * assignee. "booked" records the caller as the booker the first time.
+ * Partial: only the keys sent change; null clears the follow-up, the assignee
+ * or a detail. "booked" records the caller as the booker the first time.
+ *
+ * Details (name, business, email, phone, website, need, message) on any lead,
+ * whatever its source: sending any of them needs canEditLead (else 403
+ * `forbidden`, nothing written), the lead must still have a name or a
+ * business and an email or a phone (400 `name` / `email`), and a new email
+ * must not be on another lead (409 `duplicate`). The whole patch is checked
+ * before anything is written.
  */
 export async function updateLead(ctx: ApiContext, id: string, patch: LeadPatch): Promise<Lead> {
   if (!isUuid(id)) throw notFound("That lead");
   const db = requireDb();
   const current = await readLeadRow(db, id);
   if (!current) throw notFound("That lead");
+  let details: Record<string, string | null> = {};
+  if (editsDetails(patch)) {
+    if (!canEditLead(ctx, current)) throw new ApiError(403, "forbidden", MESSAGES.editNotYours);
+    assertComplete(current, patch);
+    details = detailColumns(current, patch);
+  }
   assertBookable(current, patch.status);
+  if (details.email) await assertEmailFree(db, details.email, id);
   if (patch.assignedTo) await assertAssignable(ctx, patch.assignedTo);
-  await writeLead(db, id, patchColumns(current, patch, ctx.email));
+  await writeLead(db, id, { ...details, ...patchColumns(current, patch) });
+  await recordBooker(db, id, current, patch.status, ctx.email);
   return requireLead(ctx, id);
 }
 
@@ -553,7 +662,8 @@ export async function logTouch(
   }
 
   const status = input.status ?? (CONTACT_KINDS.includes(input.kind) && toLeadStatus(current.status) === "new" ? "contacted" : undefined);
-  await writeLead(db, leadId, patchColumns(current, { status, followUpAt: input.followUpAt }, ctx.email));
+  await writeLead(db, leadId, patchColumns(current, { status, followUpAt: input.followUpAt }));
+  await recordBooker(db, leadId, current, status, ctx.email);
 
   const [touchRes, lead] = await Promise.all([
     db.from("lead_touches").select(TOUCH_COLUMNS).eq("id", id).single(),

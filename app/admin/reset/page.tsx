@@ -29,7 +29,8 @@ export default async function ResetPasswordPage({
   if (!user) redirect("/admin/forgot?e=expired");
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-5">
+    // dvh and safe-area padding: the home-screen app draws under the status bar.
+    <main className="flex min-h-dvh items-center justify-center pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]">
       <div className="w-full max-w-sm">
         <h1 className="font-display text-2xl font-bold text-ink">Set a new password</h1>
         <p className="mt-2 text-sm text-ink-3">For {user.email}</p>
@@ -39,7 +40,7 @@ export default async function ResetPasswordPage({
           <PasswordField name="confirm" placeholder="Confirm new password" autoComplete="new-password" required minLength={8} />
           {error && <p className="text-sm text-signal">{error}</p>}
           <PendingSubmit
-            className="mt-1 rounded-full bg-ink px-6 py-3 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
+            className="mt-1 min-h-11 rounded-full bg-ink px-6 py-3 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
           >
             Update password
           </PendingSubmit>

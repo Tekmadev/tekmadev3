@@ -12,11 +12,11 @@ Staff, managers and the owner work leads from the phone: add a lead found by han
 | POST | `/leads/:id/touches` | `leads.outreach` | yes | yes | yes |
 | GET | `/leads/assignees` | `leads.update` or `leads.create` | yes | yes | yes |
 
-Nothing here is owner only. A role without the capability gets 403 `forbidden` "Your role cannot do that." (see [permissions.md](permissions.md)).
+Nothing here is owner only. A role without the capability gets 403 `forbidden` "Your role cannot do that." (see [permissions.md](permissions.md)). Editing a lead's details through `PATCH /leads/:id` has one more rule for staff (section 4): only on leads they found or that are assigned to them.
 
 ## 1. The `Lead`, with outreach fields
 
-`GET /leads`, `GET /leads/:id`, `POST /leads`, `PATCH /leads/:id` and `POST /leads/:id/touches` all answer the same `Lead`. It is the contract's shape (app `src/api/schemas/leads.ts` `zLead`) plus four keys; zod objects ignore keys they do not list, so older app builds keep working.
+`GET /leads`, `GET /leads/:id`, `POST /leads`, `PATCH /leads/:id` and `POST /leads/:id/touches` all answer the same `Lead`. It is the contract's shape (app `src/api/schemas/leads.ts` `zLead`) plus extra keys; zod objects ignore keys they do not list, so older app builds keep working.
 
 ```ts
 type StaffRef = { email: string; name: string | null }; // show the name, else the email
@@ -46,8 +46,13 @@ type Lead = {
   addedBy: StaffRef | null;      // who added it by hand (source "outreach" only)
   foundBy: StaffRef | null;      // who found it (finder credit), staff.md
   bookedBy: StaffRef | null;     // who first booked it (booker credit), staff.md
+
+  // Edit lead (2026-10-08), for the caller who asked:
+  canEdit: boolean;              // true when this caller may edit the details (section 4)
 };
 ```
+
+`canEdit` is worked out per caller on every lead the API answers (list rows too): `true` for owners and managers, and for staff on a lead they found (`foundBy`) or that is assigned to them (`assignedTo`). Show the Edit button only when it is `true`; an app build that does not know the key ignores it.
 
 ### Status folding
 
@@ -110,13 +115,38 @@ Adds a lead by hand. Source is always `outreach`.
 ## 4. `PATCH /leads/:id`
 
 ```ts
-{ status?: SettableStatus; followUpAt?: string | null; assignedTo?: string | null }
+{
+  // The lead's details (edit lead, owner decision 2026-10-08): the same rules and limits as POST /leads
+  name?: string | null;         // max 120
+  business?: string | null;     // max 200
+  email?: string | null;        // valid email, stored lowercased
+  phone?: string | null;        // 7 to 15 digits, spaces ( ) + . - allowed
+  website?: string | null;      // max 300, not checked as a URL (a handle is fine)
+  need?: LeadNeed | null;
+  message?: string | null;      // max 5,000, line breaks kept
+
+  // Working the lead, as before
+  status?: SettableStatus;
+  followUpAt?: string | null;
+  assignedTo?: string | null;
+}
 ```
 
-Partial: only the keys sent change. `null` (or `""`) clears the follow-up or the assignee. An empty body changes nothing. Answers the full `Lead`. Unknown id: 404 "That lead no longer exists.".
+Partial: only the keys sent change. `null` (or `""`, or only spaces) clears a field; text is trimmed. An empty body changes nothing. Details, status, follow-up and assignee may come in the same PATCH, and the whole PATCH is checked before anything is written (one failure, nothing changes). Answers the full `Lead`. Unknown id: 404 "That lead no longer exists.". `revenue` is not editable (unknown keys are ignored).
 
+Editing the details (owner decision 2026-10-08): a typo or a new phone number never forces a lead to become a client.
+
+- Who: capability `leads.update`. Owners and managers edit the details of any lead. Staff edit the details only of a lead they found (`foundBy`) or that is assigned to them (`assignedTo`); sending any detail key on another lead is 403 `forbidden` "You can only edit leads you found or that are assigned to you." (nothing is written, not even a status in the same PATCH). The lead's `canEdit` says this ahead of time.
+- Status, follow-up and assignee keep their rule: any `leads.update` caller on any lead, staff included. (So staff who assign a lead to themselves may then edit it.)
+- Any lead may be edited, whatever its source: added by hand, the lead form, `/grow`, a free tool, a portal sign-up or a booked call. Editing never changes a booked call's status or booking.
+- After the PATCH the lead must still have a name or a business, and an email or a phone: 400 `name` "Enter a name or a business." and 400 `email` "Enter an email or a phone number." (the same codes, copy and `fields` as POST /leads). A key not sent keeps what the lead shows, so a business that came from a free tool's form counts.
+- One email is one lead: an email another lead already has (any casing) is 409 `duplicate` "That email is already a lead. Find it in Leads and log the touch there." with `fields.email`, the same as POST /leads. The lead's own email, in any casing, is not a change.
+- A value the lead already has is not written again, so a form that sends every field changes only what was edited.
+- Clearing `business` on a free tool or portal lead shows the business from its form again; clearing `message` on a booked call shows the note left on the booking again (section 1).
 - On a lead with a booked call, the booking calendar still owns the status: when the booking is rescheduled or cancelled, the Cal webhook sets `booked` or `cancelled` again, exactly as on the website.
-- With CRM outbound sync on, any change to a lead re-queues its CRM contact push (one job per email, deduplicated), like every other lead update. A status set by hand adds no CRM tags.
+- With CRM outbound sync on, any change to a lead re-queues its CRM contact push (one job per email, deduplicated), like every other lead update. A status set by hand adds no CRM tags. A changed email pushes a contact for the new email; the contact under the old email stays in the CRM.
+- The web admin edits through the same `updateLead` (`lib/admin-api/leads/data.ts`) and the same body schema (`leadPatchBody`), so both accept and refuse exactly the same input.
+- Web screens: the lead page shows "Edit lead" only when `canEdit` is true. It opens `/admin/leads/[id]/edit`, Add lead's form (the same fields, labels, help and order) filled in with the lead. Only the fields the person changed are sent, so a detail left alone keeps what is stored (a business or note that comes from a form or a booking is not copied onto the lead). Each field error shows under its field and a failed try keeps what was typed; success opens the lead with "Lead updated.".
 
 ## 5. Touches
 
@@ -173,10 +203,10 @@ leadTouchKinds: { value: TouchKind; label: string }[];  // Call, Email, DM, Meet
 
 | Status | code | message | When |
 |---|---|---|---|
-| 400 | `name` | Enter a name or a business. | POST /leads without either |
+| 400 | `name` | Enter a name or a business. | POST /leads without either, or a PATCH that leaves the lead without either |
 | 400 | `name` | Keep the name to 120 characters or fewer. | |
 | 400 | `business` | Keep the business name to 200 characters or fewer. | |
-| 400 | `email` | Enter an email or a phone number. | POST /leads without either |
+| 400 | `email` | Enter an email or a phone number. | POST /leads without either, or a PATCH that leaves the lead without either |
 | 400 | `email` | Enter a valid email. | |
 | 400 | `phone` | Enter a valid phone number. | |
 | 400 | `website` | Keep the website to 300 characters or fewer. | |
@@ -194,8 +224,9 @@ leadTouchKinds: { value: TouchKind; label: string }[];  // Call, Email, DM, Meet
 | 400 | `at` | Enter a valid time for the touch. / That time is in the future. / Log touches from the last year only. | |
 | 400 | `assigned` | Unknown assignee. | GET /leads filter |
 | 400 | `follow_up` | Unknown follow-up filter. | GET /leads filter |
+| 403 | `forbidden` | You can only edit leads you found or that are assigned to you. | PATCH /leads/:id with a detail key, by staff on a lead they did not find and is not assigned to them |
 | 404 | `not_found` | That lead no longer exists. | |
-| 409 | `duplicate` | That email is already a lead. Find it in Leads and log the touch there. | POST /leads (`fields.email` too) |
+| 409 | `duplicate` | That email is already a lead. Find it in Leads and log the touch there. | POST /leads, or PATCH /leads/:id to an email another lead has (`fields.email` too) |
 | 503 | `not_configured` | Outreach needs a database update first. Ask the owner to apply the lead outreach migration. | before `20261003000004_lead_outreach.sql` |
 
 Validation failures also carry `fields` keyed by the body field (`followUpAt`, `assignedTo`, ...) for inline errors.
@@ -212,3 +243,4 @@ Until that migration is applied, `GET /leads` and `GET /leads/:id` keep working 
 - `zLead` may add `website`, `followUpAt`, `assignedTo`, `addedBy` (optional in the schema keeps older fixtures valid).
 - New schemas: `zTouch`, `zTouchPage`, `zLogTouchResult` (`{ touch, lead }`), `zStaffRef`, and `leadTouchKinds` in the leads meta fragment.
 - New endpoints in `src/api/endpoints/leads.ts` and mock routes mirroring the rules above (the status folding, the auto "contacted", the 409 on email).
+- Edit lead (2026-10-08): `zLead` may add `canEdit: z.boolean().optional()` (read undefined as false, so an older server shows no Edit button); `LeadPatch` gains the seven detail keys; the mock's PATCH mirrors section 4 (who may edit, the two rules on the whole lead, the 409 on another lead's email, nothing written on a failure, unchanged values not written) and sets `canEdit` on every lead it answers.

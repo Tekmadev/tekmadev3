@@ -38,7 +38,8 @@ export function PasswordField({
         placeholder={placeholder}
         autoComplete={autoComplete}
         minLength={minLength}
-        className="w-full rounded-xl border border-line-strong bg-surface px-4 py-3 pr-11 text-sm text-ink outline-none transition-colors focus:border-gold"
+        // 16px below lg, in portrait and landscape: iOS zooms on anything smaller.
+        className="w-full rounded-xl border border-line-strong bg-surface px-4 py-3 pr-11 text-base text-ink outline-none transition-colors focus:border-gold lg:text-sm"
       />
       <button
         type="button"
@@ -46,7 +47,7 @@ export function PasswordField({
         aria-label={show ? "Hide password" : "Show password"}
         aria-pressed={show}
         title={show ? "Hide password" : "Show password"}
-        className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-ink-4 transition-colors hover:text-ink"
+        className="absolute right-0 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center text-ink-4 transition-colors hover:text-ink"
       >
         {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </button>

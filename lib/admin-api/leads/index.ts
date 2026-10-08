@@ -33,8 +33,14 @@ export {
   touchKindInput,
   touchAtInput,
   createLeadBody,
+  leadDetailFields,
+  LEAD_DETAIL_KEYS,
+  leadListQuery,
+  leadPatchBody,
+  leadTouchBody,
+  parseLeadInput,
 } from "./input";
-export type { TouchKind } from "./input";
+export type { TouchKind, LeadDetailKey } from "./input";
 
-export { listLeads, getLead, createOutreachLead, updateLead, listTouches, logTouch, listAssignees } from "./data";
-export type { LeadListQuery, FollowUpFilter, CreateLeadInput, LeadPatch, Touch, LogTouchInput, Assignee } from "./data";
+export { listLeads, getLead, createOutreachLead, updateLead, canEditLead, listTouches, logTouch, listAssignees } from "./data";
+export type { LeadListQuery, FollowUpFilter, CreateLeadInput, LeadDetails, LeadPatch, Touch, LogTouchInput, Assignee } from "./data";

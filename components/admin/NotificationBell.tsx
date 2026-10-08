@@ -256,10 +256,10 @@ export function NotificationBell({
         ref={button}
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label={count > 0 ? `Notifications, ${count} unread` : "Notifications"}
+        aria-label={count > 0 ? `Inbox, ${count} unread` : "Inbox"}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="relative rounded-lg p-2 text-ink-2 transition-colors hover:bg-surface/70 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+        className="relative flex h-11 w-11 items-center justify-center rounded-lg text-ink-2 transition-colors hover:bg-surface/70 hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
       >
         <Bell className="h-5 w-5" />
         {count > 0 && (
@@ -279,22 +279,26 @@ export function NotificationBell({
           ref={panel}
           tabIndex={-1}
           role="dialog"
-          aria-label="Notifications"
+          aria-label="Inbox"
           // On a phone the panel is pinned to the screen, not to the bell: anchored
-          // to a button 58px from the edge, a 22rem panel ran off the side.
+          // to a button 58px from the edge, a 22rem panel ran off the side. It
+          // opens just below the top bar (4rem under the status bar) and clear of
+          // the landscape notch.
           className={
             "z-[60] overflow-hidden rounded-2xl border border-line-strong bg-surface shadow-[0_24px_60px_-24px_rgba(13,12,10,0.45)] outline-none " +
-            "fixed inset-x-3 top-[64px] lg:absolute lg:inset-x-auto lg:top-full lg:mt-2 lg:w-[22rem] " +
+            "fixed inset-x-3 top-[calc(4rem+env(safe-area-inset-top))] max-lg:left-[max(0.75rem,env(safe-area-inset-left))] max-lg:right-[max(0.75rem,env(safe-area-inset-right))] lg:absolute lg:inset-x-auto lg:top-full lg:mt-2 lg:w-[22rem] " +
             (align === "right" ? "lg:right-0" : "lg:left-0")
           }
         >
-          <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-            <p className="text-sm font-semibold text-ink">Notifications</p>
+          {/* Header and footer rows are 48px: 44px targets with little padding,
+              so on a small phone the panel still ends above the tab bar. */}
+          <div className="flex min-h-12 items-center justify-between gap-3 border-b border-line px-4 py-0.5">
+            <p className="text-sm font-semibold text-ink">Inbox</p>
             {count > 0 && (
               <button
                 type="button"
                 onClick={() => void markAllRead()}
-                className="inline-flex items-center gap-1.5 text-xs text-ink-3 transition-colors hover:text-gold"
+                className="inline-flex min-h-11 items-center gap-1.5 text-xs text-ink-3 transition-colors hover:text-gold"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
                 Mark all read
@@ -305,7 +309,7 @@ export function NotificationBell({
           {items.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-ink-4">Nothing yet. New leads, sales and problems land here.</p>
           ) : (
-            <ul className="max-h-[min(26rem,60vh)] divide-y divide-line overflow-y-auto">
+            <ul className="max-h-[min(26rem,55dvh)] divide-y divide-line overflow-y-auto">
               {items.map((n) => {
                 const Icon = n.severity === "critical" ? AlertTriangle : CATEGORY_ICON[n.category] ?? Bell;
                 return (
@@ -348,12 +352,20 @@ export function NotificationBell({
             </ul>
           )}
 
-          <div className="flex items-center justify-between gap-3 border-t border-line px-4 py-3 text-xs">
-            <Link href="/admin/notifications" onClick={() => close(false)} className="font-medium text-ink-2 transition-colors hover:text-gold">
+          <div className="flex min-h-12 items-center justify-between gap-3 border-t border-line px-4 py-0.5 text-xs">
+            <Link
+              href="/admin/notifications"
+              onClick={() => close(false)}
+              className="inline-flex min-h-11 items-center font-medium text-ink-2 transition-colors hover:text-gold"
+            >
               See all
             </Link>
             {summary.needsAction > 0 && (
-              <Link href="/admin/notifications?filter=action" onClick={() => close(false)} className="text-signal transition-colors hover:underline">
+              <Link
+                href="/admin/notifications?filter=action"
+                onClick={() => close(false)}
+                className="inline-flex min-h-11 items-center text-signal transition-colors hover:underline"
+              >
                 {summary.needsAction} need{summary.needsAction === 1 ? "s" : ""} action
               </Link>
             )}
