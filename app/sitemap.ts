@@ -7,7 +7,7 @@ import { CASE_STUDIES_PATH, publishedCaseStudies } from "@/config/case-studies";
 
 const SITE_URL = business.url;
 
-const legalRoutes = ["/privacy", "/terms", "/cookies"];
+const legalRoutes = ["/privacy", "/terms", "/cookies", "/account-deletion"];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();

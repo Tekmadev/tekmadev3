@@ -1,19 +1,22 @@
 /**
- * Source of truth for legal documents: Privacy Policy, Terms of Service, Cookie Policy.
- * Edit values here and they propagate to /privacy, /terms, /cookies pages and SEO metadata.
+ * Source of truth for legal documents: Privacy Policy, Terms of Service, Cookie Policy,
+ * and the Account Deletion page. Edit values here and they propagate to /privacy, /terms,
+ * /cookies, /account-deletion pages and SEO metadata.
  *
  * IMPORTANT: This content is a professional starting draft. It must be reviewed by an
  * Ontario / Quebec licensed lawyer before publication. Tekmadev is responsible for
  * accuracy of facts referenced (registered office, Privacy Officer name, sub-processors).
  */
-import { business } from "@/config/site";
+import { business, portal } from "@/config/site";
 
 export type LegalBlock =
   | { type: "p"; text: string }
   | { type: "h3"; text: string }
   | { type: "ul"; items: string[] }
   | { type: "ol"; items: string[] }
-  | { type: "note"; text: string };
+  | { type: "note"; text: string }
+  /** A paragraph that ends in one internal link: `${before} <label>${after}`. */
+  | { type: "link"; before: string; label: string; href: string; after?: string };
 
 export type LegalSection = {
   id: string;
@@ -34,12 +37,14 @@ export type LegalDoc = {
 const company = `${business.name} (${business.legalName})`;
 const legalEmail = business.legalEmail;
 const phone = business.phone.pretty;
+/** The private mobile app our team uses (Android and iPhone). */
+const staffApp = `${business.name} Admin`;
 
 export const privacyPolicy: LegalDoc = {
   slug: "privacy",
   title: "Privacy Policy",
   subtitle: "How Tekmadev collects, uses, and protects personal information.",
-  intro: `This Privacy Policy explains how ${company} ("${business.name}", "we", "us", or "our") collects, uses, discloses, retains, and safeguards personal information. ${business.name} operates from ${business.jurisdictions.primary} and complies with the federal Personal Information Protection and Electronic Documents Act (PIPEDA). Where individuals reside in Quebec, we also respect the rights provided under the Quebec Act respecting the protection of personal information in the private sector (Law 25). This policy applies to information we collect through ${business.url}, through our Growth System services, and through our other interactions with you.`,
+  intro: `This Privacy Policy explains how ${company} ("${business.name}", "we", "us", or "our") collects, uses, discloses, retains, and safeguards personal information. ${business.name} operates from ${business.jurisdictions.primary} and complies with the federal Personal Information Protection and Electronic Documents Act (PIPEDA). Where individuals reside in Quebec, we also respect the rights provided under the Quebec Act respecting the protection of personal information in the private sector (Law 25). This policy applies to information we collect through ${business.url}, through our Growth System services, through the ${staffApp} app used by our team, and through our other interactions with you.`,
   effectiveDate: business.legalDates.effective,
   lastUpdated: business.legalDates.lastUpdated,
   sections: [
@@ -50,6 +55,10 @@ export const privacyPolicy: LegalDoc = {
         {
           type: "p",
           text: `This policy applies to any individual who visits our website, books an audit call, signs up as a client, communicates with us by phone, email, or chat, or whose personal information is processed by us in the course of delivering services to a client (for example, the end customers of a ${business.name} client whose calls and messages flow through our installed system).`,
+        },
+        {
+          type: "p",
+          text: `It also applies to the members of our team who use ${staffApp}, our private mobile app for staff. Section 12 explains how we handle their information.`,
         },
         {
           type: "p",
@@ -134,7 +143,7 @@ export const privacyPolicy: LegalDoc = {
         },
         {
           type: "p",
-          text: "You may withdraw consent at any time, subject to legal and contractual restrictions and reasonable notice. To withdraw consent, contact our Privacy Officer at the address in Section 16. Withdrawing consent may affect our ability to provide services to you.",
+          text: "You may withdraw consent at any time, subject to legal and contractual restrictions and reasonable notice. To withdraw consent, contact our Privacy Officer at the address in Section 17. Withdrawing consent may affect our ability to provide services to you.",
         },
         {
           type: "p",
@@ -153,7 +162,8 @@ export const privacyPolicy: LegalDoc = {
         {
           type: "ul",
           items: [
-            "Service providers and sub-processors who help us deliver the Growth System (for example, our customer relationship and automation platform provider, Vercel and Cloudflare for hosting and content delivery, Cal.com for booking, payment processors for billing, and analytics or productivity vendors). A current list is available on request.",
+            "Service providers and sub-processors who help us deliver the Growth System and run our business (for example, our customer relationship and automation platform provider, Vercel and Cloudflare for hosting and content delivery, Supabase for our database and sign-in, Resend for sending email, Cal.com for booking, payment processors for billing, and analytics or productivity vendors). A current list is available on request.",
+            `Service providers for ${staffApp}, the mobile app our team uses: Expo, Apple (Apple Push Notification service) and Google (Firebase Cloud Messaging) to deliver push notifications to team members' phones, and Sentry to receive crash and error reports from the app. Section 12 describes what each of them receives.`,
             "Meta Platforms, Inc. (Facebook and Instagram), for advertising measurement and delivery, and only if you have accepted advertising cookies. We share the pages you view and the actions you take on our website (such as requesting a report, booking a call, or starting a checkout), the Meta cookie values in your browser, your IP address and browser type, and, when you give us your contact details, your email address, phone number and name in hashed form (SHA-256, a one-way scramble that Meta can match only against accounts it already holds). Some of this is sent from your browser and some from our server. Meta handles this information under its own terms and privacy policy and may combine it with information it already has about you. If you decline advertising cookies, we send Meta nothing about you.",
             "Professional advisors (lawyers, accountants, auditors) under duties of confidentiality.",
             "Government, regulatory, or law enforcement authorities where we are legally required, or to protect our rights, property, or safety, or those of our clients or the public.",
@@ -174,6 +184,10 @@ export const privacyPolicy: LegalDoc = {
           type: "p",
           text: "Personal information may be stored or processed in Canada, the United States, or other jurisdictions where our service providers operate. When information is processed outside of Quebec or Canada, it may become subject to the laws of the foreign jurisdiction, including lawful access by foreign courts and authorities. We use contractual safeguards and, where appropriate, conduct privacy impact assessments before transferring personal information outside Quebec, as required by Law 25.",
         },
+        {
+          type: "p",
+          text: `Our database and sign-in service (Supabase) are hosted in Canada. Some of our service providers process information outside Canada. For example, push notifications for ${staffApp} are delivered through Expo, Apple and Google, which may process them outside Canada, including in the United States, and crash reports from the app are sent to Sentry and may be processed in the United States.`,
+        },
       ],
     },
     {
@@ -193,6 +207,7 @@ export const privacyPolicy: LegalDoc = {
             "Marketing consent records and unsubscribe records: as required by CASL.",
             "Advertising context records (the Meta cookie values, IP address and browser type of a visitor who accepted advertising cookies): 90 days.",
             "Security and audit logs: typically 12 months.",
+            `Information about members of our team who use ${staffApp}: see Section 12.5.`,
           ],
         },
         {
@@ -227,12 +242,20 @@ export const privacyPolicy: LegalDoc = {
             "Withdraw consent at any time, subject to legal or contractual restrictions and reasonable notice.",
             "Request that we cease using or disclosing your information, or destroy it, where retention is no longer necessary.",
             "Object to direct marketing at any time.",
-            "Lodge a complaint with us or with the appropriate regulator (see Section 17).",
+            "Lodge a complaint with us or with the appropriate regulator (see Section 18).",
           ],
         },
         {
           type: "p",
           text: `To exercise any of these rights, contact our Privacy Officer at ${legalEmail}. We will respond within the period required by applicable law (no later than 30 days under PIPEDA and Quebec Law 25 in most cases). We may need to verify your identity before processing your request.`,
+        },
+        {
+          type: "link",
+          before:
+            "To ask us to delete your account and the personal information linked to it, whether you are a member of our team, a client portal user, or anyone else, see what we delete, what we must keep, and how to ask on our",
+          label: "account deletion page",
+          href: "/account-deletion",
+          after: ".",
         },
       ],
     },
@@ -275,8 +298,121 @@ export const privacyPolicy: LegalDoc = {
       ],
     },
     {
+      id: "team-app",
+      title: `12. The ${staffApp} app and our team`,
+      blocks: [
+        {
+          type: "p",
+          text: `${staffApp} is our private mobile app for Android and iPhone. Our owners, managers and staff (including our salespeople) use it to manage leads, clients, demo requests, marketing and our team. Nobody can sign up in the app: an owner or a manager creates each account. This section explains how we handle the personal information of the team members who use it. The client, lead and prospect information that team members see in the app is covered by the rest of this policy, in particular Sections 2, 3, 5 and 7.`,
+        },
+        {
+          type: "h3",
+          text: "12.1 What we collect about team members",
+        },
+        {
+          type: "ul",
+          items: [
+            "Account details: your name, email address and role (owner, manager or staff). You sign in with your email address and a password, which are managed by our sign-in provider, Supabase Auth.",
+            "Sign-in and access history: records of when your account signs in to and accesses the app.",
+            "Device information: for each phone you use, the token that lets us send it push notifications (an Expo push token), the device name, the platform (Android or iOS), the app version, and when the phone was last seen.",
+            "Notification preferences: which notifications you have chosen to receive.",
+            "Work records: the leads you add, the outreach you log (calls, emails, messages and meetings), the calls you book, the clients you create or help, the demo requests you work on, and your share of commission credit on clients.",
+            "Crash reports: if the app crashes or hits an error, a report with your phone's model, its operating system version, the app version, the error and its stack trace (the technical record of where the error happened), and the internal ID of your account (a code, not your name or email address). Crash reports do not include names, email addresses, client or lead details, or screen recordings.",
+          ],
+        },
+        {
+          type: "p",
+          text: "Face ID, Touch ID and fingerprint unlock are handled by your phone's operating system. The app never receives or stores your face, fingerprint or any other biometric information: it only receives a yes or no answer to whether the check passed.",
+        },
+        {
+          type: "p",
+          text: "The app keeps an encrypted cache on your phone so that screens open quickly and can be used offline. Signing out ends your session on that phone and removes the phone's registration for push notifications.",
+        },
+        {
+          type: "h3",
+          text: "12.2 Why we use it",
+        },
+        {
+          type: "ul",
+          items: [
+            "To create your account, let you sign in securely, and keep a record of access that protects our systems and the information in them.",
+            "To show each person what their role allows. Owners and managers see the activity and commission credit of every team member. Staff see only their own.",
+            "To send push notifications to your phone, according to your notification preferences.",
+            "To record who added, contacted, booked and helped each lead and client, to manage the team's work, and to work out each team member's share of commission credit.",
+            "To find and fix crashes and errors in the app.",
+            "To meet our legal and tax obligations, and to establish, exercise, or defend legal claims.",
+          ],
+        },
+        {
+          type: "h3",
+          text: "12.3 Who receives it",
+        },
+        {
+          type: "p",
+          text: "Inside Tekmadev, owners and managers can see every team member's activity and commission credit, and staff can see only their own. Outside Tekmadev, the following service providers receive team member information, only as far as they need it to provide their service:",
+        },
+        {
+          type: "ul",
+          items: [
+            "Supabase, which hosts our database and manages sign-in, in Canada.",
+            "Expo, Apple (Apple Push Notification service) and Google (Firebase Cloud Messaging), which deliver push notifications. They receive your phone's push token and each notification sent to it.",
+            "Sentry, which receives the crash and error reports described in Section 12.1.",
+            "Vercel, which runs our website and the server the app connects to, and Resend, which sends our email.",
+          ],
+        },
+        {
+          type: "p",
+          text: "We also disclose information in the other limited cases listed in Section 5, for example to professional advisors or where the law requires it. We do not sell team member information.",
+        },
+        {
+          type: "h3",
+          text: "12.4 Where it is stored",
+        },
+        {
+          type: "p",
+          text: "Our database and sign-in service are hosted in Canada. Push notifications pass through Expo, Apple and Google, which may process them outside Canada, including in the United States. Crash reports may be processed in the United States. The encrypted cache stays on your phone. Section 6 explains what it means when information is processed outside Canada.",
+        },
+        {
+          type: "h3",
+          text: "12.5 How long we keep it",
+        },
+        {
+          type: "p",
+          text: "We keep team member information only as long as we need it for the purposes above and to meet our legal and tax obligations, on the same approach as Section 7. Typical retention periods include:",
+        },
+        {
+          type: "ul",
+          items: [
+            "Account details and notification preferences: while you are a member of our team. When you leave, we close your account so it can no longer be used to sign in, and delete or anonymize these details within 30 days, except your name where it must stay on the work and commission records below.",
+            "Push notification registration for a phone: until you sign out of the app on that phone, or your account is closed.",
+            "Other device information (device name, platform, app version, and last seen): while your account is open, then deleted within 30 days after it is closed.",
+            "Sign-in and access history: typically 12 months, like our other security and audit logs.",
+            "Work records: these are business records about our leads and clients, so they stay with the lead or client they relate to and are kept as Section 7 describes.",
+            "Commission credit records: while any commission is owed, then 7 years after the last related payment to meet tax and limitation period requirements.",
+            "Crash reports: up to 90 days.",
+          ],
+        },
+        {
+          type: "h3",
+          text: "12.6 Seeing, correcting, or deleting your information",
+        },
+        {
+          type: "p",
+          text: `You can see your own activity and commission credit in the app. To get a copy of the personal information we hold about you, to correct it, or to ask us to delete it, ask one of our owners or contact our Privacy Officer at ${legalEmail}. Your rights, and the time we take to respond, are described in Section 9. You can also turn off notifications from the app at any time in your phone's settings.`,
+        },
+        {
+          type: "link",
+          before:
+            "When you leave our team or ask us to delete your account, we close it and delete or anonymize your personal information, except what we must keep for the periods above, such as commission records while commission is owed and tax records for as long as the law requires. The steps are set out on our",
+          label: "account deletion page",
+          href: "/account-deletion",
+          after: ".",
+        },
+      ],
+    },
+    {
       id: "cookies",
-      title: "12. Cookies and tracking technologies",
+      title: "13. Cookies and tracking technologies",
       blocks: [
         {
           type: "p",
@@ -286,7 +422,7 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       id: "children",
-      title: "13. Children",
+      title: "14. Children",
       blocks: [
         {
           type: "p",
@@ -296,7 +432,7 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       id: "links",
-      title: "14. Third-party links",
+      title: "15. Third-party links",
       blocks: [
         {
           type: "p",
@@ -306,7 +442,7 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       id: "changes",
-      title: "15. Changes to this policy",
+      title: "16. Changes to this policy",
       blocks: [
         {
           type: "p",
@@ -316,7 +452,7 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       id: "contact",
-      title: "16. How to contact our Privacy Officer",
+      title: "17. How to contact our Privacy Officer",
       blocks: [
         {
           type: "p",
@@ -335,7 +471,7 @@ export const privacyPolicy: LegalDoc = {
     },
     {
       id: "regulators",
-      title: "17. Filing a complaint with a regulator",
+      title: "18. Filing a complaint with a regulator",
       blocks: [
         {
           type: "p",
@@ -360,7 +496,7 @@ export const termsOfService: LegalDoc = {
   subtitle: "The agreement between Tekmadev and our clients.",
   intro: `These Terms of Service ("Terms") form a legally binding agreement between ${company} ("${business.name}", "we", "us", or "our") and the business entity that accesses our website, books an audit call, or engages us to deliver the Growth System or any related service ("Client", "you", or "your"). By using our website, booking a call, signing an order form, or otherwise engaging us, you agree to these Terms. If you do not agree, do not use our website or services.`,
   effectiveDate: business.legalDates.effective,
-  lastUpdated: business.legalDates.lastUpdated,
+  lastUpdated: business.legalDates.termsLastUpdated,
   sections: [
     {
       id: "definitions",
@@ -745,7 +881,7 @@ export const cookiePolicy: LegalDoc = {
   subtitle: "How Tekmadev uses cookies and similar technologies.",
   intro: `This Cookie Policy explains what cookies and similar technologies are, why ${company} uses them, and how you can control them. This policy supplements our Privacy Policy.`,
   effectiveDate: business.legalDates.effective,
-  lastUpdated: business.legalDates.lastUpdated,
+  lastUpdated: business.legalDates.termsLastUpdated,
   sections: [
     {
       id: "what",
@@ -856,8 +992,170 @@ export const cookiePolicy: LegalDoc = {
   ],
 };
 
+/**
+ * Public account deletion page (/account-deletion). The app stores (Apple and
+ * Google Play) ask for a web page that explains how to delete an account and
+ * its data; this is that page. Keep its retention periods in line with
+ * Sections 7 and 12.5 of the Privacy Policy.
+ */
+export const accountDeletion: LegalDoc = {
+  slug: "account-deletion",
+  title: "Account and Data Deletion",
+  subtitle: "How to ask Tekmadev to delete your account and your personal information.",
+  intro: `This page explains how to ask ${company} ("${business.name}", "we", "us", or "our") to delete your account and the personal information linked to it, what we delete, what we must keep and why, and how long it takes. It applies to the members of our team who use the ${staffApp} app, to people who use our client portal, and to anyone else whose personal information we hold. It supplements our Privacy Policy.`,
+  effectiveDate: business.legalDates.accountDeletionEffective,
+  lastUpdated: business.legalDates.lastUpdated,
+  sections: [
+    {
+      id: "who",
+      title: "1. Who this page is for",
+      blocks: [
+        {
+          type: "ul",
+          items: [
+            `Members of our team who use ${staffApp}, our private mobile app for Android and iPhone.`,
+            `People who sign in to our client portal at ${portal.host}.`,
+            "Anyone else whose personal information we hold, for example people who contacted us through our website, booked a call, or subscribed to our newsletter, and our leads and prospects.",
+          ],
+        },
+        {
+          type: "p",
+          text: "If we hold your information only because a business that uses our Growth System received your call or message, that business controls your information, as explained in Section 1 of our Privacy Policy. Please ask that business directly. If you contact us instead, we will pass your request on to that business and help it respond.",
+        },
+      ],
+    },
+    {
+      id: "how-to-ask",
+      title: "2. How to ask",
+      blocks: [
+        {
+          type: "ol",
+          items: [
+            `Email our Privacy Officer at ${legalEmail} with the subject line "Account deletion request".`,
+            `Send it from the email address linked to your account if you can. Tell us your name, which account you mean (${staffApp}, the client portal, or neither), and whether you want everything deleted or only certain information.`,
+            "We may ask you to confirm your identity before we act, so that nobody else can delete your account or see your information.",
+          ],
+        },
+        {
+          type: "p",
+          text: "If you are a member of our team, or you work with us as a client, you can also ask one of our owners directly. We handle the request in the same way.",
+        },
+        {
+          type: "note",
+          text: "Deleting the app from your phone, or signing out of it, does not delete your account or the information we hold. Removing a teammate from the Team page of the client portal stops their access but does not delete their information either. To have information deleted, send a request as described above.",
+        },
+      ],
+    },
+    {
+      id: "what-we-delete",
+      title: "3. What we delete",
+      blocks: [
+        {
+          type: "p",
+          text: "Once we have confirmed your request, we delete or anonymize the personal information linked to your account, except what we must keep as described in Section 4. To anonymize information means to change it so that it no longer identifies you.",
+        },
+        {
+          type: "h3",
+          text: `Members of our team (${staffApp})`,
+        },
+        {
+          type: "ul",
+          items: [
+            "Your sign-in account, so it can no longer be used to sign in.",
+            "Your email address, role, and notification preferences, and your name, except where it must stay on the records we keep.",
+            "Your device records: push notification tokens, device names, platforms, app versions, and last seen times.",
+          ],
+        },
+        {
+          type: "h3",
+          text: "Client portal users",
+        },
+        {
+          type: "ul",
+          items: [
+            "Your portal sign-in account, so it can no longer be used to sign in.",
+            "Your profile: your name, email address, title, and other contact details.",
+            "If your business's engagement with us has ended and the business asks us to close its account, the information the business gave us through the portal.",
+          ],
+        },
+        {
+          type: "h3",
+          text: "Everyone else",
+        },
+        {
+          type: "ul",
+          items: [
+            "Your contact details, and the messages, call notes, and other records we hold about you as a website visitor, lead, prospect, or subscriber.",
+            "Your place on our mailing lists.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "what-we-keep",
+      title: "4. What we must keep, and why",
+      blocks: [
+        {
+          type: "p",
+          text: "Some records must be kept even after a deletion request, because the law requires it or because we need them to meet obligations we owe. We keep only what is needed, limit who can see it, and delete or anonymize it when the period ends. These periods match Sections 7 and 12.5 of our Privacy Policy.",
+        },
+        {
+          type: "ul",
+          items: [
+            "Invoices, payment records, and tax and accounting records: 7 years after the end of the engagement, to meet tax and limitation period requirements.",
+            "Commission records: while any commission is owed to a team member, then 7 years after the last related payment, for the same reasons.",
+            "Agreements and consent records: the agreements a client accepted (who accepted, when, and which version) for as long as we keep that client's account records, and records of marketing consent and unsubscribes as the Canadian Anti-Spam Legislation (CASL) requires, so that we do not email you again after you have asked us to stop.",
+            "Work records about our leads and clients, such as leads added, outreach logged, calls booked, and demo requests: these are our business records about those leads and clients, so they stay with them for the periods in Section 7 of our Privacy Policy. A team member's name stays on them only where we need it, for example to work out commission.",
+            "Security and audit logs, including sign-in history: typically 12 months, to protect our systems and investigate misuse.",
+            "Crash reports from the app already sent to Sentry: these do not include your name or email address, and are deleted within 90 days.",
+            "Information we need to establish, exercise, or defend a legal claim, or that a law, court, or regulator requires us to keep: until the matter is resolved or the requirement ends.",
+            "Copies in routine backups: deleted information can remain in our service providers' backups until those backups are replaced in the normal course.",
+          ],
+        },
+      ],
+    },
+    {
+      id: "timing",
+      title: "5. How long it takes",
+      blocks: [
+        {
+          type: "p",
+          text: "We respond to every deletion request within 30 days of receiving it. Our response confirms what we deleted and, if we kept anything, what we kept, why, and for how long. If we cannot complete a request, for example because we could not confirm your identity, we tell you why within the same 30 days.",
+        },
+      ],
+    },
+    {
+      id: "contact",
+      title: "6. Questions and complaints",
+      blocks: [
+        {
+          type: "p",
+          text: "Questions about this page or about a deletion request can be sent to our Privacy Officer:",
+        },
+        {
+          type: "ul",
+          items: [
+            `${business.privacyOfficer.name}, ${business.privacyOfficer.title}, ${company}`,
+            `Email: ${legalEmail}`,
+            `Phone: ${phone}`,
+          ],
+        },
+        {
+          type: "link",
+          before:
+            "If you are not satisfied with how we handled your request, you can complain to a privacy regulator, as explained in Section 18 of our",
+          label: "Privacy Policy",
+          href: "/privacy#regulators",
+          after: ".",
+        },
+      ],
+    },
+  ],
+};
+
 export const legalDocs: Record<string, LegalDoc> = {
   privacy: privacyPolicy,
   terms: termsOfService,
   cookies: cookiePolicy,
+  "account-deletion": accountDeletion,
 };

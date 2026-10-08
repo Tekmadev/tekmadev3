@@ -1,7 +1,8 @@
 import { badRequest, businessRule, conflict, dbError, isUuid, notFound, requireDb, unavailable, type ApiContext } from "@/lib/admin-api";
-import { StaffDataNotReady, creditClientFromLead } from "@/lib/staff-credit";
+import { StaffDataNotReady, creditClientFromLead, creditClientToCreator } from "@/lib/staff-credit";
 import { loadGuarantee, type ApiGuarantee } from "@/lib/admin-api/clients/sections";
 import { provisionClient } from "@/lib/client-provisioning";
+import { linkDemoRequestsToClient } from "@/lib/admin-api/demos/link";
 import {
   addTaskByStaff,
   changeOnboardingStage,
@@ -83,6 +84,14 @@ const likeExact = (value: string) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 export type CreateClientOutcome = { client: ApiClient; reused: boolean; invite: "sent" | "failed" | "skipped" };
 
+/**
+ * Who adds a client: an admin API caller, or a web admin session
+ * (lib/admin-web-context.ts webApiContext). POST /clients and the web New
+ * client form both go through createClientByStaff, so the rules (and who
+ * gets the credit) live in one place.
+ */
+export type ClientCreator = Pick<ApiContext, "email" | "can" | "require">;
+
 type SourceLead = { id: string; found_by: string | null; booked_by: string | null };
 
 /**
@@ -90,7 +99,7 @@ type SourceLead = { id: string; found_by: string | null; booked_by: string | nul
  * and booked it. Null with no `leadId`. 400 `lead_id` when it does not exist,
  * 409 `lead_converted` when another client already came from it.
  */
-async function sourceLeadFor(ctx: ApiContext, leadId: string | null | undefined, email: string): Promise<SourceLead | null> {
+async function sourceLeadFor(ctx: ClientCreator, leadId: string | null | undefined, email: string): Promise<SourceLead | null> {
   if (!leadId) return null;
   ctx.require("leads.convert");
   const db = requireDb();
@@ -120,9 +129,11 @@ async function sourceLeadFor(ctx: ApiContext, leadId: string | null | undefined,
  * bonus on top of the create: before the staff management migration, or on a
  * failed write, the client is still created and the failure is logged.
  */
-async function linkSourceLead(ctx: ApiContext, client: Client, lead: SourceLead): Promise<Client> {
+async function linkSourceLead(ctx: ClientCreator, client: Client, lead: SourceLead): Promise<Client> {
   let linked = client;
   if (!client.lead_id) linked = await updateClient(client.id, { lead_id: lead.id }, ctx.email);
+  // The lead's demo requests show on the client too (docs/admin-api/demos.md). Never throws.
+  if (linked.lead_id === lead.id) await linkDemoRequestsToClient(lead.id, client.id);
   try {
     await creditClientFromLead({ clientId: client.id, leadId: lead.id, foundBy: lead.found_by, bookedBy: lead.booked_by, by: ctx.email });
   } catch (err) {
@@ -133,18 +144,37 @@ async function linkSourceLead(ctx: ApiContext, client: Client, lead: SourceLead)
 }
 
 /**
+ * A client created directly (no lead, owner decision 2026-10-05): the person
+ * who created it gets the credit as finder and booker, 100 together. A bonus
+ * on top of the create, like the lead's credits: before the staff management
+ * migration, or on a failed write, the client is still created and the
+ * failure is logged.
+ */
+async function creditCreator(ctx: ClientCreator, client: Client): Promise<void> {
+  try {
+    await creditClientToCreator({ clientId: client.id, by: ctx.email });
+  } catch (err) {
+    if (err instanceof StaffDataNotReady) console.warn("[admin-api] client created without credits: the staff management migration is not applied");
+    else console.error("[admin-api] creator credits failed", err instanceof Error ? err.message : String(err));
+  }
+}
+
+/**
  * New client by hand. One client per email: an existing live client with the
  * email is reused and updated (business name, and contact name, phone, plan,
- * strategist when sent). A test client with the email is the owner's to reuse;
+ * strategist when sent) for a caller with `clients.edit`; staff (who may add
+ * clients but not edit them) get the existing client back unchanged. A test client with the email is the owner's to reuse;
  * for anyone else the email is taken (409). Provisioning is the website's own
  * (lib/client-provisioning.ts): the client row, its owner login, the checklist
  * run from the plan's active templates, and the portal invite when asked.
  *
  * `leadId` ("Create client from this lead", docs/admin-api/staff.md) links the
  * client to that lead and copies the lead's finder and booker to the client's
- * credits with the default split (only when it has none yet).
+ * credits with the default split (only when it has none yet). Without a lead,
+ * a newly created client credits the person who created it as finder and
+ * booker (100 together); an existing client keeps its credits.
  */
-export async function createClientByStaff(ctx: ApiContext, body: JsonObject): Promise<CreateClientOutcome> {
+export async function createClientByStaff(ctx: ClientCreator, body: JsonObject): Promise<CreateClientOutcome> {
   const check = new FieldCheck(body);
   const businessName = check.required("businessName", "required", REQUIRED, "Enter the business name.", 200);
   const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
@@ -164,14 +194,17 @@ export async function createClientByStaff(ctx: ApiContext, body: JsonObject): Pr
   if (test && !ctx.can("testdata.view")) throw conflict("email_taken", EMAIL_TAKEN, { email: EMAIL_TAKEN });
   const existing = live ?? test;
   const sourceLead = await sourceLeadFor(ctx, leadId, email);
+  // Provisioning fills a missing plan or phone on an existing client: that is
+  // an edit, so only for a role that may edit clients.
+  const fills = !existing || ctx.can("clients.edit");
 
   const result = await provisionClient({
     client_id: existing?.id ?? null,
     business_name: businessName,
     email,
     name: name ?? null,
-    phone: phone ?? null,
-    plan_id: planId ?? null,
+    phone: fills ? (phone ?? null) : null,
+    plan_id: fills ? (planId ?? null) : null,
     lead_id: sourceLead?.id ?? null,
     actor_type: "admin",
     actor_email: ctx.email,
@@ -181,8 +214,12 @@ export async function createClientByStaff(ctx: ApiContext, body: JsonObject): Pr
 
   let client = result.client;
   if (sourceLead) client = await linkSourceLead(ctx, client, sourceLead);
+  else if (result.createdClient) await creditCreator(ctx, client);
   const reused = !result.createdClient;
-  if (reused) {
+  // Adding a client is open to staff (clients.create), editing one is not
+  // (clients.edit): an email that is already a client answers that client
+  // unchanged for a role that may not edit it.
+  if (reused && ctx.can("clients.edit")) {
     const patch: Partial<Client> = {};
     if (businessName !== client.business_name) patch.business_name = businessName;
     if (phone && phone !== client.primary_phone) patch.primary_phone = phone;
@@ -202,7 +239,7 @@ export async function createClientByStaff(ctx: ApiContext, body: JsonObject): Pr
       entity_id: client.id,
       summary: "Added again by hand: the existing client was updated.",
     });
-  } else if (strategist) {
+  } else if (!reused && strategist) {
     client = await updateClient(client.id, { assigned_strategist: strategist }, ctx.email);
   }
 

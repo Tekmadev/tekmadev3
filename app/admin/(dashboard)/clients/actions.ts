@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { requireAdminCapability } from "@/lib/admin";
+import { adminCan, requireAdminCapability } from "@/lib/admin";
 import {
   addTaskByStaff,
   changeOnboardingStage,
@@ -42,7 +42,10 @@ import {
   type TaskStatus,
 } from "@/lib/onboarding-data";
 import { type AccessProviderKey } from "@/lib/access-providers";
-import { inviteMember, provisionClient } from "@/lib/client-provisioning";
+import { inviteMember } from "@/lib/client-provisioning";
+import { ApiError, MESSAGES } from "@/lib/admin-api";
+import { createClientByStaff, type CreateClientOutcome } from "@/lib/admin-api/clients/core";
+import { webApiContext } from "@/lib/admin-web-context";
 import {
   logClientBookedCall,
   postClientNote,
@@ -107,27 +110,50 @@ function pick<T extends string>(v: FormDataEntryValue | null, allowed: readonly 
 // Clients
 // ---------------------------------------------------------------------------
 
+/**
+ * The New client form. It runs the admin API's own create (POST /clients,
+ * createClientByStaff) so the rules live in one place: one client per email
+ * (an existing one is only updated by a role with `clients.edit`), a test
+ * client's email is taken for roles without test data, and the credit. From a
+ * lead (`lead_id`, needs `leads.convert`) the client is linked to the lead and
+ * the lead's finder and booker get the credit; added directly, the person who
+ * adds it is finder and booker (owner decision 2026-10-05).
+ */
 export async function createClientAction(formData: FormData) {
   const ctx = await requireAdminCapability("clients.create");
-  const email = s(formData.get("email"), 200).toLowerCase();
-  const businessName = s(formData.get("business_name"), 200);
-  if (!email.includes("@") || !businessName) redirect("/admin/clients/new?e=required");
+  const leadId = opt(formData.get("lead_id"), 64);
+  const plan = s(formData.get("plan_id"), 64);
+  const body: Record<string, unknown> = {
+    businessName: s(formData.get("business_name"), 400),
+    email: s(formData.get("email"), 400),
+    name: opt(formData.get("name"), 400),
+    phone: opt(formData.get("phone"), 400),
+    planId: plan || null,
+    assignedStrategist: opt(formData.get("assigned_strategist"), 400),
+    sendInvite: formData.get("send_invite") === "on",
+    ...(leadId ? { leadId } : {}),
+  };
 
-  const planRaw = s(formData.get("plan_id"));
-  const result = await provisionClient({
-    business_name: businessName,
-    email,
-    name: opt(formData.get("name"), 120),
-    phone: opt(formData.get("phone"), 40),
-    plan_id: planRaw || null,
-    actor_type: "admin",
-    actor_email: ctx.email,
-    send_invite: formData.get("send_invite") === "on",
-  });
-  if (opt(formData.get("assigned_strategist"))) {
-    await updateClient(result.client.id, { assigned_strategist: opt(formData.get("assigned_strategist"), 200) }, ctx.email);
+  let outcome: CreateClientOutcome;
+  try {
+    outcome = await createClientByStaff(webApiContext(ctx), body);
+  } catch (err) {
+    if (!(err instanceof ApiError)) throw err;
+    // The API's copy: its message, then each field's own line when it says more.
+    const lines = [err.message, ...Object.values(err.fields ?? {}).filter((m) => m !== err.message && m !== MESSAGES.invalid)];
+    const again = new URLSearchParams({ e: [...new Set(lines)].join(" ") });
+    if (leadId) again.set("leadId", leadId);
+    redirect(`/admin/clients/new?${again.toString()}`);
   }
-  redirect(`${back(result.client.id)}?created=1${result.invite && !result.invite.ok ? "&invite=failed" : ""}`);
+
+  const id = outcome.client.id;
+  const flags = `created=1&invite=${outcome.invite}${outcome.reused ? "&reused=1" : ""}`;
+  // "Client wants a demo": straight on to the demo request form for this client.
+  if (formData.get("wants_demo") === "on" && adminCan(ctx, "demos.request")) {
+    const prefill = new URLSearchParams({ clientId: id, businessName: outcome.client.businessName });
+    redirect(`/admin/demos/new?${prefill.toString()}&${flags}`);
+  }
+  redirect(`${back(id)}?${flags}`);
 }
 
 export async function updateClientAction(formData: FormData) {

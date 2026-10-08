@@ -50,6 +50,9 @@ export default function GrowLayout({ children }: { children: React.ReactNode }) 
             <a href="/terms" className="hover:text-gold">
               Terms
             </a>
+            <a href="/account-deletion" className="hover:text-gold">
+              Account deletion
+            </a>
             <CookieSettingsButton className="underline decoration-line-strong underline-offset-4 transition-colors hover:text-gold" />
           </nav>
         </div>

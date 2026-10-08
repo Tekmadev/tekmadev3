@@ -19,6 +19,6 @@
  * The Terms (config/legal.ts: the Growth System "Install" item and Webline's
  * "Timeline") and the Webline Agreement summary (config/agreements.ts) say
  * there is no fixed delivery date. Keep them that way, and move
- * `legalDates.lastUpdated` in config/site.ts if you change them.
+ * `legalDates.termsLastUpdated` in config/site.ts if you change them.
  */
 export const WEBLINE_TARGET_DAYS = 11;

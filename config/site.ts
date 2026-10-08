@@ -91,7 +91,21 @@ export const business = {
   },
   legalDates: {
     effective: "2026-05-16",
-    lastUpdated: "2026-10-06",
+    /**
+     * Privacy Policy (and the consent records stamped with its version). Production
+     * has "2026-10-06" for the text without Section 12 (the app and team members),
+     * so this text needs a later version: move it to the day it goes live.
+     */
+    lastUpdated: "2026-10-08",
+    /**
+     * Terms of Service, Cookie Policy and the client agreements (config/agreements.ts
+     * uses it as the agreement version, so moving it asks clients to accept again).
+     * Move it only when one of those documents changes. "2026-10-06": the owner's
+     * guarantee terms (standard pricing only), already live and accepted as that version.
+     */
+    termsLastUpdated: "2026-10-06",
+    /** The /account-deletion page's first publish date (move it to the day it goes live); the older documents keep `effective`. */
+    accountDeletionEffective: "2026-10-08",
   },
   phone: {
     tel: _phoneTel,
@@ -527,6 +541,7 @@ export const footerColumns = [
       { label: "Privacy", href: "/privacy" },
       { label: "Terms", href: "/terms" },
       { label: "Cookies", href: "/cookies" },
+      { label: "Account deletion", href: "/account-deletion" },
     ],
   },
 ];

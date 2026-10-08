@@ -123,7 +123,17 @@ type NewClientInput = { /* ...existing... */ leadId?: string | null };
   - nobody known: no credit.
 - The copy is logged as the internal activity entry `credits.created` "Credits set from the lead".
 - Credit is a bonus on the create: if it fails (or migration 0400 is not applied), the client is still created and the failure is logged on the server.
-- Needs `clients.create` as before, and `leads.convert` when `leadId` is sent.
+- Needs `clients.create` (owners, managers and staff since 2026-10-05, [demos.md](demos.md)), and `leads.convert` when `leadId` is sent.
+
+### A client created directly (no `leadId`)
+
+Owner decision 2026-10-05: the person who creates the client gets full credit. They are recorded as both finder and booker with the default split, so they hold 100 together (the same rule as one person in both roles on a lead). It applies to every role and to both ways a client is added by hand: `POST /clients` and the web New client form, which run the same function (`createClientByStaff` in `lib/admin-api/clients/core/writes.ts`, credit by `creditClientToCreator` in `lib/staff-credit.ts`).
+
+- Only a newly created client: an email that is already a client keeps its credits (and is only updated by a role with `clients.edit`; staff get it back unchanged).
+- Written only when the client has no credits yet, logged as the internal activity entry `credits.created` "Credits set to the person who added the client".
+- A bonus on the create, like the lead's credits: without migration 0400 the client is still created, with no credits.
+- Owners and managers change them afterwards as for any client (`PUT /clients/:id/credits`, the client page's Credit card).
+- Creating from a lead is unchanged: the lead's finder and booker (or nobody, when the lead has neither).
 
 | Status | code | message | fields |
 |---|---|---|---|
@@ -282,4 +292,4 @@ Web admin:
 - Team page: role change and pause with `updateTeamAccess()` (`lib/admin-users.ts`); show `paused`, `pausedAt`, `pausedBy` from `listAdmins()`.
 - Client page: credits from `readClientCredits()`, edits with `checkCredits()` + `saveClientCredits()` (`lib/staff-credit.ts`), the same capabilities.
 - Activity: `loadStaffActivity()` (`lib/staff-activity.ts`). Settings: `getCommissionSplit()` / `setCommissionSplit()` (`lib/site-settings.ts`).
-- New client from a lead: pass the lead to the same flow (`lead_id` on `provisionClient`, then `creditClientFromLead()`).
+- New client from a lead: `/admin/clients/new?leadId=<id>` (the lead page's "Create client") fills the form from the lead (`getLead`, needs `leads.convert`) and the form runs `createClientByStaff` with `leadId`, exactly like `POST /clients`: the lead points at its new client and its finder and booker get the credit. A lead that already became a client shows "Open client" instead of the form; an unknown lead shows the empty form with a note. Added directly, the person adding it gets the credit (section 4).

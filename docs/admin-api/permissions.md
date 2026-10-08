@@ -6,7 +6,7 @@ Roles (owner decision 2026-10-03):
 
 - **Owner**: everything.
 - **Manager**: nearly the owner's power: everything except removing team members (`team.remove`) and creating or promoting owners (`team.owners`). Managers add managers and staff.
-- **Staff**: leads and outreach, analytics, onboarding help; marketing (blog, email campaigns and templates, links with QR), pricing and coupons view only (coupons: share deal links too); never money (no revenue on Home, no Subscriptions, no client billing), never email subscribers, Ads, CRM, Loader, Test mode or Team. Staff read only the Leads and Clients Inbox categories, and never owner-audience rows. Staff see their own activity and their own credit rows, never anyone else's.
+- **Staff**: leads and outreach, adding clients, demo requests (ask, never build), analytics, onboarding help; marketing (blog, email campaigns and templates, links with QR), pricing and coupons view only (coupons: share deal links too); never money (no revenue on Home, no Subscriptions, no client billing), never email subscribers, Ads, CRM, Loader, Test mode or Team. Staff read only the Leads and Clients Inbox categories, and never owner-audience rows. Staff see their own activity and their own credit rows, never anyone else's.
 
 The app keeps the same table as its fallback for a `GET /me` without `capabilities` (`src/auth/capabilities.ts` in the app repo, mirrored by the mock in `src/api/mock/permissions.ts`). Keep the names and rows identical.
 
@@ -83,7 +83,7 @@ Events marked `audience: "owner"` in `lib/admin-notify.ts` (Stripe and checkout 
 |---|---|---|---|---|
 | `clients.view` | yes | yes | yes | Client list and detail (without billing), files, activity. |
 | `clients.billing` | yes | yes | no | The billing block, amounts and subscription data on a client, and its billing and care plan activity entries (`billing.*`, `care.*`). |
-| `clients.create` | yes | yes | no | New client. |
+| `clients.create` | yes | yes | yes | New client (POST /clients, the web New client page). Staff since 2026-10-05. Added directly, the person who adds it gets the credit (finder and booker); from a lead, the lead's finder and booker ([staff.md](staff.md) section 4). An email that is already a client is only updated with `clients.edit`. |
 | `clients.edit` | yes | yes | no | Account fields, internal notes field and guarantee terms (PATCH /clients/:id). |
 | `clients.go_live` | yes | yes | no | Go live (with the care plan override). |
 | `clients.trash` | yes | yes | no | Move a client to trash (DELETE /clients/:id). |
@@ -100,6 +100,16 @@ Events marked `audience: "owner"` in `lib/admin-notify.ts` (Stripe and checkout 
 | `clients.calls.review` | yes | yes | no | Edit, qualify, disqualify and review calls toward the guarantee. |
 | `clients.activity.write` | yes | yes | yes | Internal notes and client updates on the activity feed. |
 | `clients.templates` | yes | yes | no | Onboarding checklist templates. |
+
+## Demo requests
+
+A salesperson asks for a demo website for a client or a lead; an owner or manager builds it; the salesperson shows it. Rules and endpoints: [demos.md](demos.md).
+
+| Capability | Owner | Manager | Staff | Covers |
+|---|---|---|---|---|
+| `demos.view` | yes | yes | yes | List and read demo requests (all of them, like `clients.view`). |
+| `demos.request` | yes | yes | yes | Create a demo request; edit or cancel your own while it is requested or building; mark your own shown once it is ready. |
+| `demos.manage` | yes | yes | no | Everything on any demo request: status, builder, demo link, builder note, edit, cancel. |
 
 ## Test data
 

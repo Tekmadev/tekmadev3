@@ -17,6 +17,11 @@ import { ApiError, MESSAGES } from "./errors";
  *   Staff    leads and outreach, analytics, onboarding help; marketing,
  *            pricing and coupons view only; never money.
  *
+ * Demo requests (owner decision 2026-10-05, docs/admin-api/demos.md): everyone
+ * reads them (`demos.view`) and asks for one (`demos.request`, also editing,
+ * cancelling and marking shown their own); owners and managers build them
+ * (`demos.manage`). Staff may also add a client directly (`clients.create`).
+ *
  * Staff management (owner decision 2026-10-03, docs/admin-api/staff.md):
  * owners and managers change roles (`team.role`), pause access
  * (`team.pause`), read everyone's activity and credits (`team.activity`) and
@@ -77,7 +82,8 @@ export const PERMISSIONS = {
   "clients.view": OMS,
   /** The billing block, amounts and subscription data on a client. */
   "clients.billing": OM,
-  "clients.create": OM,
+  /** Add a client directly (POST /clients, the web New client page). Staff too since 2026-10-05 (docs/admin-api/demos.md). */
+  "clients.create": OMS,
   /** Account fields, internal notes field and guarantee terms (PATCH /clients/:id). */
   "clients.edit": OM,
   "clients.go_live": OM,
@@ -105,6 +111,14 @@ export const PERMISSIONS = {
   "clients.activity.write": OMS,
   /** Onboarding checklist templates. */
   "clients.templates": OM,
+
+  /* Demo requests (docs/admin-api/demos.md) */
+  /** List and read demo requests (all of them, like `clients.view`). */
+  "demos.view": OMS,
+  /** Create a demo request; edit or cancel your own while it is requested or building; mark your own shown once it is ready. */
+  "demos.request": OMS,
+  /** Everything on any demo request: status, builder, demo link, builder note, edit, cancel. */
+  "demos.manage": OM,
 
   /** Test clients, test inbox rows, test purchases and the Test toggles. */
   "testdata.view": OM,

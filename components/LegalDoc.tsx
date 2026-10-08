@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
 import type { LegalDoc, LegalBlock } from "@/config/legal";
 import { Section } from "@/components/Section";
@@ -114,6 +115,19 @@ function Block({ block }: { block: LegalBlock }) {
       return (
         <p className="max-w-3xl rounded-2xl border border-line bg-bg-2/60 p-5 text-sm text-ink-2">
           {block.text}
+        </p>
+      );
+    case "link":
+      return (
+        <p className="max-w-3xl">
+          {block.before}{" "}
+          <Link
+            href={block.href}
+            className="text-ink underline decoration-line-strong underline-offset-4 transition-colors hover:text-gold"
+          >
+            {block.label}
+          </Link>
+          {block.after}
         </p>
       );
   }
