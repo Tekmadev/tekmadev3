@@ -191,7 +191,7 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      const mail = growWelcomeEmail({ firstName, path });
+      const mail = growWelcomeEmail({ firstName, need, path });
       const [mailResult] = await Promise.all([
         sendMail({ to: email, subject: mail.subject, html: mail.html, tags: mail.tags }),
         // Skipped unless the visitor accepted advertising cookies (no `mctx` without consent).
