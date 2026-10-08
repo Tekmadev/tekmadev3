@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useRef } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { BlackHole } from "@/components/BlackHole";
 import { Field, Notice, btnPrimary, inputCls } from "@/components/portal/ui";
 import { DEMO_LIMITS } from "@/lib/admin-api/demos/limits";
@@ -47,6 +47,9 @@ function FieldError({ fields, name }: { fields?: Record<string, string>; name: s
  * The demo request form: new (for a client or a lead) or editing the details
  * of one. The server checks every field again with the admin API's rules and
  * copy (lib/admin-api/demos/input.ts) and answers the same field errors.
+ * A new request offers "Already built? Demo link" to people who build demos
+ * (`canAddLink`, demos.manage): with a link it is saved ready to show, and
+ * the button says "Save as ready to show" (the app's words).
  *
  * Sent with startTransition instead of `<form action>`, so a refused save
  * keeps everything typed (React resets a form after its action).
@@ -58,6 +61,7 @@ export function DemoRequestForm({
   leadId,
   demoId,
   idempotencyKey,
+  canAddLink = false,
 }: {
   mode: "create" | "edit";
   initial: DemoFormValues;
@@ -66,9 +70,14 @@ export function DemoRequestForm({
   demoId?: string;
   /** One per form load: a double submit or a retry makes one request. */
   idempotencyKey?: string;
+  /** New requests only: "Already built? Demo link" (demos.manage; the server checks it again). */
+  canAddLink?: boolean;
 }) {
   const [state, formAction, pending] = useActionState<DemoFormState, FormData>(mode === "create" ? createDemoAction : editDemoAction, null);
   const noticeRef = useRef<HTMLDivElement>(null);
+  // The demo link as typed: with one, the request is saved ready to show, not sent to the builders.
+  const [demoUrl, setDemoUrl] = useState("");
+  const withLink = mode === "create" && canAddLink && demoUrl.trim() !== "";
   useEffect(() => {
     if (state) noticeRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [state]);
@@ -181,14 +190,39 @@ export function DemoRequestForm({
         <textarea id="demo-wants" name="wants" maxLength={DEMO_LIMITS.wants} defaultValue={initial.wants} className={textareaCls} {...invalid("wants")} />
         <FieldError fields={fields} name="wants" />
       </Field>
+      {mode === "create" && canAddLink && (
+        <div className="sm:col-span-2">
+          <Field label="Already built? Demo link" htmlFor="demo-url" help="Paste the link and it is saved as ready to show.">
+            {/* Text, not url: the browser would block a bad link with its own words instead of the server's. */}
+            <input
+              id="demo-url"
+              name="demo_url"
+              type="text"
+              inputMode="url"
+              placeholder="https://name.vercel.app"
+              maxLength={DEMO_LIMITS.demoUrl}
+              autoCapitalize="none"
+              autoCorrect="off"
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(e) => setDemoUrl(e.target.value)}
+              className={inputCls}
+              {...invalid("demoUrl")}
+            />
+            <FieldError fields={fields} name="demoUrl" />
+          </Field>
+        </div>
+      )}
 
       <div className="sm:col-span-2">
         <button type="submit" disabled={pending} aria-busy={pending || undefined} className={cn(btnPrimary, "w-full sm:w-auto")}>
           {pending ? (
             <span className="inline-flex items-center gap-1.5">
               <BlackHole />
-              {mode === "create" ? "Sending" : "Saving"}
+              {mode === "create" && !withLink ? "Sending" : "Saving"}
             </span>
+          ) : withLink ? (
+            "Save as ready to show"
           ) : mode === "create" ? (
             "Request a demo"
           ) : (

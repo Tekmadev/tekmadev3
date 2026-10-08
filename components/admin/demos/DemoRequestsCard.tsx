@@ -14,8 +14,10 @@ const SHOWN = 20;
 /**
  * A client's or a lead's demo requests, with "Request a demo" (a server
  * component: drop it into the client page or the lead page). Pass exactly one
- * of `clientId` / `leadId`. It reads the signed-in admin itself: nothing
- * renders without `demos.view`, and the button needs `demos.request`. Before
+ * of `clientId` / `leadId`. It reads the signed-in admin itself, like the
+ * app's Demo card: the list needs `demos.view`, "Request a demo" needs
+ * `demos.request` and shows even when the list could not load (so staff on a
+ * phone can always ask for one), and nothing renders without either. Before
  * the demo requests migration it says so instead of failing the page.
  *
  *   <DemoRequestsCard clientId={client.id} businessName={client.business_name} />
@@ -37,15 +39,19 @@ export async function DemoRequestsCard({
   id?: string;
 }) {
   const ctx = await requireAdmin();
-  if (!adminCan(ctx, "demos.view") || Boolean(clientId) === Boolean(leadId)) return null;
+  const canView = adminCan(ctx, "demos.view");
+  const canRequest = adminCan(ctx, "demos.request");
+  if ((!canView && !canRequest) || Boolean(clientId) === Boolean(leadId)) return null;
 
   let result: DemoListResult | null = null;
   let problem: string | null = null;
-  try {
-    result = await listDemos(demoActorFor(ctx), { status: "all", mine: false, clientId, leadId, limit: SHOWN });
-  } catch (err) {
-    problem = err instanceof ApiError ? err.message : "Could not load the demo requests just now. Reload to try again.";
-    if (!(err instanceof ApiError)) console.error("[demos] card failed", err instanceof Error ? err.message : String(err));
+  if (canView) {
+    try {
+      result = await listDemos(demoActorFor(ctx), { status: "all", mine: false, clientId, leadId, limit: SHOWN });
+    } catch (err) {
+      problem = err instanceof ApiError ? err.message : "Could not load the demo requests just now. Reload to try again.";
+      if (!(err instanceof ApiError)) console.error("[demos] card failed", err instanceof Error ? err.message : String(err));
+    }
   }
 
   const prefill = new URLSearchParams(clientId ? { clientId } : { leadId: leadId as string });
@@ -53,7 +59,7 @@ export async function DemoRequestsCard({
   if (area?.trim()) prefill.set("area", area.trim());
   const filter = new URLSearchParams(clientId ? { clientId, status: "all" } : { leadId: leadId as string, status: "all" });
 
-  const request = adminCan(ctx, "demos.request") && !problem && (
+  const request = canRequest && (
     <Link href={`/admin/demos/new?${prefill.toString()}`} className={cn(btnSecondary, "px-4")}>
       <MonitorPlay className="h-4 w-4" aria-hidden />
       Request a demo
@@ -63,7 +69,7 @@ export async function DemoRequestsCard({
   return (
     <div id={id} className="scroll-mt-28">
       <Panel title={result && result.counts.open > 0 ? `Demos (${result.counts.open} open)` : "Demos"} action={request || undefined}>
-        {problem ? (
+        {!canView ? null : problem ? (
           <p className="text-sm text-ink-4">{problem}</p>
         ) : (
           <>

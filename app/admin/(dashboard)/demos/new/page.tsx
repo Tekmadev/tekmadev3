@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
-import { requireAdminCapability } from "@/lib/admin";
+import { adminCan, requireAdminCapability } from "@/lib/admin";
 import { demoTargetFor } from "@/lib/demos-admin";
 import { PageHeader, Panel, Notice } from "@/components/admin/ui";
 import { DemoRequestForm, EMPTY_DEMO_FORM } from "@/components/admin/demos/DemoRequestForm";
@@ -12,7 +12,9 @@ export const dynamic = "force-dynamic";
  * business name filled in from them (or from ?businessName= and ?area=, which
  * the New client page and the client and lead cards pass). The same rules
  * and copy as POST /demos. New client (?created=1) and Add lead (?added=1)
- * land here when the person ticked that they want a demo.
+ * land here when the person ticked that they want a demo. People who build
+ * demos (demos.manage) also get "Already built? Demo link": with a link the
+ * request is saved ready to show.
  */
 export default async function NewDemoPage({
   searchParams,
@@ -52,6 +54,7 @@ export default async function NewDemoPage({
             clientId={target.kind === "client" ? target.id : undefined}
             leadId={target.kind === "lead" ? target.id : undefined}
             idempotencyKey={randomUUID()}
+            canAddLink={adminCan(ctx, "demos.manage")}
             initial={{
               ...EMPTY_DEMO_FORM,
               businessName: clip(sp.businessName, 120) || target.businessName,
@@ -83,8 +86,8 @@ export default async function NewDemoPage({
           </Link>
         )}
         {target?.kind === "lead" && (
-          <Link href="/admin/leads" className="inline-flex min-h-11 items-center hover:text-ink">
-            Back to leads
+          <Link href={`/admin/leads/${target.id}`} className="inline-flex min-h-11 items-center hover:text-ink">
+            Back to the lead
           </Link>
         )}
       </p>

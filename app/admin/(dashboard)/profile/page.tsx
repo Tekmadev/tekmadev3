@@ -55,7 +55,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
               defaultValue={name ?? ""}
               placeholder="Your name"
               autoComplete="name"
-              className="rounded-xl border border-line-strong bg-bg px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-gold"
+              className="rounded-xl border border-line-strong bg-bg px-4 py-3 text-base text-ink outline-none transition-colors focus:border-gold lg:text-sm"
             />
           </label>
 
@@ -75,7 +75,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
           </div>
 
           <PendingSubmit
-            className="mt-1 self-start rounded-full bg-ink px-6 py-3 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
+            className="mt-1 min-h-11 self-start rounded-full bg-ink px-6 py-3 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
           >
             Save changes
           </PendingSubmit>

@@ -1,6 +1,7 @@
 import { adminCapabilities, adminInboxViewer, requireAdmin } from "@/lib/admin";
 import { Sidebar } from "@/components/admin/Sidebar";
 import { InternalDeviceMark } from "@/components/admin/InternalDevice";
+import { RefreshOnResume } from "@/components/admin/RefreshOnResume";
 import { EMPTY_SUMMARY, getNotificationSummary, listNotifications, seedViewer } from "@/lib/admin-notifications-data";
 
 export const dynamic = "force-dynamic";
@@ -23,11 +24,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const items = itemsOrNull ?? [];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-dvh">
       <InternalDeviceMark />
+      {/* The home-screen app has no reload button and no pull to refresh. */}
+      <RefreshOnResume />
       <Sidebar email={email} name={name} role={role} capabilities={adminCapabilities(ctx)} notifications={{ summary, items }} />
       <div className="lg:pl-64">
-        <main className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-8 sm:py-10">{children}</main>
+        {/*
+          Below lg the bottom reserves room for the tab bar (or a lead's contact
+          dock) above the home indicator, and the sides clear the landscape
+          notch. The insets are 0 on desktop, so it keeps px-8 py-10 there.
+        */}
+        <main className="mx-auto w-full max-w-6xl pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))] pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))] sm:pl-[max(2rem,env(safe-area-inset-left))] sm:pr-[max(2rem,env(safe-area-inset-right))] sm:pt-10 lg:pb-10">
+          {children}
+        </main>
       </div>
     </div>
   );

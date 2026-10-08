@@ -178,14 +178,19 @@ export type Lead = {
   foundBy: StaffRef | null;
   /** Who first moved it to booked or logged the booking (credit role booker), else null. */
   bookedBy: StaffRef | null;
+  /* Edit lead (docs/admin-api/outreach.md section 4): an extra key, ignored by older app builds. */
+  /** Whether the caller may edit this lead's details (PATCH /leads/:id name, business, email, ...). */
+  canEdit: boolean;
 };
 
-/** What a lead's row needs from other tables. */
+/** What a lead's row needs from other tables, and about the caller. */
 export type LeadLinks = {
   /** The client this lead became, when the caller may see it. */
   client?: { id: string; businessName: string | null } | null;
   /** Display names by lowercased email (staff). */
   names: Map<string, string | null>;
+  /** Whether the caller may edit the details (see canEditLead in data.ts). Absent: false. */
+  canEdit?: boolean;
 };
 
 const clean = (v: string | null | undefined): string | null => {
@@ -193,6 +198,30 @@ const clean = (v: string | null | undefined): string | null => {
   const t = v.trim();
   return t ? t : null;
 };
+
+/**
+ * Who found the lead, as a lowercased email, else null. Before the staff
+ * migration (found_by absent), whoever added an outreach lead found it.
+ */
+export function finderEmail(row: Pick<LeadRow, "source" | "found_by" | "added_by">): string | null {
+  const source = clean(row.source) ?? "cal_booking";
+  return clean(row.found_by === undefined && source === OUTREACH_SOURCE ? row.added_by : row.found_by)?.toLowerCase() ?? null;
+}
+
+/** Who the lead is assigned to, as a lowercased email, else null (also before the outreach migration). */
+export function assigneeEmail(row: Pick<LeadRow, "assigned_to">): string | null {
+  return clean(row.assigned_to)?.toLowerCase() ?? null;
+}
+
+/**
+ * The business a lead shows when it has no business_name: free tools keep it
+ * in raw.company, portal sign-ups in raw.business_name (the placeholder they
+ * started with; the client's own name wins in toLead when there is a client).
+ */
+export function formBusiness(row: Pick<LeadRow, "source" | "raw_company" | "raw_business_name">): string | null {
+  const source = clean(row.source) ?? "cal_booking";
+  return clean(row.raw_company) ?? (source === "portal_signup" ? clean(row.raw_business_name) : null);
+}
 
 function staffRef(email: string | null | undefined, names: Map<string, string | null>): StaffRef | null {
   const e = clean(email)?.toLowerCase();
@@ -235,8 +264,8 @@ export function toLead(row: LeadRow, links: LeadLinks): Lead {
     followUpAt: instant(row.follow_up_at ?? null),
     assignedTo: staffRef(row.assigned_to, links.names),
     addedBy: source === OUTREACH_SOURCE ? staffRef(row.added_by, links.names) : null,
-    // Before the staff migration (found_by absent), whoever added an outreach lead found it.
-    foundBy: staffRef(row.found_by === undefined && source === OUTREACH_SOURCE ? row.added_by : row.found_by, links.names),
+    foundBy: staffRef(finderEmail(row), links.names),
     bookedBy: staffRef(row.booked_by, links.names),
+    canEdit: links.canEdit ?? false,
   };
 }

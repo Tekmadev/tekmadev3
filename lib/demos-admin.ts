@@ -32,7 +32,11 @@ function businessFrom(formData: FormData) {
   };
 }
 
-/** The new request form as a POST /demos body. */
+/**
+ * The new request form as a POST /demos body. "Already built? Demo link"
+ * (only on the form for `demos.manage`) is sent as demoUrl when the form has
+ * it, like the app; createDemo still refuses a link from anyone else (403).
+ */
 export function demoCreateBodyFromForm(formData: FormData): Record<string, unknown> {
   return {
     clientId: text(formData, "client_id") || undefined,
@@ -40,6 +44,7 @@ export function demoCreateBodyFromForm(formData: FormData): Record<string, unkno
     business: businessFrom(formData),
     wants: text(formData, "wants"),
     neededBy: text(formData, "needed_by"),
+    ...(formData.has("demo_url") ? { demoUrl: text(formData, "demo_url") } : {}),
     idempotencyKey: text(formData, "idempotency_key") || undefined,
   };
 }

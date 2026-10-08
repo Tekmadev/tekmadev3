@@ -20,7 +20,8 @@ export default async function AdminLogin({
   const error = e ? (ERRORS[e] ?? "Could not sign in.") : null;
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-5">
+    // dvh and safe-area padding: the home-screen app draws under the status bar.
+    <main className="flex min-h-dvh items-center justify-center pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[max(1.25rem,env(safe-area-inset-left))] pr-[max(1.25rem,env(safe-area-inset-right))]">
       <div className="w-full max-w-sm">
         <h1 className="font-display text-2xl font-bold text-ink">Tekmadev admin</h1>
         <p className="mt-2 text-sm text-ink-3">Sign in to your dashboard.</p>
@@ -32,12 +33,14 @@ export default async function AdminLogin({
             required
             placeholder="Email"
             autoComplete="email"
-            className="rounded-xl border border-line-strong bg-surface px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-gold"
+            autoCapitalize="none"
+            spellCheck={false}
+            className="rounded-xl border border-line-strong bg-surface px-4 py-3 text-base text-ink outline-none transition-colors focus:border-gold lg:text-sm"
           />
           <PasswordField name="password" placeholder="Password" autoComplete="current-password" required />
           {error && <p className="text-sm text-signal">{error}</p>}
           <PendingSubmit
-            className="mt-1 rounded-full bg-ink px-6 py-3 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
+            className="mt-1 min-h-11 rounded-full bg-ink px-6 py-3 text-sm font-medium text-bg transition-colors hover:bg-ink-2"
           >
             Sign in
           </PendingSubmit>
@@ -45,7 +48,7 @@ export default async function AdminLogin({
 
         <Link
           href="/admin/forgot"
-          className="mt-4 inline-block text-sm text-ink-3 transition-colors hover:text-ink"
+          className="mt-2 inline-flex min-h-11 items-center text-sm text-ink-3 transition-colors hover:text-ink"
         >
           Forgot password?
         </Link>

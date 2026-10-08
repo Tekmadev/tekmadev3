@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { signOutAction } from "@/app/admin/actions";
 import { NotificationBell, useAdminNotifications } from "@/components/admin/NotificationBell";
+import { MobileTabBar } from "@/components/admin/MobileTabBar";
 import type { AdminNotification, NotificationSummary } from "@/lib/admin-notifications-data";
 import { PendingSubmit } from "@/components/PendingSubmit";
 import { cn } from "@/lib/cn";
@@ -61,7 +62,8 @@ type NavGroup = { id: string; label: string; icon: LucideIcon; items: NavItem[] 
 /** Always visible, above the groups: the two pages opened most. */
 const TOP: NavItem[] = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard, capability: "overview.view" },
-  { href: "/admin/notifications", label: "Notifications", icon: Bell, unreadBadge: true, capability: "notifications.view" },
+  // "Inbox" everywhere: this entry, the tab bar, the bell, the page title and the mobile app.
+  { href: "/admin/notifications", label: "Inbox", icon: Bell, unreadBadge: true, capability: "notifications.view" },
 ];
 
 /**
@@ -203,7 +205,7 @@ export function Sidebar({
         onClick={() => setOpen(false)}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex items-center gap-3 rounded-xl px-3 text-sm transition-colors",
+          "flex items-center gap-3 rounded-xl px-3 text-sm transition-colors max-lg:min-h-11",
           nested ? "py-2" : "py-2.5",
           active ? "bg-surface font-medium text-ink shadow-sm" : "text-ink-3 hover:bg-surface/60 hover:text-ink",
         )}
@@ -240,33 +242,57 @@ export function Sidebar({
   }, []);
 
   // While the drawer is open on a phone, the page behind it must not scroll.
+  // iOS ignores the lock on body alone, so the root element is locked too.
   useEffect(() => {
     if (!open) return;
     const previous = document.body.style.overflow;
+    const previousRoot = document.documentElement.style.overflow;
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = previous;
+      document.documentElement.style.overflow = previousRoot;
     };
   }, [open]);
 
   return (
     <>
-      {/* Mobile top bar */}
-      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-bg/90 px-4 py-3 backdrop-blur lg:hidden">
-        <Link href="/admin" className="font-display text-base font-bold text-ink">
+      {/* Mobile top bar. It reaches under the status bar (viewport-fit=cover)
+          and pads its content clear of it and of the landscape notch: 60px of
+          content (3.75rem) below the safe area. z-40, above the tab bar, the
+          lead dock and the "Log this call" prompt (all z-30): backdrop-blur
+          makes this bar the stacking context of the bell's panel inside it, so
+          the panel only paints over them if the bar does. The menu's overlay
+          (z-40, later) and the drawer (z-50) still cover it. */}
+      <div className="sticky top-0 z-40 flex items-center justify-between border-b border-line bg-bg/90 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-2 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] backdrop-blur lg:hidden">
+        <Link href="/admin" className="inline-flex min-h-11 items-center font-display text-base font-bold text-ink">
           Tekmadev
         </Link>
         <div className="flex items-center gap-1">
           <NotificationBell state={inbox} align="right" />
           <button
+            type="button"
             onClick={() => setOpen(true)}
             aria-label="Open menu"
-            className="rounded-lg border border-line-strong p-2 text-ink-2"
+            aria-expanded={open}
+            aria-controls="admin-menu"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-line-strong text-ink-2"
           >
             <Menu className="h-5 w-5" />
           </button>
         </div>
       </div>
+
+      {/* Phone tab bar. useSearchParams inside needs a Suspense boundary. */}
+      <Suspense fallback={null}>
+        <MobileTabBar
+          capabilities={capabilities}
+          unread={inbox.summary.unread}
+          critical={inbox.summary.criticalUnread > 0}
+          menuOpen={open}
+          onMore={() => setOpen(true)}
+        />
+      </Suspense>
 
       {/* Overlay (mobile) */}
       {open && (
@@ -277,12 +303,15 @@ export function Sidebar({
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar. "Open menu" and the tab bar's More point here (aria-controls). */}
       <aside
+        id="admin-menu"
         className={
           // h-dvh, not inset-y-0: on a phone the visible height shrinks under the
           // browser's toolbars, and the bottom of the menu (Sign out) sat behind them.
-          "fixed left-0 top-0 z-50 flex h-dvh w-64 flex-col border-r border-line bg-bg-2 transition-transform duration-200 lg:translate-x-0 " +
+          // The safe-area padding keeps it clear of the status bar and the
+          // landscape notch on a phone; both insets are 0 on desktop.
+          "fixed left-0 top-0 z-50 flex h-dvh w-64 flex-col border-r border-line bg-bg-2 pt-[env(safe-area-inset-top)] pl-[env(safe-area-inset-left)] transition-transform duration-200 lg:translate-x-0 " +
           (open ? "translate-x-0" : "-translate-x-full")
         }
       >
@@ -293,7 +322,12 @@ export function Sidebar({
               Admin
             </span>
           </Link>
-          <button onClick={() => setOpen(false)} aria-label="Close menu" className="text-ink-3 lg:hidden">
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            aria-label="Close menu"
+            className="-mr-2 flex h-11 w-11 items-center justify-center text-ink-3 lg:hidden"
+          >
             <X className="h-5 w-5" />
           </button>
           {/* Desktop bell. On a phone it lives in the top bar instead. */}
@@ -321,7 +355,7 @@ export function Sidebar({
                   aria-expanded={isOpen}
                   aria-controls={panelId}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors hover:bg-surface/60 hover:text-ink",
+                    "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors hover:bg-surface/60 hover:text-ink max-lg:min-h-11",
                     holdsActive ? "text-ink" : "text-ink-2",
                   )}
                 >
@@ -366,7 +400,7 @@ export function Sidebar({
           </div>
           <form action={signOutAction}>
             <PendingSubmit
-              className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-ink-3 transition-colors hover:bg-surface/60 hover:text-ink"
+              className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-ink-3 transition-colors hover:bg-surface/60 hover:text-ink max-lg:min-h-11"
             >
               <LogOut className="h-[18px] w-[18px] text-ink-4" />
               Sign out

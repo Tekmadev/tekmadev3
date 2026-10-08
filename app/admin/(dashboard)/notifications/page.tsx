@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { AlertTriangle, ArrowUpRight, Bell } from "lucide-react";
 import { adminCan, adminInboxViewer, requireAdminCapability } from "@/lib/admin";
@@ -21,6 +22,9 @@ import { markAllReadAction, markReadAction, muteCategoryAction, openNotification
 import { PendingSubmit } from "@/components/PendingSubmit";
 
 export const dynamic = "force-dynamic";
+
+// "Inbox", as in the app, the tab bar, the menu and the bell. The URL stays /admin/notifications.
+export const metadata: Metadata = { title: "Inbox" };
 
 const PAGE = 40;
 const TZ = "America/Toronto";
@@ -96,25 +100,26 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   const categories = ADMIN_CATEGORIES.filter((c) =>
     viewer.categories ? viewer.categories.includes(c.key) : viewer.isOwner || (c.key !== "team" && c.key !== "audience"),
   );
+  // Every chip and button is at least 44px tall: this page is used on phones.
   const chip = (active: boolean) =>
     cn(
-      "shrink-0 snap-start rounded-full border px-3.5 py-1.5 text-sm transition-colors",
+      "inline-flex min-h-11 shrink-0 snap-start items-center rounded-full border px-4 text-sm transition-colors",
       active ? "border-gold bg-gold/15 text-gold-deep" : "border-line-strong text-ink-3 hover:text-ink",
     );
   const smallBtn =
-    "rounded-full border border-line-strong px-3 py-1 text-xs text-ink-2 transition-colors hover:border-gold/50 hover:text-gold";
+    "inline-flex min-h-11 items-center justify-center gap-1 rounded-full border border-line-strong px-4 text-sm text-ink-2 transition-colors hover:border-gold/50 hover:text-gold disabled:cursor-not-allowed disabled:opacity-60";
 
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
-        title="Notifications"
+        title="Inbox"
         subtitle={`${summary.unread} unread · ${summary.needsAction} need${summary.needsAction === 1 ? "s" : ""} action`}
       >
         {(summary.unread > 0 || anyUnreadShown) && (
           <form action={markAllReadAction}>
             <input type="hidden" name="back" value={here} />
             <input type="hidden" name="seen" value={newestShown ?? ""} />
-            <PendingSubmit className={smallBtn + " px-4 py-2 text-sm"}>
+            <PendingSubmit className={smallBtn}>
               Mark all read
             </PendingSubmit>
           </form>
@@ -133,11 +138,20 @@ export default async function NotificationsPage({ searchParams }: { searchParams
           ))}
         </nav>
         <nav aria-label="Category" className="-mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
-          <Link href={href({ category: undefined, cursor: undefined })} className={chip(category === null)}>
+          <Link
+            href={href({ category: undefined, cursor: undefined })}
+            aria-current={category === null ? "page" : undefined}
+            className={chip(category === null)}
+          >
             Everything
           </Link>
           {categories.map((c) => (
-            <Link key={c.key} href={href({ category: c.key, cursor: undefined })} className={chip(category === c.key)}>
+            <Link
+              key={c.key}
+              href={href({ category: c.key, cursor: undefined })}
+              aria-current={category === c.key ? "page" : undefined}
+              className={chip(category === c.key)}
+            >
               {c.label}
             </Link>
           ))}
@@ -174,7 +188,12 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        {!n.is_read && <span aria-label="Unread" className="h-2 w-2 shrink-0 rounded-full bg-gold" />}
+                        {!n.is_read && (
+                          <>
+                            <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-gold" />
+                            <span className="sr-only">Unread:</span>
+                          </>
+                        )}
                         <p className={cn("text-sm leading-snug text-ink", !n.is_read && "font-semibold")}>{n.title}</p>
                         {open && (
                           <span className="rounded-full bg-signal/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-signal">
@@ -206,8 +225,8 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                           <form action={openNotificationAction}>
                             <input type="hidden" name="id" value={n.id} />
                             <input type="hidden" name="to" value={n.action_url} />
-                            <PendingSubmit className={smallBtn + " inline-flex items-center gap-1"}>
-                              Open <ArrowUpRight className="h-3 w-3" />
+                            <PendingSubmit className={smallBtn}>
+                              Open <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5" />
                             </PendingSubmit>
                           </form>
                         )}
@@ -243,7 +262,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
       {items.length === PAGE && (
         <Link
           href={href({ cursor: encodeCursor(items[items.length - 1]) })}
-          className="self-center rounded-full border border-line-strong px-5 py-2 text-sm text-ink-2 transition-colors hover:border-gold hover:text-gold"
+          className="inline-flex min-h-11 items-center self-center rounded-full border border-line-strong px-5 text-sm text-ink-2 transition-colors hover:border-gold hover:text-gold"
         >
           Load older
         </Link>

@@ -198,10 +198,18 @@ export default async function ClientDetailPage({
         )}
       </section>
 
-      <nav className="sticky top-0 z-20 -mx-5 flex snap-x gap-2 overflow-x-auto border-b border-line bg-bg/90 px-5 py-2 backdrop-blur sm:-mx-8 sm:px-8">
+      {/* Below lg it sticks under the phone top bar (Sidebar: 3.75rem and its 1px
+          border below the safe area), not under the status bar where the bar
+          would cover it. Each link is a 44px tap target around its pill. */}
+      <nav
+        aria-label="Sections"
+        className="sticky top-[calc(3.75rem+1px+env(safe-area-inset-top))] z-20 -mx-5 flex snap-x gap-2 overflow-x-auto border-b border-line bg-bg/90 px-5 backdrop-blur sm:-mx-8 sm:px-8 lg:top-0"
+      >
         {SECTIONS.filter(([key]) => (key !== "crm" || seesCrm) && (key !== "credit" || credit) && (key !== "demos" || can("demos.view"))).map(([key, label]) => (
-          <a key={key} href={`#${key}`} className="shrink-0 snap-start rounded-full border border-line-strong px-3 py-1.5 text-xs text-ink-3 hover:text-ink">
-            {label}
+          <a key={key} href={`#${key}`} className="group flex min-h-11 shrink-0 snap-start items-center outline-none">
+            <span className="rounded-full border border-line-strong px-3 py-1.5 text-xs text-ink-3 transition-colors group-hover:text-ink group-focus-visible:ring-2 group-focus-visible:ring-gold">
+              {label}
+            </span>
           </a>
         ))}
       </nav>

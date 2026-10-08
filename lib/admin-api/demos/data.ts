@@ -7,6 +7,7 @@ import { decodeCursor, keysetFilter, toPage } from "../cursor";
 import { dbError, isUuid, requireDb } from "../data";
 import { MESSAGES, badRequest, businessRule, conflict, notConfigured, notFound, type ApiError } from "../errors";
 import { canonicalJson } from "../idempotency";
+import { OUTREACH_SOURCE } from "../leads/shape";
 import { forbiddenError } from "../permissions";
 import { DEMO_MESSAGES, type DemoCreateInput, type DemoPatchInput } from "./input";
 import { demoSchemaMissing } from "./link";
@@ -271,11 +272,13 @@ async function notifyRequested(demo: DemoRequest, row: Pick<DemoRow, "is_test">)
 }
 
 /**
- * "Demo ready: {business}". Every role reads it in Clients; only the person
- * who asked gets the push (not when they marked it ready themselves). Each
- * time it becomes ready is news, so a rework that is ready again notifies again.
+ * "Demo ready: {business}". Every role reads it in Clients; the push goes to
+ * `pushTo` only (team emails), never to whoever made it ready: the person who
+ * asked when a builder marks it ready, the people on the lead or client when
+ * it is added already built (createDemo). Each time it becomes ready is news,
+ * so a rework that is ready again notifies again.
  */
-async function notifyReady(demo: DemoRequest, row: Pick<DemoRow, "is_test">, by: DemoActor): Promise<void> {
+async function notifyReady(demo: DemoRequest, row: Pick<DemoRow, "is_test">, by: DemoActor, pushTo: readonly string[]): Promise<void> {
   await notifyAdmins({
     event: "demo.ready",
     title: `Demo ready: ${demo.business.name}`,
@@ -287,7 +290,7 @@ async function notifyReady(demo: DemoRequest, row: Pick<DemoRow, "is_test">, by:
     isTest: Boolean(row.is_test),
     dedupeKey: `demo.ready:${demo.id}:${demo.readyAt ?? ""}`,
     data: { demoId: demo.id, clientId: demo.clientId, leadId: demo.leadId, requestedBy: demo.requestedBy, demoUrl: demo.demoUrl },
-    push: { only: [demo.requestedBy], except: [by.email] },
+    push: { only: pushTo, except: [by.email] },
   });
 }
 
@@ -295,7 +298,9 @@ async function notifyReady(demo: DemoRequest, row: Pick<DemoRow, "is_test">, by:
 /* POST /demos                                                         */
 /* ------------------------------------------------------------------ */
 
-type ClientRef = { id: string; business_name: string | null; is_test: boolean | null; deleted_at: string | null };
+type ClientRef = { id: string; business_name: string | null; is_test: boolean | null; deleted_at: string | null; assigned_strategist: string | null };
+
+const CLIENT_REF_COLUMNS = "id,business_name,is_test,deleted_at,assigned_strategist";
 
 /** The client a demo may be for: live (not trashed), and a test client only for roles that see test data. */
 const usableClient = (actor: DemoActor, c: ClientRef | null) => !!c && !c.deleted_at && (!c.is_test || actor.can("testdata.view"));
@@ -308,13 +313,49 @@ async function replay(actor: DemoActor, existing: DemoRow, hash: string): Promis
   return requireDemo(actor, existing.id);
 }
 
+/** Lead columns for who works a lead, newest schema first: found_by (staff management), assigned_to (outreach). */
+const LEAD_PEOPLE_COLUMNS = ["assigned_to,found_by", "assigned_to,source,added_by:form->>added_by", "source,added_by:form->>added_by"];
+
+const columnMissing = (error: DbError) => ["42703", "PGRST204"].includes(error?.code ?? "");
+
 /**
- * A new request, status requested, for a client or a lead (404 when it does
- * not exist). A lead that already became a client gets that client too. With
- * an idempotency key the id comes from the key, so a retry after a timeout
- * finds the request it already wrote. Tells the builders (Inbox and push).
+ * The lead's assignee and finder (lowercased emails, the same people as the
+ * Lead's assignedTo and foundBy). Never throws: a failed read is logged and
+ * nobody gets the push, the request itself is already written.
+ */
+async function leadPeople(db: SupabaseClient, leadId: string): Promise<string[]> {
+  for (const columns of LEAD_PEOPLE_COLUMNS) {
+    const { data, error } = await db.from("leads").select(columns).eq("id", leadId).maybeSingle();
+    if (error && columnMissing(error)) continue;
+    if (error) {
+      console.error("[demos] reading the lead's people failed", leadId, error.code, error.message);
+      return [];
+    }
+    const row = (data ?? {}) as { assigned_to?: string | null; found_by?: string | null; source?: string | null; added_by?: string | null };
+    // Before the staff management migration, whoever added an outreach lead found it.
+    const finder = "found_by" in row ? row.found_by : row.source === OUTREACH_SOURCE ? row.added_by : null;
+    return [...new Set([lower(row.assigned_to), lower(finder)].filter(Boolean))];
+  }
+  return [];
+}
+
+/**
+ * A new request for a client or a lead (404 when it does not exist). A lead
+ * that already became a client gets that client too. With an idempotency key
+ * the id comes from the key, so a retry after a timeout finds the request it
+ * already wrote (a different body, the link included, is 409).
+ *
+ * Without a link it starts requested and tells the builders ("Demo
+ * requested", Inbox and push). With `demoUrl` (already built, demos.manage
+ * only, else 403 `forbidden`) it starts ready: the caller is the builder,
+ * readyAt is now, the events are created, builder, link and status (requested
+ * to ready), and nobody is asked to build it. "Demo ready" goes out instead,
+ * its push to the lead's assignee and finder (a request for a lead) or the
+ * client's assigned strategist (a request for a client), never the caller.
  */
 export async function createDemo(actor: DemoActor, input: DemoCreateInput, idempotencyKey: string | null): Promise<DemoRequest> {
+  const demoUrl = input.demoUrl ?? null;
+  if (demoUrl && !actor.can("demos.manage")) throw forbiddenError("demos.manage");
   const db = requireDb();
   const hash = requestHashOf(input);
   const id = idempotencyKey ? demoIdFor(actor.userId, idempotencyKey) : randomUUID();
@@ -327,14 +368,16 @@ export async function createDemo(actor: DemoActor, input: DemoCreateInput, idemp
   let clientId: string | null = null;
   let leadId: string | null = null;
   let isTest = false;
+  let strategist: string | null = null;
   if (input.clientId) {
     if (!isUuid(input.clientId)) throw notFound("That client");
-    const { data, error } = await db.from("clients").select("id,business_name,is_test,deleted_at").eq("id", input.clientId).maybeSingle();
+    const { data, error } = await db.from("clients").select(CLIENT_REF_COLUMNS).eq("id", input.clientId).maybeSingle();
     if (error) throw dbError("demo client read", error);
     const client = data as ClientRef | null;
     if (!client || !usableClient(actor, client)) throw notFound("That client");
     clientId = client.id;
     isTest = Boolean(client.is_test);
+    strategist = lower(client.assigned_strategist) || null;
   } else {
     if (!isUuid(input.leadId)) throw notFound("That lead");
     const { data, error: leadError } = await db.from("leads").select("id").eq("id", input.leadId).maybeSingle();
@@ -345,7 +388,7 @@ export async function createDemo(actor: DemoActor, input: DemoCreateInput, idemp
     // Already a client: the request shows there too (the same link a conversion makes later).
     const { data: clients, error } = await db
       .from("clients")
-      .select("id,business_name,is_test,deleted_at")
+      .select(CLIENT_REF_COLUMNS)
       .eq("lead_id", lead.id)
       .is("deleted_at", null)
       .order("created_at", { ascending: true })
@@ -359,9 +402,10 @@ export async function createDemo(actor: DemoActor, input: DemoCreateInput, idemp
   }
 
   const b = input.business;
+  const readyAt = demoUrl ? new Date().toISOString() : null;
   const { error } = await db.from("demo_requests").insert({
     id,
-    status: "requested",
+    status: demoUrl ? "ready" : "requested",
     client_id: clientId,
     lead_id: leadId,
     business_name: b.name,
@@ -376,6 +420,7 @@ export async function createDemo(actor: DemoActor, input: DemoCreateInput, idemp
     requested_by: actor.email,
     is_test: isTest,
     request_hash: hash,
+    ...(demoUrl ? { demo_url: demoUrl, builder_email: actor.email, ready_at: readyAt } : {}),
   });
   if (error) {
     if (error.code === "23505" && idempotencyKey) {
@@ -388,9 +433,23 @@ export async function createDemo(actor: DemoActor, input: DemoCreateInput, idemp
     throw failed("demo create", error);
   }
 
-  await writeEvents(db, id, actor.email, [{ type: "created", from: null, to: "requested" }]);
+  if (!demoUrl) {
+    await writeEvents(db, id, actor.email, [{ type: "created", from: null, to: "requested" }]);
+    const demo = await requireDemo(actor, id);
+    await notifyRequested(demo, { is_test: isTest });
+    return demo;
+  }
+
+  // Already built: the same history a builder leaves, in the same order.
+  await writeEvents(db, id, actor.email, [
+    { type: "created", from: null, to: "requested" },
+    { type: "builder", from: null, to: actor.email },
+    { type: "link", from: null, to: demoUrl },
+    { type: "status", from: "requested", to: "ready" },
+  ]);
   const demo = await requireDemo(actor, id);
-  await notifyRequested(demo, { is_test: isTest });
+  const pushTo = leadId ? await leadPeople(db, leadId) : strategist ? [strategist] : [];
+  await notifyReady(demo, { is_test: isTest }, actor, pushTo);
   return demo;
 }
 
@@ -521,6 +580,6 @@ async function applyPatch(actor: DemoActor, id: string, patch: DemoPatchInput, a
   await writeEvents(db, id, actor.email, events);
 
   const demo = await requireDemo(actor, id);
-  if (statusChanged && next === "ready") await notifyReady(demo, row, actor);
+  if (statusChanged && next === "ready") await notifyReady(demo, row, actor, [demo.requestedBy]);
   return demo;
 }
