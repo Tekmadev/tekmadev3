@@ -1,5 +1,5 @@
 import { business } from "@/config/site";
-import { CALL_MINUTES, GROW_WELCOME_PATH, type GrowPath } from "@/config/grow";
+import { CALL_MINUTES, GROW_WELCOME_PATH, type GrowNeed, type GrowPath } from "@/config/grow";
 import { renderMail } from "@/lib/mail/layout";
 
 /**
@@ -7,6 +7,12 @@ import { renderMail } from "@/lib/mail/layout";
  * welcome page's: get the call booked while they are still warm. It is an
  * answer to their inquiry, so it carries no unsubscribe link and joins them to
  * no list; the newsletter is a separate, ticked opt-in.
+ *
+ * The opening line answers what they picked on /grow (each need has its own),
+ * and the offer that fits (the path) only shapes it where the two differ: more
+ * customers or "not sure" from a business with no revenue yet. The booking
+ * link still goes to the welcome page for the path. Never say they asked for
+ * something they did not pick.
  */
 
 export type GrowEmail = {
@@ -15,16 +21,27 @@ export type GrowEmail = {
   tags: { name: string; value: string }[];
 };
 
-const OPENERS: Record<GrowPath, string> = {
-  growth:
-    "You told us you want more customers. That is exactly what we build: a system that answers every call, follows up on every lead and fills your calendar, and we run it for you.",
-  webline:
-    "You want a website that brings in customers, whether you are just starting out or your current one is not pulling its weight. Webline gets you a professional website built to be found on Google and ChatGPT, ready before you are.",
-  custom:
-    "You have something specific in mind. AI tools and automations, apps and software, content and motion graphics: we build all of it, and the call is where we scope yours.",
-};
+/** The first paragraph: what they picked, in their words, then how we help. */
+export function growOpener(need: GrowNeed, path: GrowPath): string {
+  switch (need) {
+    case "customers":
+      return path === "webline"
+        ? "You want more customers. You are just starting out, so the first step is being easy to find: Webline gets you a professional website built to be found on Google and ChatGPT, and the call is where we plan what comes after it."
+        : "You told us you want more customers. That is exactly what we build: a system that answers every call, follows up on every lead and fills your calendar, and we run it for you.";
+    case "website":
+      return "You want a website that brings in customers, whether you are just starting out or your current one is not pulling its weight. Webline gets you a professional website built to be found on Google and ChatGPT, ready before you are.";
+    case "custom":
+      return "You have something specific in mind: an AI tool, an automation, an app or software. We build all of it, and the call is where we scope yours.";
+    case "content":
+      return "You want content that makes people stop and watch: videos, reels and motion graphics for your brand. We make it with you, and the call is where we plan yours.";
+    case "unsure":
+      return path === "webline"
+        ? "You are not sure yet what you need, and that is fine: that is what the call is for. You are just starting out, so we look at where you are and tell you honestly what to do first, and what can wait."
+        : "You are not sure yet what you need, and that is fine: that is what the call is for. We look at your business first and tell you honestly what would bring in the most customers, whether that is a website, a growth system or something else.";
+  }
+}
 
-export function growWelcomeEmail(opts: { firstName: string | null; path: GrowPath }): GrowEmail {
+export function growWelcomeEmail(opts: { firstName: string | null; need: GrowNeed; path: GrowPath }): GrowEmail {
   const hello = opts.firstName ? `Thanks, ${opts.firstName}.` : "Thanks.";
   const bookUrl = `${business.url}${GROW_WELCOME_PATH}?for=${opts.path}#book`;
 
@@ -32,7 +49,7 @@ export function growWelcomeEmail(opts: { firstName: string | null; path: GrowPat
     preheader: "Pick a time for your strategy call. You leave with a plan either way.",
     heading: `${hello} Here is what happens next.`,
     paragraphs: [
-      OPENERS[opts.path],
+      growOpener(opts.need, opts.path),
       "Look, you need to make money. We know. So let us handle the marketing and the development, and you get back to running the business.",
     ],
     steps: [
@@ -60,6 +77,7 @@ export function growWelcomeEmail(opts: { firstName: string | null; path: GrowPat
     tags: [
       { name: "template", value: "grow-welcome" },
       { name: "path", value: opts.path },
+      { name: "need", value: opts.need },
     ],
   };
 }
