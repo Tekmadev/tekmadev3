@@ -21,6 +21,8 @@ export type AddLeadState = {
   /** Set when the email is already a lead, to offer "Find it". */
   duplicateEmail: string | null;
   values: AddLeadValues;
+  /** "They want a demo", kept across a failed try. Not part of the values: it never changes the idempotency key. */
+  wantsDemo: boolean;
 };
 
 export const EMPTY_ADD_LEAD: AddLeadValues = { name: "", business: "", email: "", phone: "", website: "", need: "", message: "" };
@@ -31,6 +33,7 @@ export const INITIAL_ADD_LEAD_STATE: AddLeadState = {
   fields: {},
   duplicateEmail: null,
   values: EMPTY_ADD_LEAD,
+  wantsDemo: false,
 };
 
 /** The form's text values (each trimmed and capped; the shared rules check them properly). */
@@ -45,4 +48,9 @@ export function readAddLeadValues(form: FormData): AddLeadValues {
     need: text("need", 40),
     message: text("message", 6000),
   };
+}
+
+/** "They want a demo" (a checkbox: "on" when ticked). */
+export function readWantsDemo(form: FormData): boolean {
+  return form.get("wants_demo") === "on";
 }

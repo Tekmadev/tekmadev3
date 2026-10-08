@@ -163,7 +163,7 @@ export default async function NewClientPage({ searchParams }: { searchParams: Pr
               <input type="checkbox" name="wants_demo" className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--color-gold)]" />
               <span>
                 Client wants a demo
-                <span className="block text-xs text-ink-4">After the client is created, the demo request form opens for them.</span>
+                <span className="block text-xs text-ink-4">After the client is created, the demo request opens so you can add what they want to see.</span>
               </span>
             </label>
           )}

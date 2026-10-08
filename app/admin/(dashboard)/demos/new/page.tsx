@@ -11,12 +11,13 @@ export const dynamic = "force-dynamic";
  * "Request a demo" for a client (?clientId=) or a lead (?leadId=), with the
  * business name filled in from them (or from ?businessName= and ?area=, which
  * the New client page and the client and lead cards pass). The same rules
- * and copy as POST /demos.
+ * and copy as POST /demos. New client (?created=1) and Add lead (?added=1)
+ * land here when the person ticked that they want a demo.
  */
 export default async function NewDemoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ clientId?: string; leadId?: string; businessName?: string; area?: string; created?: string; invite?: string; reused?: string }>;
+  searchParams: Promise<{ clientId?: string; leadId?: string; businessName?: string; area?: string; created?: string; invite?: string; reused?: string; added?: string }>;
 }) {
   const ctx = await requireAdminCapability("demos.request");
   const sp = await searchParams;
@@ -41,6 +42,8 @@ export default async function NewDemoPage({
           demo.
         </Notice>
       )}
+
+      {sp.added === "1" && target?.kind === "lead" && <Notice kind="ok">Lead added. Now tell the builder about the demo.</Notice>}
 
       {target ? (
         <Panel title="The business">
@@ -77,6 +80,11 @@ export default async function NewDemoPage({
         {target?.kind === "client" && (
           <Link href={`/admin/clients/${target.id}`} className="inline-flex min-h-11 items-center hover:text-ink">
             Back to the client
+          </Link>
+        )}
+        {target?.kind === "lead" && (
+          <Link href="/admin/leads" className="inline-flex min-h-11 items-center hover:text-ink">
+            Back to leads
           </Link>
         )}
       </p>

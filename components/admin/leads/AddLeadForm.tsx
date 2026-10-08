@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Notice } from "@/components/admin/ui";
 import { Field, inputCls, selectCls } from "@/components/portal/ui";
 import { SubmitButton } from "@/components/portal/SubmitButton";
@@ -13,11 +13,23 @@ import { INITIAL_ADD_LEAD_STATE } from "./add-lead-state";
  * 16px inputs (iPhone Safari does not zoom), the right keyboard per field and
  * a full-width submit. The same fields, copy and rules as the app's Add a lead
  * sheet. A failed try keeps everything typed and puts the server's message
- * under the field it is about.
+ * under the field it is about. "They want a demo" shows once the need is a
+ * website (Webline), for people who can request one, and opens the demo
+ * request form for the new lead.
  */
-export function AddLeadForm({ idempotencyKey, needs }: { idempotencyKey: string; needs: { value: string; label: string }[] }) {
+export function AddLeadForm({
+  idempotencyKey,
+  needs,
+  canDemo,
+}: {
+  idempotencyKey: string;
+  needs: { value: string; label: string }[];
+  canDemo: boolean;
+}) {
   const [state, action] = useActionState(addLeadAction, INITIAL_ADD_LEAD_STATE);
   const v = state.values;
+  // Which need is picked: "They want a demo" only shows for a website.
+  const [need, setNeed] = useState(v.need);
   const err = (field: string) =>
     state.fields[field] ? (
       <p id={`${field}-error`} className="text-sm text-signal">
@@ -91,7 +103,7 @@ export function AddLeadForm({ idempotencyKey, needs }: { idempotencyKey: string;
         {err("website")}
       </Field>
       <Field label="Need" htmlFor="need">
-        <select id="need" name="need" defaultValue={v.need} className={selectCls} {...invalid("need")}>
+        <select id="need" name="need" defaultValue={v.need} onChange={(e) => setNeed(e.target.value)} className={selectCls} {...invalid("need")}>
           <option value="">Not sure yet</option>
           {needs.map((n) => (
             <option key={n.value} value={n.value}>
@@ -101,6 +113,15 @@ export function AddLeadForm({ idempotencyKey, needs }: { idempotencyKey: string;
         </select>
         {err("need")}
       </Field>
+      {canDemo && need === "website" && (
+        <label className="flex min-h-11 cursor-pointer items-start gap-3 py-1 text-sm text-ink-2">
+          <input type="checkbox" name="wants_demo" defaultChecked={state.wantsDemo} className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--color-gold)]" />
+          <span>
+            They want a demo
+            <span className="block text-xs text-ink-4">After the lead is added, the demo request opens so you can add what they want to see.</span>
+          </span>
+        </label>
+      )}
       <Field label="Note" htmlFor="message" help="What you know about them: where you found them, what they asked.">
         <textarea id="message" name="message" defaultValue={v.message} rows={4} maxLength={5000} className={inputCls} {...invalid("message")} />
         {err("message")}
