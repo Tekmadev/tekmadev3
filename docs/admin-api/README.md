@@ -225,7 +225,7 @@ Keyset cursors over the sort columns plus `id`: fetch `limit + 1`, `toPage()` bu
 
 ## App version gates
 
-The app sends `X-App-Version`. Below the minimum every call answers 426 `upgrade_required`. Values come from the `site_settings` row `mobile_app` (`{ "minVersion", "latestVersion", "apkUrl", "features" }`, all optional), else env `ADMIN_APP_MIN_VERSION`, `ADMIN_APP_LATEST_VERSION`, `ADMIN_APP_APK_URL` (https only), `ADMIN_APP_FEATURES` (comma separated). Nothing set: nothing blocked, no update offered, `apkUrl` null. Cached one minute per server instance.
+The app sends `X-App-Version`. Below the minimum every call answers 426 `upgrade_required`, except GET /me (still signed in only), which the app needs to learn the versions and get a fresh download link; the app blocks itself from `app.minVersion`. Values come from the `site_settings` row `mobile_app` (`{ "minVersion", "latestVersion", "apkUrl", "features" }`, all optional), else env `ADMIN_APP_MIN_VERSION`, `ADMIN_APP_LATEST_VERSION`, `ADMIN_APP_APK_URL` (https only), `ADMIN_APP_FEATURES` (comma separated). Nothing set: nothing blocked, no update offered, `apkUrl` null. Cached one minute per server instance. With `apkPath` (a file under `android/` in the private `app-releases` bucket, written by the app's `npm run apk`), GET /me answers `apkUrl` with a signed download link for that file, valid six hours and reused for the first hour; `apkUrl` from the row or env is the fallback. The bucket is private, so only signed-in staff ever get a working link.
 
 ```sql
 update public.site_settings

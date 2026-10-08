@@ -13,11 +13,15 @@ export const dynamic = "force-dynamic";
  * every screen and control from this list), feature flags, the loader tuning
  * and the app version gates. Any staff.
  *
+ * It passes the minimum version gate (still signed in only): an app below the
+ * minimum blocks itself from `app.minVersion` and needs this answer for a
+ * fresh APK download link.
+ *
  * The first call for a person also sets up their Inbox read state: they start
  * at "now" instead of the whole history unread (the same seed the web admin
  * runs on a first visit). A no-op on every call after that.
  */
-export const GET = route({ method: "GET" }, async (ctx) => {
+export const GET = route({ method: "GET", versionGate: false }, async (ctx) => {
   await seedViewer(ctx.viewer);
   const [loader, app, settings] = await Promise.all([getLoaderSettings(), appVersionInfo(ctx.appVersion), getMobileAppSettings()]);
   return {

@@ -52,6 +52,12 @@ export type RouteOptions<B extends z.ZodType | undefined, Q extends z.ZodType | 
   fieldCodes?: Record<string, string>;
   /** Calls a minute per person; false to skip (default 240). */
   rateLimit?: number | false;
+  /**
+   * false: skip the minimum version check (426). Only GET /me: an app below
+   * the minimum still needs it to learn the versions and get a fresh APK link.
+   * It blocks itself from `app.minVersion`. Authentication still applies.
+   */
+  versionGate?: boolean;
 };
 
 export type RouteInput<B extends z.ZodType | undefined, Q extends z.ZodType | undefined> = {
@@ -163,7 +169,7 @@ export function route<B extends z.ZodType | undefined = undefined, Q extends z.Z
       if (!methodMatches(req.method, options.method)) {
         return fail(405, "method", "Method not allowed.", undefined, { allow: options.method });
       }
-      await assertAppVersion(req.headers.get("x-app-version"));
+      if (options.versionGate !== false) await assertAppVersion(req.headers.get("x-app-version"));
       const ctx = await authenticate(req);
 
       const perMinute = options.rateLimit === undefined ? DEFAULT_RATE_PER_MINUTE : options.rateLimit;

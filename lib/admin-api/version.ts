@@ -8,8 +8,9 @@ import { ApiError, MESSAGES } from "./errors";
  * app can show "Update available" before that.
  *
  * Where the numbers come from, first match wins per field:
- *   1. site_settings row `mobile_app`: { minVersion?, latestVersion?, apkUrl?, features? }
- *      (owner controlled, no deploy needed; insert it with SQL until a screen edits it)
+ *   1. site_settings row `mobile_app`: { minVersion?, latestVersion?, apkPath?, apkUrl?, features? }
+ *      (owner controlled, no deploy needed; the app's `npm run apk` writes
+ *      latestVersion and apkPath after each build, see scripts/publish-apk.mjs there)
  *   2. env ADMIN_APP_MIN_VERSION, ADMIN_APP_LATEST_VERSION, ADMIN_APP_APK_URL,
  *      ADMIN_APP_FEATURES (comma separated)
  *   3. no minimum (nothing blocked), latest = the caller's own version, no APK link,
@@ -17,11 +18,19 @@ import { ApiError, MESSAGES } from "./errors";
  *
  * The row is cached in memory for a minute so the gate costs no query per call.
  * A failed read falls back to env: a database hiccup must not block the app.
+ *
+ * The APK: `apkPath` names the file in the private `app-releases` bucket, and
+ * GET /me hands each signed-in person a signed download link for it (valid
+ * for hours, reused for a while so the gate stays cheap). The bucket is never
+ * public: only staff who are signed in can download the app. `apkUrl` (a
+ * plain https link) is the older way and is used only when there is no path.
  */
 
 export type MobileAppSettings = {
   minVersion: string | null;
   latestVersion: string | null;
+  /** The APK in the private `app-releases` bucket, e.g. "android/tekmadev-admin.apk". */
+  apkPath: string | null;
   apkUrl: string | null;
   features: string[];
 };
@@ -30,6 +39,15 @@ export type AppVersionInfo = { latestVersion: string; minVersion: string; apkUrl
 
 const VERSION_RE = /^\d+(\.\d+){0,3}$/;
 const CACHE_MS = 60_000;
+
+/** The private bucket the app's build script uploads to. */
+export const APP_RELEASES_BUCKET = "app-releases";
+/** A signed link works this long, and is handed out again for at most the first hour of it. */
+const SIGNED_SECONDS = 6 * 60 * 60;
+const SIGNED_REUSE_MS = 60 * 60 * 1000;
+const APK_PATH_RE = /^android\/[A-Za-z0-9._-]{1,120}\.apk$/;
+
+let signedCache: { key: string; at: number; url: string } | null = null;
 
 let cache: { at: number; value: MobileAppSettings } | null = null;
 
@@ -46,6 +64,13 @@ const cleanUrl = (v: unknown): string | null => {
   }
 };
 
+/** Only a plain file under android/ ending in .apk: nothing that walks out of the folder. */
+const cleanApkPath = (v: unknown): string | null => {
+  if (typeof v !== "string") return null;
+  const path = v.trim();
+  return APK_PATH_RE.test(path) && !path.includes("..") ? path : null;
+};
+
 const cleanFeatures = (v: unknown): string[] | null => {
   if (Array.isArray(v)) return v.filter((f): f is string => typeof f === "string" && f.trim() !== "").map((f) => f.trim());
   if (typeof v === "string") return v.split(",").map((f) => f.trim()).filter(Boolean);
@@ -56,6 +81,7 @@ function fromEnv(): MobileAppSettings {
   return {
     minVersion: cleanVersion(process.env.ADMIN_APP_MIN_VERSION),
     latestVersion: cleanVersion(process.env.ADMIN_APP_LATEST_VERSION),
+    apkPath: null,
     apkUrl: cleanUrl(process.env.ADMIN_APP_APK_URL),
     features: cleanFeatures(process.env.ADMIN_APP_FEATURES) ?? [],
   };
@@ -78,6 +104,7 @@ export async function getMobileAppSettings(): Promise<MobileAppSettings> {
     value = {
       minVersion: cleanVersion(row.minVersion) ?? env.minVersion,
       latestVersion: cleanVersion(row.latestVersion) ?? env.latestVersion,
+      apkPath: cleanApkPath(row.apkPath),
       apkUrl: cleanUrl(row.apkUrl) ?? env.apkUrl,
       features: cleanFeatures(row.features) ?? env.features,
     };
@@ -108,7 +135,29 @@ export async function assertAppVersion(header: string | null): Promise<void> {
   if (compareVersions(current, minVersion) < 0) throw new ApiError(426, "upgrade_required", MESSAGES.upgrade);
 }
 
-/** `Me.app` for GET /me. */
+/**
+ * A signed download link for the APK at `path`, named after the version so the
+ * phone's Downloads shows which one it is. Reused for the first hour of its six,
+ * so every link handed out still works for at least five hours. Null when the
+ * file cannot be signed (missing, or storage down): the caller falls back.
+ */
+async function signedApkUrl(path: string, version: string): Promise<string | null> {
+  const key = `${path}|${version}`;
+  if (signedCache && signedCache.key === key && Date.now() - signedCache.at < SIGNED_REUSE_MS) return signedCache.url;
+  const db = getSupabaseAdmin();
+  if (!db) return null;
+  const { data, error } = await db.storage
+    .from(APP_RELEASES_BUCKET)
+    .createSignedUrl(path, SIGNED_SECONDS, { download: `tekmadev-admin-${version}.apk` });
+  if (error || !data?.signedUrl) {
+    console.error("[admin-api] could not sign the APK link", error?.message ?? "no url");
+    return null;
+  }
+  signedCache = { key, at: Date.now(), url: data.signedUrl };
+  return data.signedUrl;
+}
+
+/** `Me.app` for GET /me (signed-in staff only, so the APK link never reaches anyone else). */
 export async function appVersionInfo(callerVersion: string | null): Promise<AppVersionInfo> {
   const s = await getMobileAppSettings();
   const min = s.minVersion ?? "0.0.0";
@@ -116,5 +165,6 @@ export async function appVersionInfo(callerVersion: string | null): Promise<AppV
   // Unknown latest: report the caller's own version (no "Update available"), never below the minimum.
   let latest = s.latestVersion ?? caller ?? min;
   if (compareVersions(latest, min) < 0) latest = min;
-  return { latestVersion: latest, minVersion: min, apkUrl: s.apkUrl };
+  const signed = s.apkPath ? await signedApkUrl(s.apkPath, latest) : null;
+  return { latestVersion: latest, minVersion: min, apkUrl: signed ?? s.apkUrl };
 }
