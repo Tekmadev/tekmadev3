@@ -91,13 +91,13 @@ export function DemoManageForm({
         </select>
         {fields?.builderEmail && <p className="text-xs text-signal">{fields.builderEmail}</p>}
       </Field>
-      <Field label="Demo link" htmlFor="demo-url" help="Needed before it can be marked ready.">
+      <Field label="Demo link" htmlFor="demo-url" help="Usually the demo's Vercel link. Needed before it can be marked ready.">
         <input
           id="demo-url"
           name="demo_url"
           type="url"
           inputMode="url"
-          placeholder="https://"
+          placeholder="https://name.vercel.app"
           maxLength={DEMO_LIMITS.demoUrl}
           defaultValue={demoUrl ?? ""}
           className={inputCls}
