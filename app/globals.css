@@ -180,6 +180,14 @@
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    /* The gradient is painted only inside the element's own box, and the
+       display type runs at a line-height under 1, so that box ends above the
+       descenders: the tails of p, g, y, j and q on the last line were left
+       unpainted. The padding grows the painted box below the baseline, and
+       the equal negative margin puts the layout back where it was (on an
+       inline span the margin does nothing and the padding takes no space). */
+    padding-bottom: 0.25em;
+    margin-bottom: -0.25em;
   }
 
   .grain {
