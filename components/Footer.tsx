@@ -27,7 +27,16 @@ export function Footer() {
                 {business.name}
               </span>
             </a>
-            <p className="mt-7 max-w-md text-base leading-relaxed text-ink-3">
+            {/* Tighter on the narrowest phones so the three words stay on one line. */}
+            <p className="mt-4 flex flex-wrap items-center gap-x-1.5 gap-y-1.5 font-mono text-[0.7rem] font-medium uppercase tracking-[0.12em] text-ink-3 min-[380px]:gap-x-3 min-[380px]:tracking-[0.18em]">
+              {footerCopy.pillars.map((pillar, i) => (
+                <span key={pillar} className="inline-flex items-center gap-x-1.5 min-[380px]:gap-x-3">
+                  {i > 0 && <span aria-hidden className="h-1 w-1 rounded-full bg-gold" />}
+                  {pillar}
+                </span>
+              ))}
+            </p>
+            <p className="mt-6 max-w-md text-base leading-relaxed text-ink-3">
               {footerCopy.tagline}
             </p>
 

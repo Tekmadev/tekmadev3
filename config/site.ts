@@ -547,6 +547,8 @@ export const footerColumns = [
 ];
 
 export const footerCopy = {
+  /** What Tekmadev does, in three words, under the footer logo. */
+  pillars: ["Technology", "Marketing", "Development"],
   tagline:
     "We install the system that fills your calendar. 30 qualified appointments in 60 days, or we work free until you hit it.",
   signoff: "Built · Installed · Running",
