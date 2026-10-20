@@ -95,7 +95,10 @@ export const about = {
     heading: "What results has Tekmadev produced?",
     answer: `Since ${business.foundingYear}, Tekmadev has installed more than 40 growth systems. Across our clients, booked appointments rise 3.2 times on average, new leads get a reply in about 11 seconds, and 94% of clients are still running the system after 12 months.`,
     stats: [
-      { value: "40+", label: `Systems installed since ${business.foundingYear}` },
+      {
+        value: "40+",
+        label: `Systems installed since ${business.foundingYear}`,
+      },
       { value: "3.2×", label: "Average lift in booked appointments" },
       { value: "11s", label: "Average lead response time" },
       { value: "94%", label: "Clients still running after 12 months" },
@@ -109,7 +112,10 @@ export const about = {
     answer:
       "Yes. Fixible, a phone and device repair shop in Hamilton, grew with the same work we sell: no ad budget, all organic.",
     body: "We built its website and the search work behind it. It gets calls every day, and customers tell the shop that ChatGPT and Gemini recommended it, not only Google.",
-    link: { href: "/case-studies/fixible", label: "Read the Fixible case study" },
+    link: {
+      href: "/case-studies/fixible",
+      label: "Read the Fixible case study",
+    },
   },
 
   who: {
@@ -129,11 +135,11 @@ export const about = {
       },
       {
         q: "Where is Tekmadev located?",
-        a: `Tekmadev Innovation Inc. has its head office at ${business.registeredOffice.line1}, ${business.registeredOffice.city}, ${business.registeredOffice.province}, Canada, and its co-founders work from ${canadian.teamPlaces}. It is 100% Canadian owned and operated, and works with clients remotely.`,
+        a: `Tekmadev Innovations Inc. has its head office at ${business.registeredOffice.line1}, ${business.registeredOffice.city}, ${business.registeredOffice.province}, Canada, and its co-founders work from ${canadian.teamPlaces}. It is 100% Canadian owned and operated, and works with clients remotely.`,
       },
       {
         q: "Who owns Tekmadev?",
-        a: `Tekmadev Innovation Inc. is a privately held Canadian company. It was founded by ${business.privacyOfficer.name} and is run by its two co-founders.`,
+        a: `Tekmadev Innovations Inc. is a privately held Canadian company. It was founded by ${business.privacyOfficer.name} and is run by its two co-founders.`,
       },
       {
         q: "When was Tekmadev founded?",
@@ -158,6 +164,9 @@ export const about = {
     heading: "Want to see where your leads are leaking?",
     body: "Book a call and we will map it with you, or run the numbers yourself first. Either way you leave knowing what it is costing you.",
     primary: { href: "/#book", label: "Book a call" },
-    secondary: { href: "/tools/revenue-leak-calculator", label: "Run the free Revenue Leak Calculator" },
+    secondary: {
+      href: "/tools/revenue-leak-calculator",
+      label: "Run the free Revenue Leak Calculator",
+    },
   },
 } as const;
