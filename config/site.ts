@@ -1,4 +1,3 @@
-
 /**
  * Single source of truth for Tekmadev brand, business info, content data, and theme colors.
  *
@@ -52,11 +51,23 @@ export const portal = {
 };
 
 /** The founder's own public profiles. Shown as icons beside the photo, and as sameAs in the Person schema. */
-export type FounderProfile = { network: "linkedin" | "instagram"; label: string; url: string };
+export type FounderProfile = {
+  network: "linkedin" | "instagram";
+  label: string;
+  url: string;
+};
 const _founderProfiles: FounderProfile[] = [
-  { network: "linkedin", label: "LinkedIn", url: "https://www.linkedin.com/in/sajistreo3/" },
+  {
+    network: "linkedin",
+    label: "LinkedIn",
+    url: "https://www.linkedin.com/in/sajistreo3/",
+  },
   // Clean profile URL only: a link copied from the app carries share tokens that identify the sharer.
-  { network: "instagram", label: "Instagram", url: "https://www.instagram.com/its.shajeed/" },
+  {
+    network: "instagram",
+    label: "Instagram",
+    url: "https://www.instagram.com/its.shajeed/",
+  },
 ];
 
 const _office = {
@@ -69,7 +80,7 @@ const _office = {
 
 export const business = {
   name: "Tekmadev",
-  legalName: "Tekmadev Innovation Inc.",
+  legalName: "Tekmadev Innovations Inc.",
   domain: "tekmadev.com",
   url: _siteUrl,
   description:

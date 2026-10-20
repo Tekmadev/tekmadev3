@@ -29,12 +29,14 @@ const C = {
   soft: "#f5f2eb",
   goldTint: "#f4ebd6",
 };
-const FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
-const MONO = "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace";
+const FONT =
+  "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+const MONO =
+  "ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace";
 
 const BUSINESS = {
   name: "Tekmadev",
-  legalName: "Tekmadev Innovation Inc.",
+  legalName: "Tekmadev Innovations Inc.",
   // www on purpose. The bare domain answers with a redirect to www, so every
   // link and the open pixel would take an extra hop, and some mail image proxies
   // do not follow redirects at all, which undercounts opens.
@@ -132,7 +134,8 @@ function bullets(items) {
 }
 
 /** Vertical space, for text that follows a button. */
-const gap = (px) => `<div style="height:${px}px;line-height:${px}px;font-size:${px}px;">&nbsp;</div>`;
+const gap = (px) =>
+  `<div style="height:${px}px;line-height:${px}px;font-size:${px}px;">&nbsp;</div>`;
 
 const divider = () =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-top:1px solid ${C.line};font-size:0;line-height:0;height:1px;">&nbsp;</td></tr></table>`;
@@ -143,7 +146,14 @@ const divider = () =>
  * shrunk or sideways-scrolling email. Outlook on Windows ignores max-width,
  * hence the fixed 600px table wrapped around it in [if mso] comments.
  */
-function base({ campaignKey, subject, preheader, eyebrowText, heading, blocks }) {
+function base({
+  campaignKey,
+  subject,
+  preheader,
+  eyebrowText,
+  heading,
+  blocks,
+}) {
   const body = blocks.join("\n");
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
@@ -208,15 +218,28 @@ const templates = [
     key: "welcome",
     name: "Welcome email",
     subject: "Welcome to the Growth Memo",
-    preheader: "The plays we use to book 30 qualified calls in 60 days, straight to your inbox.",
+    preheader:
+      "The plays we use to book 30 qualified calls in 60 days, straight to your inbox.",
     eyebrowText: "The Growth Memo",
     heading: "You're in.",
     blocks: (k) => [
-      lead("Thanks for subscribing. You just joined the operators we build for: B2B service businesses that would rather have a full calendar than a full to-do list."),
-      p("Here is what lands in your inbox once or twice a month: the exact AI and automation plays we install to answer every lead in seconds, follow up until they book, and turn a quiet pipeline into 30 qualified calls in 60 days. No theory, no filler."),
-      callout("30 booked calls in 60 days.", "That is the guarantee we build toward. If we miss it, we keep working for free until you hit it."),
-      p("Want to see the system before the next memo? Take the 2 minute tour of how it works, or book a 30 minute pipeline audit and we will map exactly where your calls are leaking."),
-      button("See how the system works", trackClick(k, "welcome-system", DEST.system)),
+      lead(
+        "Thanks for subscribing. You just joined the operators we build for: B2B service businesses that would rather have a full calendar than a full to-do list.",
+      ),
+      p(
+        "Here is what lands in your inbox once or twice a month: the exact AI and automation plays we install to answer every lead in seconds, follow up until they book, and turn a quiet pipeline into 30 qualified calls in 60 days. No theory, no filler.",
+      ),
+      callout(
+        "30 booked calls in 60 days.",
+        "That is the guarantee we build toward. If we miss it, we keep working for free until you hit it.",
+      ),
+      p(
+        "Want to see the system before the next memo? Take the 2 minute tour of how it works, or book a 30 minute pipeline audit and we will map exactly where your calls are leaking.",
+      ),
+      button(
+        "See how the system works",
+        trackClick(k, "welcome-system", DEST.system),
+      ),
       p(`Talk soon,<br>The ${BUSINESS.name} team`),
     ],
   },
@@ -225,15 +248,25 @@ const templates = [
     key: "newsletter",
     name: "Newsletter / broadcast",
     subject: "[Subject line goes here]",
-    preheader: "[Preheader: one line that earns the open. Edit before sending.]",
+    preheader:
+      "[Preheader: one line that earns the open. Edit before sending.]",
     eyebrowText: "The Growth Memo",
     heading: "[Headline: the one idea of this issue]",
     blocks: (k) => [
-      lead(`Hi ${FNAME}, [open with the hook. One or two sentences that make the reader feel the problem or the opportunity before you explain it.]`),
-      p("[Body: deliver the single most useful idea of the issue. Keep it concrete. If you are making a claim, back it with a number or a real example.]"),
+      lead(
+        `Hi ${FNAME}, [open with the hook. One or two sentences that make the reader feel the problem or the opportunity before you explain it.]`,
+      ),
+      p(
+        "[Body: deliver the single most useful idea of the issue. Keep it concrete. If you are making a claim, back it with a number or a real example.]",
+      ),
       h2("[Optional section heading]"),
-      p("[More detail, a short story, or a step-by-step. This template is reusable: keep this structure, swap the copy each send.]"),
-      callout("[Stat or result]", "[One line of context for the number above.]"),
+      p(
+        "[More detail, a short story, or a step-by-step. This template is reusable: keep this structure, swap the copy each send.]",
+      ),
+      callout(
+        "[Stat or result]",
+        "[One line of context for the number above.]",
+      ),
       p("[Close with the single action you want them to take.]"),
       button("[Call to action]", trackClick(k, "newsletter-cta", DEST.book)),
     ],
@@ -243,20 +276,32 @@ const templates = [
     key: "nurture-1",
     name: "Nurture 1 of 3 (the problem)",
     subject: "The most expensive number in your business",
-    preheader: "It is the number of leads that reach out and never hear back in time.",
+    preheader:
+      "It is the number of leads that reach out and never hear back in time.",
     eyebrowText: "Nurture · 1 of 3",
     heading: "Your leads are leaking. Here is where.",
     blocks: (k) => [
-      lead(`Hi ${FNAME}, most service businesses do not have a lead problem. They have a follow-up problem.`),
-      p("A prospect fills out your form or calls after hours. Five minutes pass, then an hour, then a day. By the time someone replies, they have already booked with whoever answered first. The lead was never bad. The response was just too slow."),
+      lead(
+        `Hi ${FNAME}, most service businesses do not have a lead problem. They have a follow-up problem.`,
+      ),
+      p(
+        "A prospect fills out your form or calls after hours. Five minutes pass, then an hour, then a day. By the time someone replies, they have already booked with whoever answered first. The lead was never bad. The response was just too slow.",
+      ),
       bullets([
         "The average business takes hours to respond. The winner responds in seconds.",
         "Half of buyers pick the company that replies first, not the cheapest.",
         "Every missed call after hours is a booked job for a competitor.",
       ]),
-      p("This is the leak we plug first. Not more ads, not more leads. A system that catches every inquiry the moment it lands and works it until it books."),
-      p("Tomorrow, I will show you exactly how that system is built. For now, if you want to see where your own pipeline leaks, book a 30 minute audit and we will map it live."),
-      button("Book my pipeline audit", trackClick(k, "nurture1-book", DEST.book)),
+      p(
+        "This is the leak we plug first. Not more ads, not more leads. A system that catches every inquiry the moment it lands and works it until it books.",
+      ),
+      p(
+        "Tomorrow, I will show you exactly how that system is built. For now, if you want to see where your own pipeline leaks, book a 30 minute audit and we will map it live.",
+      ),
+      button(
+        "Book my pipeline audit",
+        trackClick(k, "nurture1-book", DEST.book),
+      ),
     ],
   },
   {
@@ -264,22 +309,39 @@ const templates = [
     key: "nurture-2",
     name: "Nurture 2 of 3 (the system)",
     subject: "How the calendar fills itself",
-    preheader: "The four pieces that turn a slow pipeline into 30 booked calls.",
+    preheader:
+      "The four pieces that turn a slow pipeline into 30 booked calls.",
     eyebrowText: "Nurture · 2 of 3",
     heading: "The system, in four moves.",
     blocks: (k) => [
       lead(`Hi ${FNAME}, yesterday we named the leak. Today, the fix.`),
-      p("Here is the system we install, end to end. It runs whether you are on a job, asleep, or on vacation."),
+      p(
+        "Here is the system we install, end to end. It runs whether you are on a job, asleep, or on vacation.",
+      ),
       h2("1. Answer in seconds"),
-      p("An AI voice and text agent picks up every call and message 24/7, trained on your offer. No lead waits."),
+      p(
+        "An AI voice and text agent picks up every call and message 24/7, trained on your offer. No lead waits.",
+      ),
       h2("2. Follow up until they book"),
-      p("A 12 touch follow-up sequence, written for your industry, works every lead until they schedule or say no."),
+      p(
+        "A 12 touch follow-up sequence, written for your industry, works every lead until they schedule or say no.",
+      ),
       h2("3. Book straight to your calendar"),
-      p("Qualified prospects land on your calendar automatically, with the context you need to close them."),
+      p(
+        "Qualified prospects land on your calendar automatically, with the context you need to close them.",
+      ),
       h2("4. Tune weekly"),
-      p("We watch the dashboard daily and tighten the scripts weekly, so the number climbs instead of plateauing."),
-      callout("Built around your business.", "Every system is set up for how your business already runs, then we run it for you."),
-      button("See the full system", trackClick(k, "nurture2-system", DEST.system)),
+      p(
+        "We watch the dashboard daily and tighten the scripts weekly, so the number climbs instead of plateauing.",
+      ),
+      callout(
+        "Built around your business.",
+        "Every system is set up for how your business already runs, then we run it for you.",
+      ),
+      button(
+        "See the full system",
+        trackClick(k, "nurture2-system", DEST.system),
+      ),
     ],
   },
   {
@@ -291,15 +353,24 @@ const templates = [
     eyebrowText: "Nurture · 3 of 3",
     heading: "It works. Here is the proof.",
     blocks: (k) => [
-      lead(`Hi ${FNAME}, you have seen the leak and the system. Now the receipts.`),
-      p("Down2Detail, an auto detailing shop, went from 9 booked jobs a month to 52 in 42 days. Same team, same market. The only change was the system catching and working every lead."),
+      lead(
+        `Hi ${FNAME}, you have seen the leak and the system. Now the receipts.`,
+      ),
+      p(
+        "Down2Detail, an auto detailing shop, went from 9 booked jobs a month to 52 in 42 days. Same team, same market. The only change was the system catching and working every lead.",
+      ),
       bullets([
         "Stoneworks Interlock: $8K to $31K monthly revenue in 5 months.",
         "KeyFoby: 2 to 3 calls a week to 30+.",
         "94% of clients are still running the system 12 months later.",
       ]),
-      callout("30 booked calls in 60 days, or we work free until you hit it.", "If the system stops booking, we stop billing. Cancel any month, no long-term contract."),
-      p("If your pipeline could carry more, the next step is a 30 minute audit. We map your leaks, show you the system, and tell you straight whether it is a fit. Zero pressure."),
+      callout(
+        "30 booked calls in 60 days, or we work free until you hit it.",
+        "If the system stops booking, we stop billing. Cancel any month, no long-term contract.",
+      ),
+      p(
+        "If your pipeline could carry more, the next step is a 30 minute audit. We map your leaks, show you the system, and tell you straight whether it is a fit. Zero pressure.",
+      ),
       button("Book my free audit", trackClick(k, "nurture3-book", DEST.book)),
     ],
   },
@@ -308,16 +379,28 @@ const templates = [
     key: "promo",
     name: "Promo / limited offer",
     subject: "Your Build & Install is on us (this week)",
-    preheader: "Free install plus a promo code, applied automatically. Ends Sunday.",
+    preheader:
+      "Free install plus a promo code, applied automatically. Ends Sunday.",
     eyebrowText: "Limited offer",
     heading: "Your Build & Install is on us.",
     blocks: (k) => [
-      lead("This week only, we are waiving the Build & Install fee for new clients and applying a launch discount on top, automatically."),
-      p("You get the full done-for-you system: the AI answering layer, the 12 touch follow-up, the CRM wiring, and weekly tuning, with none of the upfront build cost. One trade-off to know: discounted plans run without our 30 booked calls in 60 days guarantee."),
-      callout("Free Build & Install + auto-applied promo", "Applied at checkout when you start this week. No code to remember."),
-      p("Spots are limited because every install is done by hand and done right. If your calendar has room to grow, claim it before Sunday."),
+      lead(
+        "This week only, we are waiving the Build & Install fee for new clients and applying a launch discount on top, automatically.",
+      ),
+      p(
+        "You get the full done-for-you system: the AI answering layer, the 12 touch follow-up, the CRM wiring, and weekly tuning, with none of the upfront build cost. One trade-off to know: discounted plans run without our 30 booked calls in 60 days guarantee.",
+      ),
+      callout(
+        "Free Build & Install + auto-applied promo",
+        "Applied at checkout when you start this week. No code to remember.",
+      ),
+      p(
+        "Spots are limited because every install is done by hand and done right. If your calendar has room to grow, claim it before Sunday.",
+      ),
       button("Claim the offer", trackClick(k, "promo-start", DEST.start)),
-      p("Prefer to talk it through first? Book a 30 minute audit and we will confirm the fit before you commit to anything."),
+      p(
+        "Prefer to talk it through first? Book a 30 minute audit and we will confirm the fit before you commit to anything.",
+      ),
       button("Book a call instead", trackClick(k, "promo-book", DEST.book)),
     ],
   },
@@ -330,11 +413,23 @@ const templates = [
     eyebrowText: "Quick check-in",
     heading: "Are we still useful?",
     blocks: (k) => [
-      lead(`Hi ${FNAME}, it has been a while since you opened one of these, so a fair question: is the Growth Memo still worth your inbox?`),
-      p("If yes, here is what you have been missing. We now install a full AI answering and follow-up system that has taken service businesses from single-digit monthly bookings to 30+ qualified calls, with a performance guarantee behind it: we work free until you hit the target."),
-      callout("One free audit could change the quarter.", "30 minutes, we map your pipeline leaks and show you the fix. No pressure."),
-      button("Show me what's new", trackClick(k, "reengage-system", DEST.system)),
-      p(`If it is not for you, no hard feelings. You can <a href="${UNSUB}" target="_blank" style="color:${C.gold};text-decoration:underline;">step off the list here</a> and we will stop emailing. Either way, thanks for being here.`),
+      lead(
+        `Hi ${FNAME}, it has been a while since you opened one of these, so a fair question: is the Growth Memo still worth your inbox?`,
+      ),
+      p(
+        "If yes, here is what you have been missing. We now install a full AI answering and follow-up system that has taken service businesses from single-digit monthly bookings to 30+ qualified calls, with a performance guarantee behind it: we work free until you hit the target.",
+      ),
+      callout(
+        "One free audit could change the quarter.",
+        "30 minutes, we map your pipeline leaks and show you the fix. No pressure.",
+      ),
+      button(
+        "Show me what's new",
+        trackClick(k, "reengage-system", DEST.system),
+      ),
+      p(
+        `If it is not for you, no hard feelings. You can <a href="${UNSUB}" target="_blank" style="color:${C.gold};text-decoration:underline;">step off the list here</a> and we will stop emailing. Either way, thanks for being here.`,
+      ),
     ],
   },
   {
@@ -347,14 +442,21 @@ const templates = [
     key: "webline",
     name: "Webline (for a website that brings no customers)",
     subject: "Would you hire you from your website?",
-    preheader: "Nobody calls to say they picked someone else. Here is a one-minute test.",
+    preheader:
+      "Nobody calls to say they picked someone else. Here is a one-minute test.",
     eyebrowText: "One-minute website test",
     heading: "Nobody calls to tell you they picked someone else.",
     blocks: (k) => [
-      lead(`Hi ${FNAME}, here is how a job gets lost without you ever knowing. Someone hears your name, looks you up on their phone, and gives your website a few seconds.`),
-      p("If it looks dated, loads slowly or makes them hunt for your number, they tap back and call the next name on the list. You never hear about it. It just shows up as a slow month."),
+      lead(
+        `Hi ${FNAME}, here is how a job gets lost without you ever knowing. Someone hears your name, looks you up on their phone, and gives your website a few seconds.`,
+      ),
+      p(
+        "If it looks dated, loads slowly or makes them hunt for your number, they tap back and call the next name on the list. You never hear about it. It just shows up as a slow month.",
+      ),
       h2("Try this right now"),
-      p("Open your website on your phone and pretend you have never heard of your business."),
+      p(
+        "Open your website on your phone and pretend you have never heard of your business.",
+      ),
       bullets([
         "Can you tell what you do, and where, in the first five seconds?",
         "Can you call or book with one tap?",
@@ -362,9 +464,15 @@ const templates = [
         "Search Google for what you do and your city. Are you on page one?",
         "Ask ChatGPT to recommend a business like yours in your city. Are you in the answer?",
       ]),
-      p(b("If you hesitated on even one, your website is sending customers to someone else.")),
+      p(
+        b(
+          "If you hesitated on even one, your website is sending customers to someone else.",
+        ),
+      ),
       h2("Fixing it is easier than you think"),
-      p("That is what Webline is for. No big agency quote, no months of meetings, and you do not write a word."),
+      p(
+        "That is what Webline is for. No big agency quote, no months of meetings, and you do not write a word.",
+      ),
       bullets([
         `${b("Designed for you.")} Not a template.`,
         `${b("Written for you.")} Every page, from one 15-minute form.`,
@@ -372,28 +480,45 @@ const templates = [
         `${b("Built to bring in work.")} One tap to call, a booking link, and a contact form straight to your inbox.`,
         `${b("Ready before you are.")} Launched on your domain, then hosted and looked after by us, so it never goes stale again.`,
       ]),
-      p("We did it for Fixible, a repair shop in Hamilton. It gets calls every day, has spent $0 on ads, and its customers say they found it on Google and ChatGPT."),
-      callout("Love the design, or pay nothing.", "You see your new homepage first. If you still do not love it after a free revision, you get a full refund."),
-      p("The next step is easy. Answer a few quick questions and pick a time for a free 30-minute call. We look at your current site before we talk, so you get straight answers, not a pitch."),
-      button("Book my free website call", trackClick(k, "webline-grow", DEST.growWebsite)),
+      p(
+        "We did it for Fixible, a repair shop in Hamilton. It gets calls every day, has spent $0 on ads, and its customers say they found it on Google and ChatGPT.",
+      ),
+      callout(
+        "Love the design, or pay nothing.",
+        "You see your new homepage first. If you still do not love it after a free revision, you get a full refund.",
+      ),
+      p(
+        "The next step is easy. Answer a few quick questions and pick a time for a free 30-minute call. We look at your current site before we talk, so you get straight answers, not a pitch.",
+      ),
+      button(
+        "Book my free website call",
+        trackClick(k, "webline-grow", DEST.growWebsite),
+      ),
       gap(12),
-      p("Rather not click? Reply with your website address and I will tell you the first thing I would fix."),
+      p(
+        "Rather not click? Reply with your website address and I will tell you the first thing I would fix.",
+      ),
       p(`Talk soon,<br>${b("Shajeed")}<br>Founder, ${BUSINESS.name}`),
-      p(`${b("P.S.")} Every week the old site stays up, it keeps sending customers to someone else. Before you know it, the new one could be sending them to you.`),
+      p(
+        `${b("P.S.")} Every week the old site stays up, it keeps sending customers to someone else. Before you know it, the new one could be sending them to you.`,
+      ),
     ],
   },
 ];
 
 // Short "when to send this" note for the admin organizer, keyed by campaign key.
 const USE_WHEN = {
-  welcome: "Sent automatically when someone new subscribes from the site footer.",
-  newsletter: "Reusable broadcast. Duplicate it each send and swap the copy blocks.",
+  welcome:
+    "Sent automatically when someone new subscribes from the site footer.",
+  newsletter:
+    "Reusable broadcast. Duplicate it each send and swap the copy blocks.",
   "nurture-1": "Step 1 of the 3-part lead nurture sequence (name the problem).",
   "nurture-2": "Step 2, about a day later (show the system).",
   "nurture-3": "Step 3, about two days later (proof plus the offer).",
   promo: "Time-boxed offer. Send to warm subscribers during a promotion.",
   reengage: "Win-back for subscribers who have gone quiet.",
-  webline: "Pitch for owners whose website is old or brings no customers. Send to subscribers only (the tmd-newsletter tag). The button opens /grow with the website answer already picked; replies with a site address need a personal answer.",
+  webline:
+    "Pitch for owners whose website is old or brings no customers. Send to subscribers only (the tmd-newsletter tag). The button opens /grow with the website answer already picked; replies with a site address need a personal answer.",
 };
 
 // --- Emit -------------------------------------------------------------------
@@ -447,7 +572,11 @@ const generatedTs =
   JSON.stringify(generated, null, 2) +
   ";\n";
 
-writeFileSync(join(DIR, "..", "..", "..", "lib", "email-templates.generated.ts"), generatedTs, "utf8");
+writeFileSync(
+  join(DIR, "..", "..", "..", "lib", "email-templates.generated.ts"),
+  generatedTs,
+  "utf8",
+);
 
 const index =
   "# Tekmadev marketing email templates\n\n" +
@@ -455,7 +584,9 @@ const index =
   "Generated by `build-marketing.mjs`. Edit the copy/blocks there and re-run `node docs/email-templates/marketing/build-marketing.mjs` to rebuild all of them.\n\n" +
   "## Templates\n\n" +
   "| Template | Campaign key | Subject |\n|---|---|---|\n" +
-  templates.map((t) => `| \`${t.file}\` | \`${t.key}\` | ${t.subject} |`).join("\n") +
+  templates
+    .map((t) => `| \`${t.file}\` | \`${t.key}\` | ${t.subject} |`)
+    .join("\n") +
   "\n\n" +
   "`_preview-<name>.html` files are sample-filled (merge fields resolved) for visual review only. Do not paste those into GHL.\n\n" +
   "## How to use each one in GHL\n\n" +
@@ -463,14 +594,22 @@ const index =
   "2. Set the **Subject** (see table). The first line of hidden preheader text is at the top of the `<body>`.\n" +
   "3. In the Tekmadev admin, go to **/admin/email > New campaign** and add a campaign with the **same campaign key** as the template. Opens and clicks then roll up under it.\n\n" +
   "## Personalization\n\n" +
-  "Templates greet with `{{contact.first_name}}`. In GHL, set a **default/fallback value of `there`** for that field so an empty name still reads well (\"You're in, there.\").\n\n" +
+  'Templates greet with `{{contact.first_name}}`. In GHL, set a **default/fallback value of `there`** for that field so an empty name still reads well ("You\'re in, there.").\n\n' +
   "## Unsubscribe\n\n" +
-  "The footer's unsubscribe link is GHL's own merge tag, `" + UNSUB + "`, which GHL fills in on send. Leave **Include Unsubscribe Link** on in the sending settings: the `List-Unsubscribe` header is an RFC requirement GHL always adds, so GHL's unsubscribe route is live whether the footer link is or not, and switching it off only costs you the visible link. Confirm the tag resolves to a real link in a test send before the first campaign.\n\n" +
+  "The footer's unsubscribe link is GHL's own merge tag, `" +
+  UNSUB +
+  "`, which GHL fills in on send. Leave **Include Unsubscribe Link** on in the sending settings: the `List-Unsubscribe` header is an RFC requirement GHL always adds, so GHL's unsubscribe route is live whether the footer link is or not, and switching it off only costs you the visible link. Confirm the tag resolves to a real link in a test send before the first campaign.\n\n" +
   "## Tracking (how it works)\n\n" +
-  "- **Opens**: the pixel `" + SITE + "/api/e/o?c=<key>` logs an open when the email is viewed.\n" +
-  "- **Clicks**: each CTA points to `" + SITE + "/api/e/c?c=<key>&l=<label>&u=<destination>`, which logs the click and forwards to the destination (destinations are host-allowlisted, so the link can't be abused as an open redirect).\n" +
+  "- **Opens**: the pixel `" +
+  SITE +
+  "/api/e/o?c=<key>` logs an open when the email is viewed.\n" +
+  "- **Clicks**: each CTA points to `" +
+  SITE +
+  "/api/e/c?c=<key>&l=<label>&u=<destination>`, which logs the click and forwards to the destination (destinations are host-allowlisted, so the link can't be abused as an open redirect).\n" +
   "- **Per-recipient (advanced, optional)**: both URLs accept an extra `&s=<id>` for per-subscriber attribution. It resolves only if `<id>` is a Tekmadev subscriber `public_id`, so it requires syncing that id into GHL as a custom field first. Without it, tracking is accurate at the campaign level.\n";
 
 writeFileSync(join(DIR, "INDEX.md"), index, "utf8");
 
-console.log(`Wrote ${templates.length} marketing templates + previews + INDEX.md to ${DIR}`);
+console.log(
+  `Wrote ${templates.length} marketing templates + previews + INDEX.md to ${DIR}`,
+);
