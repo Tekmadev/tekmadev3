@@ -4,7 +4,11 @@ import { getLead, leadPatchBody, updateLead } from "@/lib/admin-api/leads";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** GET /leads/:id -> Lead (with `canEdit` for the caller). 404 `not_found` "That lead no longer exists.". */
+/**
+ * GET /leads/:id -> Lead (with `canEdit` for the caller, and `booking`: the
+ * booked call from the Cal.com event, else null; docs/admin-api/outreach.md
+ * section 1). 404 `not_found` "That lead no longer exists.".
+ */
 export const GET = route({ method: "GET", capability: "leads.view" }, async (ctx, { params }) => {
   const lead = await getLead(ctx, params.id);
   if (!lead) throw notFound("That lead");
@@ -13,7 +17,8 @@ export const GET = route({ method: "GET", capability: "leads.view" }, async (ctx
 
 /**
  * PATCH /leads/:id { name?, business?, email?, phone?, website?, need?,
- * message?, status?, followUpAt?, assignedTo? } -> the full Lead.
+ * message?, status?, followUpAt?, assignedTo? } -> the full Lead (`booking`
+ * included; no key of the patch changes it).
  * Partial: only the keys sent change; null (or "") clears a field. The body
  * is the shared leadPatchBody (the web admin parses with it too).
  *

@@ -1,7 +1,8 @@
 /**
  * The leads domain of the admin API: GET /leads, GET /leads/:id and the
  * outreach endpoints (POST /leads, PATCH /leads/:id, GET and POST
- * /leads/:id/touches, GET /leads/assignees). See docs/admin-api/outreach.md.
+ * /leads/:id/touches, GET /leads/assignees). See docs/admin-api/outreach.md
+ * (section 1 "The booking" for `Lead.booking`, built in booking.ts).
  */
 
 export {
@@ -16,6 +17,9 @@ export {
   storedValuesFor,
 } from "./shape";
 export type { Lead, LeadRow, LeadStatus, LeadSource, SettableStatus, StaffRef } from "./shape";
+
+export { BOOKING_STATUSES, BOOKING_HOW_KINDS, HOW_LABELS as BOOKING_HOW_LABELS, toBooking } from "./booking";
+export type { Booking, BookingAnswer, BookingHow, BookingHowKind, BookingStatus } from "./booking";
 
 export {
   MESSAGES as LEAD_MESSAGES,

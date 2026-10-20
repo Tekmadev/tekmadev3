@@ -2,16 +2,19 @@ import Link from "next/link";
 import { UserRound, CalendarCheck, CreditCard, Eye } from "lucide-react";
 import { adminCan, requireAdmin, type AdminContext } from "@/lib/admin";
 import { getDashboardData } from "@/lib/admin-data";
-import { canCountFollowUps, countMyDueFollowUps, loadProblem } from "@/lib/leads-web";
-import { DEFAULT_LEAD_LIST_PARAMS, leadListHref } from "@/lib/leads-ui";
+import { canCountFollowUps, countMyDueFollowUps, loadProblem, loadUpcomingCalls } from "@/lib/leads-web";
+import { DEFAULT_LEAD_LIST_PARAMS, leadListHref, leadTitle, type Lead } from "@/lib/leads-ui";
+import { BOOKING_COPY, joinFieldsOf, upcomingCallDistance, upcomingCallLine } from "@/lib/booking-ui";
 import { PageHeader, StatCard, Panel, DataTable, Notice, fmtDateTime, fmtMoney, txt } from "@/components/admin/ui";
 import { btnPrimary, btnSecondary } from "@/components/portal/ui";
 import { RetryNotice } from "@/components/admin/leads/RetryNotice";
+import { RowJoinLink } from "@/components/admin/leads/BookedCall";
 import { AreaChart, Donut, HBars } from "@/components/admin/Charts";
 
 export const dynamic = "force-dynamic";
 
 type FollowUpCount = { ok: true; overdue: number; today: number } | { ok: false; message: string };
+type UpcomingCalls = { ok: true; items: Lead[] } | { ok: false; message: string };
 
 /** The count is per person, so the button opens "Show only mine": /admin/leads?view=due&who=mine. */
 const MY_FOLLOW_UPS_HREF = leadListHref({ ...DEFAULT_LEAD_LIST_PARAMS, view: "due", everyone: false });
@@ -27,6 +30,64 @@ function loadFollowUpCount(ctx: AdminContext): Promise<FollowUpCount> {
       (c): FollowUpCount => ({ ok: true, overdue: c.overdue, today: c.today }),
       (err): FollowUpCount => ({ ok: false, message: loadProblem(err, "follow-up count") }),
     );
+}
+
+/** The next booked calls (leads.view). A failed load is an error with a Retry, never an empty list. */
+function loadUpcoming(ctx: AdminContext, nowMs: number): Promise<UpcomingCalls> {
+  return Promise.resolve()
+    .then(() => loadUpcomingCalls(ctx, nowMs))
+    .then(
+      (items): UpcomingCalls => ({ ok: true, items }),
+      (err): UpcomingCalls => ({ ok: false, message: loadProblem(err, "upcoming calls") }),
+    );
+}
+
+/**
+ * "Upcoming calls" (the app's Home "Upcoming calls", the same copy and rules):
+ * up to 5 calls booked through the calendar, soonest first, not cancelled and
+ * not over. Each row opens the lead: the name, then the Toronto day and time
+ * and how ("Tue, Oct 21, 3:00 p.m. · Google Meet"), and how far it is ("in 25
+ * min", "tomorrow", "Now"). From 15 minutes before a call until it ends, and
+ * only with a join link, "Join call" sits under its row.
+ */
+function UpcomingCallsPanel({ calls, nowMs }: { calls: UpcomingCalls; nowMs: number }) {
+  return (
+    <Panel title={BOOKING_COPY.upcoming}>
+      {!calls.ok ? (
+        <RetryNotice compact message={calls.message} />
+      ) : calls.items.length === 0 ? (
+        <p className="text-sm text-ink-3">{BOOKING_COPY.noUpcoming}</p>
+      ) : (
+        <ul className="-my-3 divide-y divide-line">
+          {calls.items.map((lead) => {
+            const booking = lead.booking;
+            if (!booking) return null;
+            const name = leadTitle(lead);
+            const line = upcomingCallLine(booking, nowMs);
+            const distance = upcomingCallDistance(booking, nowMs);
+            return (
+              <li key={lead.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
+                <Link
+                  href={`/admin/leads/${encodeURIComponent(lead.id)}`}
+                  aria-label={[name, line, distance].filter(Boolean).join(", ")}
+                  className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-gold"
+                >
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm font-semibold text-ink">{name}</span>
+                    <span className="truncate text-sm text-ink-3 tabular-nums">{line}</span>
+                  </span>
+                  {distance ? <span className="shrink-0 text-xs text-ink-3 tabular-nums">{distance}</span> : null}
+                </Link>
+                {booking.joinUrl ? (
+                  <RowJoinLink booking={joinFieldsOf(booking)} nowMs={nowMs} who={name} label={BOOKING_COPY.join} className="w-full" />
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Panel>
+  );
 }
 
 function FollowUpsPanel({ count, canCreate }: { count: FollowUpCount; canCreate: boolean }) {
@@ -72,23 +133,27 @@ export default async function Overview({ searchParams }: { searchParams: Promise
   const { e } = await searchParams;
   // Toronto's date, not the server's: Vercel runs in UTC, so after 8 PM Toronto it showed tomorrow.
   const today = new Date().toLocaleDateString("en-CA", { dateStyle: "full", timeZone: "America/Toronto" });
+  const nowMs = Date.now();
   // Started now, so it loads alongside the dashboard data. The same check as the count itself (activity.own and leads.view).
   const followUps = canCountFollowUps(ctx) ? loadFollowUpCount(ctx) : null;
+  // Leads with a booked call: only for people who may see leads.
+  const upcoming = adminCan(ctx, "leads.view") ? loadUpcoming(ctx, nowMs) : null;
   const canCreateLead = adminCan(ctx, "leads.create");
   if (!adminCan(ctx, "overview.view")) {
-    const count = followUps ? await followUps : null;
+    const [count, calls] = await Promise.all([followUps, upcoming]);
     return (
       <div className="flex flex-col gap-8">
         <PageHeader title="Overview" subtitle={today} />
         {e === "forbidden" && <Notice kind="err">Your role cannot do that.</Notice>}
         {count && <FollowUpsPanel count={count} canCreate={canCreateLead} />}
+        {calls && <UpcomingCallsPanel calls={calls} nowMs={nowMs} />}
         <Notice kind="err">Your role has no overview. Pick a page from the menu.</Notice>
       </div>
     );
   }
   // Revenue, active subscriptions and recent subscriptions: never for staff.
   const revenue = adminCan(ctx, "overview.revenue");
-  const [data, count] = await Promise.all([getDashboardData(), followUps]);
+  const [data, count, calls] = await Promise.all([getDashboardData(), followUps, upcoming]);
 
   return (
     <div className="flex flex-col gap-8">
@@ -97,6 +162,8 @@ export default async function Overview({ searchParams }: { searchParams: Promise
       {e === "forbidden" && <Notice kind="err">Your role cannot do that.</Notice>}
 
       {count && <FollowUpsPanel count={count} canCreate={canCreateLead} />}
+
+      {calls && <UpcomingCallsPanel calls={calls} nowMs={nowMs} />}
 
       {!data ? (
         <Notice kind="err">

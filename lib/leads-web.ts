@@ -21,9 +21,11 @@ import {
   type LeadDetailKey,
   type LeadListQuery,
 } from "@/lib/admin-api/leads";
+import { listUpcomingBookings } from "@/lib/admin-api/leads/data";
 import { can } from "@/lib/admin-api/permissions";
 import { myActivity } from "@/lib/admin-api/staff/activity";
 import { webApiContext } from "@/lib/admin-web-context";
+import { UPCOMING_CALLS_LIMIT } from "@/lib/booking-ui";
 import {
   COPY,
   isMe,
@@ -190,6 +192,17 @@ export async function countMyDueFollowUps(admin: AdminContext): Promise<{ overdu
   const report = await myActivity(webApiContext(admin), "7d");
   const f = report.rows[0]?.followUps;
   return { overdue: f?.overdue ?? 0, today: f?.dueToday ?? 0 };
+}
+
+/**
+ * Overview's "Upcoming calls" (leads.view): the next 5 calls booked through
+ * the calendar that are not cancelled and not over (one under way counts),
+ * soonest first. Errors propagate (Overview shows them with a Retry).
+ */
+export async function loadUpcomingCalls(admin: AdminContext, nowMs: number = Date.now()): Promise<Lead[]> {
+  if (!can(admin.role, "leads.view")) throw forbiddenError();
+  const items = await listUpcomingBookings(webApiContext(admin), { limit: UPCOMING_CALLS_LIMIT, now: nowMs });
+  return items.map((lead) => redactLead(admin, lead));
 }
 
 /* ------------------------------------------------------------------ */

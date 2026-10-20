@@ -44,7 +44,7 @@ Then redeploy. Environment changes only take effect on a deploy. Everything stay
 ## 5. Vercel: two things to check
 
 - **Cron frequency.** The retry sweep wants to run every 10 minutes, but this project is on the Hobby plan, which only allows crons that run once a day (anything more frequent fails the whole deploy, which is what happened on 2026-09-27). So `vercel.json` runs it daily at 21:00 UTC, twelve hours away from the 09:15 UTC reconcile. Nothing breaks, only how fast a failed push retries: the happy path drains immediately after each signup, and the nightly reconcile catches the rest. On the Pro plan, set it back to `*/10 * * * *`.
-- **`CAL_WEBHOOK_SECRET`.** Confirm it is actually set in Production. If it is blank, `app/api/webhooks/cal/route.ts` currently accepts **unsigned** booking payloads and writes them straight into the `leads` table, which with the CRM live would also let a stranger inject a contact.
+- **`CAL_WEBHOOK_SECRET`.** Confirm it is set in Production, with the same value as the secret on the Cal.com webhook (see "Cal.com: the booking webhook" below). Without it the booking webhook refuses every delivery and saves nothing, so no booking reaches Leads or the CRM until it is set.
 
 ## 6. Admin: verify the connection
 
@@ -133,6 +133,40 @@ This workflow is a reply to someone who just asked, never a marketing campaign. 
 ## 13. Pick one sender per message
 
 Cal.com already sends booking reminders, so a GoHighLevel reminder workflow on `tmd-booked-call` would send a second copy: turn one of them off. Resend sends the portal, client and Webline welcomes and the calculator report, and nothing else. It sends newsletter subscribers nothing at all, so GoHighLevel owns the whole newsletter sequence, the welcome included. The step-by-step for that is in `docs/email-campaigns-setup.md`.
+
+## Cal.com: the booking webhook
+
+Every booked call reaches Leads through one Cal.com webhook (`app/api/webhooks/cal/route.ts`). Set it up once, in Cal.com under Settings > Developer > Webhooks > New:
+
+- **Subscriber URL:** `https://www.tekmadev.com/api/webhooks/cal`, with `www`, exactly as written.
+- **Event triggers:** tick these four, and only these:
+  - Booking Created
+  - Booking Rescheduled
+  - Booking Cancelled
+  - Booking Location Updated
+- **Secret:** a long random value, for example the output of `openssl rand -hex 32`. Put the same value in Vercel as `CAL_WEBHOOK_SECRET` (Production), then redeploy. Cal.com signs every delivery with it, and the site refuses any delivery whose signature does not match.
+- Leave the payload template empty, so Cal.com sends its default payload.
+
+Then book a test call on the site. It should appear in Leads within a few seconds, and the webhook's delivery log in Cal.com should show `200`.
+
+What each trigger does:
+
+- **Booking Created** goes onto the person's existing lead when there is one: the `/grow` lead from the same browser tab first, else the newest lead with the same email (any capitalization) that has no booking yet and was created in the last 60 days. That can be a `/grow`, Outreach or Booked call lead, never a Free tool or Portal sign-up one (see the CRM note below). That lead keeps its own name, phone and attribution. Otherwise it becomes a new "Booked call" lead. Either way the lead shows Booked.
+- **Booking Rescheduled** moves the same lead to the new time. The notification reads "Jane moved their call from Oct 22, 2:00 PM to Oct 24, 11:00 AM".
+- **Booking Cancelled** sets the lead to Cancelled.
+- **Booking Location Updated** changes how the call happens on the lead. The status stays.
+- A lead marked Won keeps Won whatever the calendar says, but a cancelled call still takes `tmd-booked-call` off and adds `tmd-booking-cancelled`. Any other trigger Cal.com sends is answered and ignored.
+
+What the delivery log in Cal.com means:
+
+| Code | Meaning |
+|---|---|
+| `200` | Saved, or ignored on purpose |
+| `401` | The signature did not match: the secret in Cal.com and in Vercel differ. The admin gets one alert an hour |
+| `503` | `CAL_WEBHOOK_SECRET` is not set on the deployment. Nothing is saved, and the admin gets "Bookings are not being saved" once an hour until it is. That alert closes itself on the first signed delivery |
+| `500` | The database refused the write. The admin gets "A booking could not be saved" |
+
+In the CRM: the database trigger tags booked calls only on Booked call and `/grow` leads, so the webhook queues `tmd-booked-call` (and, on a cancel, `tmd-booking-cancelled` with `tmd-booked-call` taken off) itself for a booking on an Outreach lead and for a cancel on a Won lead, with the same job keys. The backfill (step 7) queues the same jobs for any it missed. Free tool and Portal sign-up leads keep getting their own Booked call lead, because the trigger re-adds their own tag whenever their status changes once a booking is on them, which would re-run the free tool or portal workflow for someone who just booked. Attaching bookings to them too needs a migration that gives every source the booked-call branch and keeps their own tags on the row.
 
 ---
 

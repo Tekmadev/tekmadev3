@@ -308,6 +308,61 @@ export async function listLeads(ctx: ApiContext, query: LeadListQuery): Promise<
 }
 
 /* ------------------------------------------------------------------ */
+/* Upcoming calls (the web Overview)                                   */
+/* ------------------------------------------------------------------ */
+
+/** A call with no stored end counts as possibly under way for this long after its start (its end is then read from raw). */
+const NO_END_LOOKBACK_MS = 24 * 3_600_000;
+
+/**
+ * The next calls booked through the calendar, soonest first: leads whose
+ * `booking` is not cancelled and not over at `now` (a call under way counts),
+ * at most `limit` (1 to 50). The booking columns narrow the read (an end at
+ * or after now, or no end and a start in the last day; not stored as
+ * cancelled) and each lead's `booking` (booking.ts) decides, so a cancel
+ * kept only in raw (on a won lead) is still left out. Used by GET
+ * /leads?booking=upcoming (the app's Home) and the web Overview's "Upcoming
+ * calls", both under `leads.view`.
+ */
+export async function listUpcomingBookings(ctx: ApiContext, opts: { limit: number; now?: number }): Promise<Lead[]> {
+  const db = requireDb();
+  const now = opts.now ?? Date.now();
+  const limit = Math.min(50, Math.max(1, Math.floor(opts.limit)));
+  const nowIso = new Date(now).toISOString();
+  const since = new Date(now - NO_END_LOOKBACK_MS).toISOString();
+  const groups = [
+    `booking_end.gte.${pgQuote(nowIso)},and(booking_end.is.null,booking_start.gte.${pgQuote(since)})`,
+    `status.is.null,status.not.in.(${storedValuesFor("cancelled").map(pgQuote).join(",")})`,
+  ];
+  const run = (columns: string) =>
+    db
+      .from("leads")
+      .select(columns)
+      .not("booking_start", "is", null)
+      .or(`and(${groups.map((g) => `or(${g})`).join(",")})`)
+      .order("booking_start", { ascending: true })
+      .order("id", { ascending: true })
+      // Room for rows the booking then leaves out (a cancel kept only in raw, no valid start).
+      .limit(limit * 3);
+
+  const res = await selectLeadColumns(run);
+  if (res.error) throw dbError("upcoming bookings", res.error);
+
+  const rows = (res.data ?? []) as unknown as LeadRow[];
+  const leads = await hydrate(db, ctx, rows);
+  const msOf = (at: string | null | undefined) => (at ? Date.parse(at) : Number.NaN);
+  return leads
+    .filter((l) => {
+      const b = l.booking;
+      if (!b || b.status === "cancelled") return false;
+      const over = msOf(b.end ?? b.start);
+      return Number.isFinite(over) && over >= now;
+    })
+    .sort((a, b) => msOf(a.booking?.start) - msOf(b.booking?.start) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .slice(0, limit);
+}
+
+/* ------------------------------------------------------------------ */
 /* POST /leads                                                         */
 /* ------------------------------------------------------------------ */
 

@@ -49,6 +49,9 @@ type Lead = {
 
   // Edit lead (2026-10-08), for the caller who asked:
   canEdit: boolean;              // true when this caller may edit the details (section 4)
+
+  // Bookings (2026-10-20):
+  booking: Booking | null;       // the booked call from the calendar, null when there is none ("The booking" below)
 };
 ```
 
@@ -71,6 +74,55 @@ The website stores more status values than the app's seven. The API folds them s
 ### Settable statuses
 
 A person may set `new`, `booked`, `contacted`, `qualified`, `won` or `lost` (staff management, [staff.md](staff.md) section 3). `cancelled` mirrors the booking calendar, so the API refuses it: 400 `status` "Cancelled comes from the booking calendar. Pick another status.". `booked` may be set by hand on a lead with no calendar booking (a call booked by phone or DM), and records the first person who did as the lead's `bookedBy`. On a lead the calendar owns (source `cal_booking`, or a lead a Cal booking was attached to) the calendar sets booked, because that status drives the CRM's booked-call reminders: sending `booked` to one that already shows booked only records the booker, and to one that shows anything else is 400 `status` "This lead booked through the calendar, so the calendar sets booked. Pick another status.".
+
+### The booking
+
+Every lead the API answers (`GET /leads` rows, `GET /leads/:id`, `POST /leads`, `PATCH /leads/:id`, `POST /leads/:id/touches`) carries `booking`: the call booked through the calendar, read from the Cal.com event the webhook keeps on the lead (`leads.raw`, the newest event), or `null` when the lead has no booking. Code: `lib/admin-api/leads/booking.ts` (`toBooking`). `bookingAt` is unchanged and always equals `booking.start` when both are set.
+
+```ts
+type Booking = {
+  status: "booked" | "cancelled" | "past";
+  start: string;                  // ISO instant (UTC)
+  end: string | null;             // ISO instant; null only when neither an end nor a length is known
+  durationMinutes: number | null; // the event length, else end minus start
+  title: string | null;           // Cal.com's booking title ("Discovery call between Tekmadev and Jane Doe"), else the event type's title
+  eventType: string | null;       // the event type slug ("discovery-call")
+  timeZone: string | null;        // the booker's IANA zone ("America/Vancouver"), else null
+  how: {
+    kind: "video" | "phone" | "in_person" | "link" | "other";
+    label: string;                // show as sent: "Google Meet", "Zoom", "Cal Video", "Microsoft Teams", "Whereby", "Jitsi", "Webex", "Video call", "Phone call", "In person", "Meeting link", "Other", "Not set"
+    detail: string | null;        // the phone number (phone) or the address (in_person, or what was typed for other), or the link (link) when it is not the join link, else null
+  };
+  joinUrl: string | null;         // https only, never a link the booker could set ("joinUrl" below)
+  answers: { key: string; label: string; value: string }[];
+  notes: string | null;           // what the booker typed in the notes field, else additionalNotes; never the description (Cal.com copies the event type's there)
+  guests: string[];               // guest emails, lowercased, never the booker's own; may be empty
+  cancellationReason: string | null; // only on a cancelled booking (a rejected one gives the rejection reason)
+  rescheduleReason: string | null;
+  rescheduledFrom: string | null; // the previous start (ISO) when the last event was a reschedule, else null
+  manageUrl: string | null;       // the Cal.com booking page: <bookerUrl, else https://cal.com>/booking/<uid>; null without a uid
+};
+```
+
+Rules:
+
+- **Has a booking**: a lead has one when it has a start, from `leads.booking_start` or the payload's `startTime`. A lead booked by hand (status `booked` set from the app, no calendar) has `booking: null`.
+- **`status`**: `cancelled` when the last event was `BOOKING_CANCELLED` or `BOOKING_REJECTED`, the payload status is `CANCELLED` or `REJECTED`, or the stored status is `cancelled` or `booking_rejected` (a status set by hand later does not uncancel it). Otherwise `past` once the end (or the start, with no end) is before the time of the request, else `booked`. A pending booking (`BOOKING_REQUESTED`) reads as `booked`. `booking.status` is the call; the lead's own `status` stays the sales status.
+- **`how`**: the location type the booker picked (`responses.location.value`), else `payload.location` read as a type (`integrations:google:meet`, `integrations:zoom`, `integrations:daily`, `phone`, `userPhone`, `attendeeInPerson`, `inPerson`, `link`, `somewhereElse`) or as a value (an http(s) URL is `link`, or `video` when its host is a known video app; a phone number is `phone`; any other text is `in_person` with that text as the address), else `video` when Cal.com made a video call, else `{ kind: "other", label: "Not set", detail: null }`. An unknown video app is "Video call".
+- **`joinUrl`**: `videoCallData.url` (only Cal.com's video apps write it); else `payload.location` when the type picked is the organizer's (`integrations:*`, `link`, `conferencing`; with no type picked, only a link on a known video app's host: Google Meet, Zoom, Cal Video, Microsoft Teams, Whereby, Jitsi, Webex); else `metadata.videoCallUrl` when there is no `videoCallData` link, its host is a known video app's, and the type picked is not a phone, in person or somewhere else type. Whoever books can add any `metadata` key to the booking page link, and Cal.com lets theirs replace its own, so nothing else in `metadata` is ever a join link. A link location that is not the join link is `how.detail`, to show as text with Copy.
+- **`answers`**: every booking form response in form order that is not hidden (`isHidden`), not empty, and not one of `name`, `email`, `location`, `notes`, `guests` or `rescheduleReason` (those have their own keys). `key` is the response key, `label` the question as written in Cal.com (Cal's own fields carry a key such as `phone_number` there, which is sent as words: "Phone number"; with no label, the key as words). `value` is one line of text: lists joined with ", ", a checkbox "Yes" or "No", a choice with its own input as "choice, input".
+- **Never an error**: any field Cal.com leaves out or sends as another type reads as `null` (or `[]`); the booking columns (`booking_start`, `booking_end`, `event_type`, `booking_uid`) fill in what raw lacks. A stored booking delivered later (`MEETING_ENDED`, bare response values) reads the same way.
+- **Times**: every instant is UTC; show them in America/Toronto like every other date. `timeZone` is the booker's own zone, for an optional "their time" line.
+- **Not in the response**: `raw` itself, the tracking in `metadata` (UTM, `lead_ref`), the organizer and hidden answers.
+- **Reading cost**: the list selects `raw->>triggerEvent` and `raw->payload` only, never the whole `raw`.
+
+#### Screens (web and app, the same copy)
+
+Web code: `lib/booking-ui.ts` (copy and times), `components/admin/leads/BookedCallPanel.tsx` and `BookedCall.tsx`, `LeadRow.tsx`, and Overview (`app/admin/(dashboard)/page.tsx`). Times are 12 hour with "a.m." and "p.m.", in Toronto.
+
+- **Lead page, "Booked call"** (only when `booking` is set): the first line is the day and time with the end, "Tue, Oct 21, 3:00 p.m. to 3:30 p.m." (the year is added when it is not this year; an end on another day carries its day: "Tue, Oct 21, 11:30 p.m. to Wed, Oct 22, 12:30 a.m."; no end, the start alone). "Their time: 12:00 p.m. (Vancouver)" follows when the booker's clock reads differently from Toronto's at the start (so not for New York), with their day when it is another day there ("Their time: Thu, Oct 22, 6:00 a.m. (Sydney)"); the place is the last part of the zone name in words. "How" is the label, then the phone number (a call link) or the address. "Join call" and "Copy link" show whenever there is a `joinUrl`, except on a cancelled call (Cal.com closes the room); "Join call" opens it and is the primary button from 15 minutes before the start to the end (the start, with no end), never when over; "Copy link" copies it ("Link copied."); "Open in Cal.com" opens `manageUrl`, cancelled or not. Then "Their answers" (each label and value), "Notes" and "Guests", each only when there is something. Cancelled: a "Cancelled" badge and "Reason: ..." when given. Moved (`rescheduledFrom`): "Moved from Mon, Oct 20, 2:00 p.m." and "Reason: ..." (`rescheduleReason`) when given. Over: a "Done" badge. The status is read again against the clock, so a call that ends while the page is open turns "Done" on the next load and Join call stops being primary at once.
+- **Leads row**: a call that is not cancelled and not over says when on every width: "Call today, 3:00 p.m.", "Call tomorrow, 3:00 p.m.", "Call Fri, Oct 23, 3:00 p.m.", or "Call now, until 3:30 p.m." while under way. From 15 minutes before the start to the end, and only with a `joinUrl`, a "Join" button opens it (on a phone, on its own line under the row).
+- **Overview, "Upcoming calls"** (`leads.view`; the app's Home "Upcoming calls", the same copy and rules): up to 5 calls, soonest first, not cancelled and not over (one under way counts). Each row opens the lead: the lead's name, then the day and time and how ("Tue, Oct 21, 3:00 p.m. · Google Meet"), and how far it is on the right ("in 25 min", "today", "tomorrow", "in 3 days"; "Now" once it started). From 15 minutes before the start to the end, and only with a `joinUrl`, "Join call" sits under its row. Empty: "No upcoming calls."; a failed read says so with Retry. The web reads it with `listUpcomingBookings` (`lib/admin-api/leads/data.ts`); the app reads the same with `GET /leads?booking=upcoming&limit=5` (one page, `nextCursor` null; an unknown `booking` value is a 400).
 
 ## 2. `GET /leads`: two more filters
 
@@ -243,4 +295,5 @@ Until that migration is applied, `GET /leads` and `GET /leads/:id` keep working 
 - `zLead` may add `website`, `followUpAt`, `assignedTo`, `addedBy` (optional in the schema keeps older fixtures valid).
 - New schemas: `zTouch`, `zTouchPage`, `zLogTouchResult` (`{ touch, lead }`), `zStaffRef`, and `leadTouchKinds` in the leads meta fragment.
 - New endpoints in `src/api/endpoints/leads.ts` and mock routes mirroring the rules above (the status folding, the auto "contacted", the 409 on email).
+- Bookings (2026-10-20): `zLead` may add `booking: zBooking.nullable().optional()` (undefined from an older server reads as no booking), with `zBooking` matching "The booking" in section 1 exactly; the mock answers `booking` on every lead (a Cal lead with a booking, every other lead `null`).
 - Edit lead (2026-10-08): `zLead` may add `canEdit: z.boolean().optional()` (read undefined as false, so an older server shows no Edit button); `LeadPatch` gains the seven detail keys; the mock's PATCH mirrors section 4 (who may edit, the two rules on the whole lead, the 409 on another lead's email, nothing written on a failure, unchanged values not written) and sets `canEdit` on every lead it answers.

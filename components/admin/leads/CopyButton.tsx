@@ -33,7 +33,8 @@ function copyWithSelection(value: string): boolean {
   }
 }
 
-async function copyText(value: string): Promise<boolean> {
+/** Copies text: the async clipboard, else a selected textarea. False when the browser refused. */
+export async function copyText(value: string): Promise<boolean> {
   try {
     if (typeof navigator !== "undefined" && navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
       await navigator.clipboard.writeText(value);

@@ -13,6 +13,7 @@ import { BackToLeads } from "@/components/admin/leads/BackToLeads";
 import { LeadContactActions } from "@/components/admin/leads/LeadContactActions";
 import { TouchTimeline } from "@/components/admin/leads/TouchTimeline";
 import { BookedCallCard, LeadAttribution, LeadDetails, LeadMessage } from "@/components/admin/leads/LeadInfo";
+import { BookedCallPanel } from "@/components/admin/leads/BookedCallPanel";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Lead" };
@@ -25,7 +26,8 @@ const PAGE = "flex flex-col gap-5 lg:max-w-3xl max-lg:pb-[var(--lead-prompt-spac
 /**
  * A lead (the app's lead detail): who it is, one-tap Call, Text and Email
  * (then "Log this call"), "Create client from this lead" or "Open client",
- * the booked call, Outreach (status, follow-up, owner, booking credit, "Log
+ * the booked call ("Booked call" from the Cal.com event when the lead has a
+ * booking, else the plain booked time), Outreach (status, follow-up, owner, booking credit, "Log
  * outreach" and the timeline), demo requests, every field, the message and
  * the attribution. Every capability is checked here on the server, and every
  * write behind a button is checked again by its server action.
@@ -156,7 +158,11 @@ export default async function LeadPage({
         </>
       ) : null}
 
-      {lead.bookingAt ? <BookedCallCard at={lead.bookingAt} nowMs={nowMs} /> : null}
+      {lead.booking ? (
+        <BookedCallPanel booking={lead.booking} nowMs={nowMs} />
+      ) : lead.bookingAt ? (
+        <BookedCallCard at={lead.bookingAt} nowMs={nowMs} />
+      ) : null}
 
       <LeadOutreachCard
         lead={lead}
@@ -174,7 +180,8 @@ export default async function LeadPage({
       <DemoRequestsCard leadId={lead.id} businessName={lead.business} />
 
       <LeadDetails lead={lead} nowMs={nowMs} showRevenue={showRevenue} />
-      <LeadMessage lead={lead} />
+      {/* A booked call's message is the note left on the booking: Booked call already shows it under Notes. */}
+      {lead.booking?.notes && lead.message?.trim() === lead.booking.notes.trim() ? null : <LeadMessage lead={lead} />}
       <LeadAttribution lead={lead} />
     </div>
   );

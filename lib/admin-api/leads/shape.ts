@@ -1,5 +1,6 @@
 import { growNeeds, revenueBands, GROW_LEAD_SOURCE } from "@/config/grow";
 import { instant } from "../data";
+import { toBooking, type Booking } from "./booking";
 
 /**
  * The `Lead` the admin app reads (docs/api-requests/leads.md in the app repo,
@@ -68,7 +69,11 @@ export function storedValuesNotNew(): string[] {
 /* Row and columns                                                     */
 /* ------------------------------------------------------------------ */
 
-/** Columns every database has (crm_baseline, grow_lead_form). JSON paths keep `raw` out of the payload. */
+/**
+ * Columns every database has (crm_baseline, grow_lead_form). JSON paths keep
+ * the rest of `raw` out of the payload: only the Cal.com event's trigger and
+ * payload are read, for the booking (booking.ts).
+ */
 export const LEAD_BASE_COLUMNS = [
   "id",
   "created_at",
@@ -83,7 +88,9 @@ export const LEAD_BASE_COLUMNS = [
   "revenue_band",
   "message",
   "booking_start",
+  "booking_end",
   "booking_uid",
+  "event_type",
   "utm_source",
   "utm_medium",
   "utm_campaign",
@@ -91,6 +98,8 @@ export const LEAD_BASE_COLUMNS = [
   "raw_company:raw->>company",
   "raw_business_name:raw->>business_name",
   "cal_notes:raw->payload->>additionalNotes",
+  "cal_trigger:raw->>triggerEvent",
+  "cal_payload:raw->payload",
   "added_by:form->>added_by",
 ].join(",");
 
@@ -118,7 +127,9 @@ export type LeadRow = {
   revenue_band: string | null;
   message: string | null;
   booking_start: string | null;
+  booking_end: string | null;
   booking_uid: string | null;
+  event_type: string | null;
   utm_source: string | null;
   utm_medium: string | null;
   utm_campaign: string | null;
@@ -126,6 +137,9 @@ export type LeadRow = {
   raw_company: string | null;
   raw_business_name: string | null;
   cal_notes: string | null;
+  /** The Cal.com event the webhook kept (raw->>triggerEvent, raw->payload): any JSON, read by booking.ts. */
+  cal_trigger: string | null;
+  cal_payload: unknown;
   added_by: string | null;
   /** Absent until the outreach migration is applied. */
   follow_up_at?: string | null;
@@ -181,6 +195,9 @@ export type Lead = {
   /* Edit lead (docs/admin-api/outreach.md section 4): an extra key, ignored by older app builds. */
   /** Whether the caller may edit this lead's details (PATCH /leads/:id name, business, email, ...). */
   canEdit: boolean;
+  /* Bookings (docs/admin-api/outreach.md section 1, "The booking"): an extra key, ignored by older app builds. */
+  /** The booked call from the Cal.com event, else null. `bookingAt` stays as it was. */
+  booking: Booking | null;
 };
 
 /** What a lead's row needs from other tables, and about the caller. */
@@ -191,6 +208,8 @@ export type LeadLinks = {
   names: Map<string, string | null>;
   /** Whether the caller may edit the details (see canEditLead in data.ts). Absent: false. */
   canEdit?: boolean;
+  /** The time (ms) a booking counts as past from. Absent: now. */
+  now?: number;
 };
 
 const clean = (v: string | null | undefined): string | null => {
@@ -267,5 +286,6 @@ export function toLead(row: LeadRow, links: LeadLinks): Lead {
     foundBy: staffRef(finderEmail(row), links.names),
     bookedBy: staffRef(row.booked_by, links.names),
     canEdit: links.canEdit ?? false,
+    booking: toBooking(row, links.now),
   };
 }

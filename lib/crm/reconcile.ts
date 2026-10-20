@@ -4,6 +4,8 @@ import { crmGate, readCrmSetting, setCrmSync, type CrmConfig } from "@/lib/crm/c
 import { lookupContactByEmail, type CrmRateLimit, type GhlContact } from "@/lib/crm/client";
 import { readEmailDnd, type CrmDndState } from "@/lib/crm/dnd";
 import { CRM_TAGS } from "@/lib/crm/tags";
+import { TRIGGER_TAGGED_BOOKING_SOURCES, bookingTagJobs, type BookingTagState } from "@/lib/crm/booking-tags";
+import { toLeadStatus } from "@/lib/admin-api/leads/shape";
 import { setSubscriberStatus, type SubscriberStatus } from "@/lib/subscribers-data";
 
 /**
@@ -687,7 +689,7 @@ export async function backfillCrmContacts(opts?: { limit?: number }): Promise<Cr
 
     const { data: leads, error: leadError } = await db
       .from("leads")
-      .select("id,email,source,status,booking_uid")
+      .select("id,email,source,status,booking_uid,cal_trigger:raw->>triggerEvent")
       .not("email", "is", null)
       .order("created_at", { ascending: true })
       .limit(limit);
@@ -792,30 +794,20 @@ export async function backfillCrmContacts(opts?: { limit?: number }): Promise<Cr
       const scope = booking || id;
       const source = typeof row.source === "string" ? row.source : "";
       const status = typeof row.status === "string" ? row.status : "";
+      const calTrigger = typeof row.cal_trigger === "string" ? row.cal_trigger.trim().toUpperCase() : "";
 
       await upsertOnce(key, "lead", id);
 
-      // The booked-call pair, shared by a Cal booking row and a /grow row a
-      // booking was attached to, because the trigger writes the same keys for
-      // both. One definition here is what keeps the two from drifting apart.
-      const bookingTags = async (): Promise<void> => {
-        if (status === "booked" || status === "rescheduled") {
-          bump(
-            await enqueue(db, "tags.add", `tags.add:${key}:booked-call:${scope}`, key, "lead", id, {
-              tag: "booked-call",
-            }),
-          );
-        } else if (status === "cancelled") {
-          bump(
-            await enqueue(db, "tags.add", `tags.add:${key}:booking-cancelled:${scope}`, key, "lead", id, {
-              tag: "booking-cancelled",
-            }),
-          );
-          bump(
-            await enqueue(db, "tags.remove", `tags.remove:${key}:booked-call:${scope}`, key, "lead", id, {
-              tag: "booked-call",
-            }),
-          );
+      // The booked-call pair (lib/crm/booking-tags.ts), shared by a Cal
+      // booking row, a /grow row and any other lead a booking was attached
+      // to, because the trigger and the Cal webhook write the same keys for
+      // all of them. One definition is what keeps them from drifting apart.
+      const statusState: BookingTagState | null =
+        status === "booked" || status === "rescheduled" ? "booked" : status === "cancelled" ? "cancelled" : null;
+      const bookingTags = async (state: BookingTagState | null = statusState): Promise<void> => {
+        if (!state) return;
+        for (const job of bookingTagJobs(key, scope, state)) {
+          bump(await enqueue(db, job.kind, job.idemKey, key, "lead", id, job.payload));
         }
       };
 
@@ -847,6 +839,13 @@ export async function backfillCrmContacts(opts?: { limit?: number }): Promise<Cr
           }),
         );
       }
+      // A booking on a lead whose source has no booking branch in the trigger
+      // (an outreach lead the Cal webhook attached it to): the webhook queues
+      // these keys from code, so a missed one is queued here.
+      if (hasBooking && !TRIGGER_TAGGED_BOOKING_SOURCES.has(source)) await bookingTags();
+      // A won lead keeps its status when its call is cancelled, so only the
+      // stored event says so: the webhook queues the cancel pair, and so does this.
+      if (hasBooking && toLeadStatus(status) === "won" && calTrigger === "BOOKING_CANCELLED") await bookingTags("cancelled");
     }
 
     // `claimed` is rows read, `done` is jobs queued, `noop` is rows skipped
